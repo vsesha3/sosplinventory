@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS sos_users (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(200),
+    is_active TINYINT(1) DEFAULT 1,
+    is_locked TINYINT(1) DEFAULT 0,
+    last_login DATETIME,
+    created_by VARCHAR(100),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100),
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted TINYINT(1) DEFAULT 0,
+    deleted_by VARCHAR(100),
+    deleted_at DATETIME
+);
