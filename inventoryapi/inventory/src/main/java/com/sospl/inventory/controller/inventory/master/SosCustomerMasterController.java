@@ -1,7 +1,7 @@
 package com.sospl.inventory.controller.inventory.master;
 
-import com.sospl.inventory.model.inventory.master.SosProductGroupMaster;
-import com.sospl.inventory.service.inventory.master.SosProductGroupMasterService;
+import com.sospl.inventory.model.inventory.master.SosCustomerMaster;
+import com.sospl.inventory.service.inventory.master.SosCustomerMasterService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
@@ -9,38 +9,38 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/productgroup")
-public class SosProductGroupMasterController {
+@RequestMapping("/api/customer")
+public class SosCustomerMasterController {
 
-    private final SosProductGroupMasterService service;
+    private final SosCustomerMasterService service;
 
-    public SosProductGroupMasterController(SosProductGroupMasterService service) {
+    public SosCustomerMasterController(SosCustomerMasterService service) {
         this.service = service;
     }
 
     @PostMapping
-    public SosProductGroupMaster create(@RequestBody SosProductGroupMaster entity) {
+    public SosCustomerMaster create(@RequestBody SosCustomerMaster entity) {
         return service.save(entity);
     }
 
     @PutMapping("/{id}")
-    public SosProductGroupMaster update(@PathVariable Long id, @RequestBody SosProductGroupMaster entity) {
+    public SosCustomerMaster update(@PathVariable Long id, @RequestBody SosCustomerMaster entity) {
         return service.update(id, entity);
     }
 
     @GetMapping("/{id}")
-    public SosProductGroupMaster getById(@PathVariable Long id) {
+    public SosCustomerMaster getById(@PathVariable Long id) {
         return service.findById(id)
                 .orElseThrow(() -> new RuntimeException("Record not found"));
     }
 
     @GetMapping
-    public List<SosProductGroupMaster> getAll() {
+    public List<SosCustomerMaster> getAll() {
         return service.findAll();
     }
 
     @GetMapping("/page")
-    public Page<SosProductGroupMaster> getAllWithPagination(Pageable pageable) {
+    public Page<SosCustomerMaster> getAllWithPagination(Pageable pageable) {
         return service.findAll(pageable);
     }
 

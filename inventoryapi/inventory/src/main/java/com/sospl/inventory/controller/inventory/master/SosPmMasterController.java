@@ -1,7 +1,7 @@
 package com.sospl.inventory.controller.inventory.master;
 
-import com.sospl.inventory.model.inventory.master.SosProductGroupMaster;
-import com.sospl.inventory.service.inventory.master.SosProductGroupMasterService;
+import com.sospl.inventory.model.inventory.master.SosPmMaster;
+import com.sospl.inventory.service.inventory.master.SosPmMasterService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
@@ -9,38 +9,38 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/productgroup")
-public class SosProductGroupMasterController {
+@RequestMapping("/api/pm")
+public class SosPmMasterController {
 
-    private final SosProductGroupMasterService service;
+    private final SosPmMasterService service;
 
-    public SosProductGroupMasterController(SosProductGroupMasterService service) {
+    public SosPmMasterController(SosPmMasterService service) {
         this.service = service;
     }
 
     @PostMapping
-    public SosProductGroupMaster create(@RequestBody SosProductGroupMaster entity) {
+    public SosPmMaster create(@RequestBody SosPmMaster entity) {
         return service.save(entity);
     }
 
     @PutMapping("/{id}")
-    public SosProductGroupMaster update(@PathVariable Long id, @RequestBody SosProductGroupMaster entity) {
+    public SosPmMaster update(@PathVariable Long id, @RequestBody SosPmMaster entity) {
         return service.update(id, entity);
     }
 
     @GetMapping("/{id}")
-    public SosProductGroupMaster getById(@PathVariable Long id) {
+    public SosPmMaster getById(@PathVariable Long id) {
         return service.findById(id)
                 .orElseThrow(() -> new RuntimeException("Record not found"));
     }
 
     @GetMapping
-    public List<SosProductGroupMaster> getAll() {
+    public List<SosPmMaster> getAll() {
         return service.findAll();
     }
 
     @GetMapping("/page")
-    public Page<SosProductGroupMaster> getAllWithPagination(Pageable pageable) {
+    public Page<SosPmMaster> getAllWithPagination(Pageable pageable) {
         return service.findAll(pageable);
     }
 
