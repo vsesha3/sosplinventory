@@ -9,9 +9,6 @@ import java.math.BigDecimal;
 public class SosRmMaster extends BaseAuditEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(name = "rm_id", nullable = false, unique = true)
     private Integer rmId;
 
@@ -26,21 +23,6 @@ public class SosRmMaster extends BaseAuditEntity {
 
     @Column(name = "rm_group_id")
     private Integer rmGroupId;
-
-    @Column(name = "excise_tariff_no")
-    private Integer exciseTariffNo;
-
-    @Column(name = "excise_declared_item")
-    private Integer exciseDeclaredItem;
-
-    @Column(name = "excise_rate", precision = 5, scale = 2)
-    private BigDecimal exciseRate;
-
-    @Column(name = "e_cess_rate", precision = 5, scale = 2)
-    private BigDecimal eCessRate;
-
-    @Column(name = "sh_e_cess_rate", precision = 5, scale = 2)
-    private BigDecimal shECessRate;
 
     @Column(name = "avg_rate", precision = 11, scale = 2)
     private BigDecimal avgRate;
@@ -59,14 +41,6 @@ public class SosRmMaster extends BaseAuditEntity {
 
     @Column(name = "h_nh_id")
     private Integer hNhId;
-
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
 
 	public Integer getRmId() {
 		return rmId;
@@ -108,45 +82,6 @@ public class SosRmMaster extends BaseAuditEntity {
 		this.rmGroupId = rmGroupId;
 	}
 
-	public Integer getExciseTariffNo() {
-		return exciseTariffNo;
-	}
-
-	public void setExciseTariffNo(Integer exciseTariffNo) {
-		this.exciseTariffNo = exciseTariffNo;
-	}
-
-	public Integer getExciseDeclaredItem() {
-		return exciseDeclaredItem;
-	}
-
-	public void setExciseDeclaredItem(Integer exciseDeclaredItem) {
-		this.exciseDeclaredItem = exciseDeclaredItem;
-	}
-
-	public BigDecimal getExciseRate() {
-		return exciseRate;
-	}
-
-	public void setExciseRate(BigDecimal exciseRate) {
-		this.exciseRate = exciseRate;
-	}
-
-	public BigDecimal geteCessRate() {
-		return eCessRate;
-	}
-
-	public void seteCessRate(BigDecimal eCessRate) {
-		this.eCessRate = eCessRate;
-	}
-
-	public BigDecimal getShECessRate() {
-		return shECessRate;
-	}
-
-	public void setShECessRate(BigDecimal shECessRate) {
-		this.shECessRate = shECessRate;
-	}
 
 	public BigDecimal getAvgRate() {
 		return avgRate;

@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 public class SosRmMasterResponse {
 
-    private Long id;
+    private Integer id;
 
     private Integer rmCode;
     private String rmName;
@@ -13,24 +13,17 @@ public class SosRmMasterResponse {
     private String rmGroupName;
     private String testName;
 
-    private Integer exciseTariffNo;
-    private Integer exciseDeclaredItem;
-
-    private BigDecimal exciseRate;
-    private BigDecimal eCessRate;
-    private BigDecimal shECessRate;
-
     private BigDecimal avgRate;
 
     // ===============================
     // Getters & Setters
     // ===============================
 
-    public Long getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -74,46 +67,6 @@ public class SosRmMasterResponse {
         this.testName = testName;
     }
 
-    public Integer getExciseTariffNo() {
-        return exciseTariffNo;
-    }
-
-    public void setExciseTariffNo(Integer exciseTariffNo) {
-        this.exciseTariffNo = exciseTariffNo;
-    }
-
-    public Integer getExciseDeclaredItem() {
-        return exciseDeclaredItem;
-    }
-
-    public void setExciseDeclaredItem(Integer exciseDeclaredItem) {
-        this.exciseDeclaredItem = exciseDeclaredItem;
-    }
-
-    public BigDecimal getExciseRate() {
-        return exciseRate;
-    }
-
-    public void setExciseRate(BigDecimal exciseRate) {
-        this.exciseRate = exciseRate;
-    }
-
-    public BigDecimal getECessRate() {
-        return eCessRate;
-    }
-
-    public void setECessRate(BigDecimal eCessRate) {
-        this.eCessRate = eCessRate;
-    }
-
-    public BigDecimal getShECessRate() {
-        return shECessRate;
-    }
-
-    public void setShECessRate(BigDecimal shECessRate) {
-        this.shECessRate = shECessRate;
-    }
-
     public BigDecimal getAvgRate() {
         return avgRate;
     }
@@ -123,16 +76,12 @@ public class SosRmMasterResponse {
     }
     
     public SosRmMasterResponse(
-            Long id,
+            Integer id,
             Integer rmCode,
             String rmName,
             String uomName,
             String rmGroupName,
             String testName,
-            Integer exciseTariffNo,
-            Integer exciseDeclaredItem,
-            BigDecimal exciseRate,
-            BigDecimal shECessRate,
             BigDecimal avgRate
     ) {
         this.id = id;
@@ -141,10 +90,6 @@ public class SosRmMasterResponse {
         this.uomName = uomName;
         this.rmGroupName = rmGroupName;
         this.testName = testName;
-        this.exciseTariffNo = exciseTariffNo;
-        this.exciseDeclaredItem = exciseDeclaredItem;
-        this.exciseRate = exciseRate;
-        this.shECessRate = shECessRate;
         this.avgRate = avgRate;
     }
 

@@ -11,9 +11,6 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosProductMaster extends BaseAuditEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(name = "product_id", nullable = false, unique = true)
     private Integer productId;
 
@@ -32,20 +29,7 @@ public class SosProductMaster extends BaseAuditEntity {
     @Column(name = "product_group_id")
     private Integer productGroupId;
 
-    @Column(name = "excise_tariff_no")
-    private Integer exciseTariffNo;
-
-    @Column(name = "excise_declared_item")
-    private Integer exciseDeclaredItem;
-
-    @Column(name = "excise_rate", precision = 5, scale = 2)
-    private BigDecimal exciseRate;
-
-    @Column(name = "e_cess_rate", precision = 5, scale = 2)
-    private BigDecimal eCessRate;
-
-    @Column(name = "sh_e_cess_rate", precision = 5, scale = 2)
-    private BigDecimal shECessRate;
+   
 
     @Column(name = "rate", precision = 11, scale = 2)
     private BigDecimal rate;

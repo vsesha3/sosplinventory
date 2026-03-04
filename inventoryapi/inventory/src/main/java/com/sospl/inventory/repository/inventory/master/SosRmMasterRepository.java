@@ -14,7 +14,7 @@ import java.util.Optional;
 
 
 @Repository
-public interface SosRmMasterRepository extends JpaRepository<SosRmMaster, Long> {
+public interface SosRmMasterRepository extends JpaRepository<SosRmMaster, Integer> {
 
     List<SosRmMaster> findAllByIsDeletedFalse();
 
@@ -30,16 +30,12 @@ public interface SosRmMasterRepository extends JpaRepository<SosRmMaster, Long> 
     
     @Query("""
     	       SELECT new com.sospl.inventory.dto.inventory.master.SosRmMasterResponse(
-    	            r.id,
+    	            r.rmId,
     	            r.rmCode,
     	            r.rmName,
     	            u.uomName,
     	            g.rmGroupName,
     	            t.qcTestName,
-    	            r.exciseTariffNo,
-    	            r.exciseDeclaredItem,
-    	            r.exciseRate,
-    	            r.shECessRate,
     	            r.avgRate
     	       )
     	       FROM SosRmMaster r

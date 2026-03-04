@@ -10,9 +10,6 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosQcTestMaster extends BaseAuditEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(name = "qc_test_id", nullable = false, unique = true)
     private Integer qcTestId;
 
@@ -21,9 +18,6 @@ public class SosQcTestMaster extends BaseAuditEntity {
 
     @Column(name = "qc_test_name", length = 100)
     private String qcTestName;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
 
     public Integer getQcTestId() { return qcTestId; }
     public void setQcTestId(Integer qcTestId) { this.qcTestId = qcTestId; }

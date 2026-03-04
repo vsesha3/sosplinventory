@@ -10,9 +10,6 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosSupplierMaster extends BaseAuditEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(name = "supplier_id", nullable = false, unique = true)
     private Integer supplierId;
 
@@ -29,10 +26,10 @@ public class SosSupplierMaster extends BaseAuditEntity {
     private Integer countryId;
 
     @Column(name = "type_id")
-    private Integer typeId;
+    private Boolean typeId;
 
     @Column(name = "supplier_type_id")
-    private Integer supplierTypeId;
+    private Boolean supplierTypeId;
 
     @Column(name = "phone_no", length = 25)
     private String phoneNo;

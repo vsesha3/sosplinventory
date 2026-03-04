@@ -11,9 +11,6 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosCapitalGoodsMaster extends BaseAuditEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(name = "cg_id", nullable = false, unique = true)
     private Integer cgId;
 
@@ -22,10 +19,6 @@ public class SosCapitalGoodsMaster extends BaseAuditEntity {
 
     @Column(name = "cg_name", length = 100)
     private String cgName;
-
-
-    @Column(name = "excise_rate", precision = 11, scale = 2)
-    private BigDecimal exciseRate;
 
   
     @Column(name = "uom_id")

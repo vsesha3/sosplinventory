@@ -32,24 +32,28 @@ const LoginPage: React.FC = () => {
     },
   });
 
-  const handleSubmit = async (values: { usernameOrEmail: string; password: string }) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await authService.login(values);
-      const token = response.data.token;
-      localStorage.setItem('token', token);
-      navigate('/dashboard');
-    } catch (err: any) {
-      const message =
-        err.response?.data?.message ||
-        err.response?.data ||
-        'Invalid username or password. Please try again.';
-      setError(typeof message === 'string' ? message : 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleSubmit = async (values: { usernameOrEmail: string; password: string }) => {
+  setLoading(true);
+  setError(null);
+  try {
+    const response = await authService.login(values);
+    const token = response.data.data.accessToken;  // ← fixed
+    localStorage.setItem('token', token);
+
+    // Optional: store user info too
+    localStorage.setItem('user', JSON.stringify(response.data.data));
+
+    navigate('/dashboard');
+  } catch (err: any) {
+    const message =
+      err.response?.data?.message ||
+      err.response?.data ||
+      'Invalid username or password. Please try again.';
+    setError(typeof message === 'string' ? message : 'Login failed. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <Box

@@ -21,10 +21,8 @@ public class SosRmMasterMapper {
         entity.setUomId(request.getUomId());
         entity.setRmGroupId(request.getRmGroupId());
         entity.setTestId(request.getTestId());
-        entity.setExciseTariffNo(request.getExciseTariffNo());
-        entity.setExciseDeclaredItem(request.getExciseDeclaredItem());
-        entity.setExciseRate(request.getExciseRate());
-        entity.setShECessRate(request.getShECessRate());
+       
+        
         entity.setAvgRate(request.getAvgRate());
         entity.setPackSize(request.getPackSize());
         entity.setCapacity(request.getCapacity());

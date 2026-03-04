@@ -25,11 +25,11 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
         SosRmMaster entity = SosRmMasterMapper.toEntity(request);
         repository.save(entity);
 
-        return findById(entity.getId());
+        return findById(entity.getRmId());
     }
 
     @Override
-    public SosRmMasterResponse update(Long id, SosRmMasterRequest request) {
+    public SosRmMasterResponse update(Integer id, SosRmMasterRequest request) {
 
         SosRmMaster existing = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("RM not found"));
@@ -39,10 +39,7 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
         existing.setUomId(request.getUomId());
         existing.setRmGroupId(request.getRmGroupId());
         existing.setTestId(request.getTestId());
-        existing.setExciseTariffNo(request.getExciseTariffNo());
-        existing.setExciseDeclaredItem(request.getExciseDeclaredItem());
-        existing.setExciseRate(request.getExciseRate());
-        existing.setShECessRate(request.getShECessRate());
+       
         existing.setAvgRate(request.getAvgRate());
         existing.setPackSize(request.getPackSize());
         existing.setCapacity(request.getCapacity());
@@ -59,7 +56,7 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     }
 
     @Override
-    public SosRmMasterResponse findById(Long id) {
+    public SosRmMasterResponse findById(Integer id) {
         return repository.findAllWithDetails()
                 .stream()
                 .filter(r -> r.getId().equals(id))
@@ -68,7 +65,7 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     }
 
     @Override
-    public void delete(Long id) {
+    public void delete(Integer id) {
         repository.deleteById(id);
     }
 }

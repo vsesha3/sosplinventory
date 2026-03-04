@@ -10,21 +10,26 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosBrandMaster extends BaseAuditEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(name = "brand_id", nullable = false, unique = true)
     private Integer brandId;
 
     @Column(name = "brand_name", length = 200)
     private String brandName;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    
+    @Column(name = "active_flag")
+    private Boolean activeFlag;
 
     public Integer getBrandId() { return brandId; }
     public void setBrandId(Integer brandId) { this.brandId = brandId; }
 
     public String getBrandName() { return brandName; }
     public void setBrandName(String brandName) { this.brandName = brandName; }
+
+    public Boolean getActiveFlag() {
+        return activeFlag;
+    }
+
+    public void setActiveFlag(Boolean activeFlag) {
+        this.activeFlag = activeFlag;
+    }
 }

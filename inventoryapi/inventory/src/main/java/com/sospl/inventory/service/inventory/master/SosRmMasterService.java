@@ -9,11 +9,11 @@ public interface SosRmMasterService {
 
     SosRmMasterResponse create(SosRmMasterRequest request);
 
-    SosRmMasterResponse update(Long id, SosRmMasterRequest request);
+    SosRmMasterResponse update(Integer id, SosRmMasterRequest request);
 
     List<SosRmMasterResponse> findAll();
 
-    SosRmMasterResponse findById(Long id);
+    SosRmMasterResponse findById(Integer id);
 
-    void delete(Long id);
+    void delete(Integer id);
 }

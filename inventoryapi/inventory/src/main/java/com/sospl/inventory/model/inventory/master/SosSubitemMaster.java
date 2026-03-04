@@ -11,9 +11,6 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosSubitemMaster extends BaseAuditEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(name = "subitem_id", nullable = false, unique = true)
     private Integer subitemId;
 
@@ -23,5 +20,9 @@ public class SosSubitemMaster extends BaseAuditEntity {
     @Column(name = "subitem_name", length = 250)
     private String subitemName;
 
-    // other business fields remain same as earlier
+    @Column(name = "avg_rate", precision = 11, scale = 2)
+    private BigDecimal avgRate;
+
+    @Column(name = "uom_id")
+    private Integer uomId;
 }

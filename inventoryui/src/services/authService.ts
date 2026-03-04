@@ -5,8 +5,23 @@ export interface LoginRequest {
   password: string;
 }
 
+
+
+
 export interface LoginResponse {
-  token: string;
+  success: boolean;
+  message: string;
+  data: {
+    accessToken: string;
+    tokenType: string;
+    userId: number;
+    username: string;
+    email: string;
+    fullName: string;
+    roles: string[];
+    permissions: string[];
+    expiresIn: number;
+  };
 }
 
 export const authService = {

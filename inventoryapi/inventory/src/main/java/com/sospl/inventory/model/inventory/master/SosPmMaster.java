@@ -11,9 +11,6 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosPmMaster extends BaseAuditEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(name = "pm_id", nullable = false, unique = true)
     private Integer pmId;
 
@@ -29,20 +26,7 @@ public class SosPmMaster extends BaseAuditEntity {
     @Column(name = "fg_lot_code", length = 10)
     private String fgLotCode;
 
-    @Column(name = "excise_tariff_no")
-    private Integer exciseTariffNo;
-
-    @Column(name = "excise_declared_item")
-    private Integer exciseDeclaredItem;
-
-    @Column(name = "excise_rate", precision = 5, scale = 2)
-    private BigDecimal exciseRate;
-
-    @Column(name = "e_cess_rate", precision = 5, scale = 2)
-    private BigDecimal eCessRate;
-
-    @Column(name = "sh_e_cess_rate", precision = 5, scale = 2)
-    private BigDecimal shECessRate;
+ 
 
     @Column(name = "avg_rate", precision = 11, scale = 2)
     private BigDecimal avgRate;

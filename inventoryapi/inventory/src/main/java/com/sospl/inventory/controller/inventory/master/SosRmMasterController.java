@@ -32,7 +32,7 @@ public class SosRmMasterController {
     // ===============================
     @PutMapping("/{id}")
     public SosRmMasterResponse update(
-            @PathVariable Long id,
+            @PathVariable Integer id,
             @Valid @RequestBody SosRmMasterRequest request) {
         return service.update(id, request);
     }
@@ -41,7 +41,7 @@ public class SosRmMasterController {
     // GET BY ID
     // ===============================
     @GetMapping("/{id}")
-    public SosRmMasterResponse getById(@PathVariable Long id) {
+    public SosRmMasterResponse getById(@PathVariable Integer id) {
         return service.findById(id);
     }
 
@@ -57,7 +57,7 @@ public class SosRmMasterController {
     // DELETE
     // ===============================
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable Integer id) {
         service.delete(id);
     }
 }
