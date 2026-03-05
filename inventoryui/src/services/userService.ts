@@ -1,5 +1,5 @@
 import api from './api';
-import { User, CreateUserRequest } from '../types';
+import type { User, CreateUserRequest } from '../types';
 
 export const userService = {
   getAll: () => api.get<User[]>('/api/users'),

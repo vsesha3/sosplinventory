@@ -1,5 +1,5 @@
 import api from './api';
-import { Permission } from '../types';
+import type { Permission } from '../types';
 
 export const permissionService = {
   getAll: () => api.get<Permission[]>('/api/permissions'),

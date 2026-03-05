@@ -1,5 +1,5 @@
 import api from './api';
-import { Role, CreateRoleRequest } from '../types';
+import type { Role, CreateRoleRequest } from '../types';
 
 export const roleService = {
   getAll: () => api.get<Role[]>('/api/roles'),

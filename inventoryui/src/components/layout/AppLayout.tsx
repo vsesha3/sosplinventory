@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   AppShell, NavLink, Text, Group, Button, Box, ScrollArea,
+  Burger, Divider, Avatar,
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import {
   IconDashboard, IconUsers, IconShield, IconKey, IconLogout,
   IconChevronDown, IconSettings, IconDatabase,
@@ -12,11 +14,9 @@ import {
   IconAtom, IconReceipt, IconStack2,
 } from '@tabler/icons-react';
 
-// ─── Nav Structure ─────────────────────────────────────────────────────────────
-
 const navGroups = [
   {
-    group: null, // root level
+    group: null,
     items: [
       { label: 'Dashboard', path: '/dashboard', icon: <IconDashboard size={17} /> },
     ],
@@ -39,7 +39,7 @@ const navGroups = [
       { label: 'Product Group Master',    path: '/masters/product-group',    icon: <IconCategory size={17} /> },
       { label: 'RM Group Master',         path: '/masters/rm-group',         icon: <IconAtom size={17} /> },
       { label: 'PM Group Master',         path: '/masters/pm-group',         icon: <IconStack2 size={17} /> },
-      { label: 'UOM Master',              path: '/masters/uom',              icon: <IconScale size={17} /> },
+      { label: 'UOM Master',             path: '/masters/uom',              icon: <IconScale size={17} /> },
       { label: 'Customer Master',         path: '/masters/customer',         icon: <IconUser size={17} /> },
       { label: 'Product Master',          path: '/masters/product',          icon: <IconBox size={17} /> },
       { label: 'Raw Material Master',     path: '/masters/raw-material',     icon: <IconAtom size={17} /> },
@@ -54,14 +54,32 @@ const navGroups = [
   },
 ];
 
-// ─── Component ─────────────────────────────────────────────────────────────────
+const getPageTitle = (pathname: string): string => {
+  for (const section of navGroups) {
+    for (const item of section.items) {
+      if (item.path === pathname) return item.label;
+    }
+  }
+  return 'SOSPL IMS';
+};
+
+const NAVBAR_WIDTH = 250;
+const HEADER_HEIGHT = 56;
 
 const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Track which groups are open
+  const [mobileOpened, { toggle: toggleMobile }] = useDisclosure(false);
+  const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
   const [openGroups, setOpenGroups] = useState<string[]>(['User Management']);
+
+  const user = (() => {
+    try { return JSON.parse(localStorage.getItem('user') || '{}'); }
+    catch { return {}; }
+  })();
+
+  const pageTitle = getPageTitle(location.pathname);
 
   const toggleGroup = (group: string) => {
     setOpenGroups((prev) =>
@@ -72,108 +90,150 @@ const AppLayout: React.FC = () => {
   const isGroupActive = (items: { path: string }[]) =>
     items.some((item) => location.pathname.startsWith(item.path));
 
-  return (
-    <AppShell navbar={{ width: 250, breakpoint: 'sm' }} padding="md">
-      <AppShell.Navbar p="xs" style={{ display: 'flex', flexDirection: 'column' }}>
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
 
-        {/* Brand */}
-        <Box px="sm" py="md" mb="xs" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
-          <Text fw={800} size="md" style={{ letterSpacing: '-0.3px' }}>SOSPL IMS</Text>
-          <Text size="xs" c="dimmed">Inventory Management</Text>
-        </Box>
+  const handleNavClick = (path: string) => {
+    navigate(path);
+    if (mobileOpened) toggleMobile();
+  };
 
-        {/* Nav Items */}
-        <ScrollArea flex={1} scrollbarSize={4}>
-          {navGroups.map((section) => {
-            // Root level (no group header)
-            if (!section.group) {
-              return section.items.map((item) => (
-                <NavLink
-                  key={item.path}
-                  label={item.label}
-                  leftSection={item.icon}
-                  active={location.pathname === item.path}
-                  onClick={() => navigate(item.path)}
-                  mb={2}
-                  style={{ borderRadius: 6 }}
-                />
-              ));
-            }
+  const navContent = (
+    <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <Box px="sm" py="md" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
+        <Text fw={800}>SOSPL IMS</Text>
+        <Text size="xs" c="dimmed">Inventory Management System</Text>
+      </Box>
 
-            // Grouped sections
-            const isOpen = openGroups.includes(section.group);
-            const groupActive = isGroupActive(section.items);
+      <ScrollArea flex={1} scrollbarSize={4} py="xs" px={4}>
+        {navGroups.map((section) => {
+          if (!section.group) {
+            return section.items.map((item) => (
+              <NavLink
+                key={item.path}
+                label={item.label}
+                leftSection={item.icon}
+                active={location.pathname === item.path}
+                onClick={() => handleNavClick(item.path)}
+                mb={2}
+              />
+            ));
+          }
 
-            return (
-              <Box key={section.group} mb={4}>
-                {/* Group Header */}
-                <NavLink
-                  label={
-                    <Text fw={600} size="sm">
-                      {section.group}
-                    </Text>
-                  }
-                  leftSection={section.icon}
-                  rightSection={
-                    <IconChevronDown
-                      size={14}
-                      style={{
-                        transition: 'transform 0.2s',
-                        transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      }}
+          const isOpen = openGroups.includes(section.group);
+          const groupActive = isGroupActive(section.items);
+
+          return (
+            <Box key={section.group} mb={4}>
+              <NavLink
+                label={section.group}
+                leftSection={section.icon}
+                rightSection={
+                  <IconChevronDown
+                    size={14}
+                    style={{
+                      transition: 'transform 0.2s ease',
+                      transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    }}
+                  />
+                }
+                active={groupActive && !isOpen}
+                onClick={() => toggleGroup(section.group!)}
+              />
+              {isOpen && (
+                <Box ml="sm" pl="sm" style={{ borderLeft: '2px solid var(--mantine-color-gray-3)' }}>
+                  {section.items.map((item) => (
+                    <NavLink
+                      key={item.path}
+                      label={item.label}
+                      leftSection={item.icon}
+                      active={location.pathname === item.path}
+                      onClick={() => handleNavClick(item.path)}
+                      mb={2}
                     />
-                  }
-                  active={groupActive && !isOpen}
-                  onClick={() => toggleGroup(section.group!)}
-                  style={{ borderRadius: 6 }}
-                />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          );
+        })}
+      </ScrollArea>
 
-                {/* Group Children */}
-                {isOpen && (
-                  <Box
-                    ml="sm"
-                    pl="sm"
-                    style={{ borderLeft: '2px solid var(--mantine-color-gray-3)' }}
-                  >
-                    {section.items.map((item) => (
-                      <NavLink
-                        key={item.path}
-                        label={item.label}
-                        leftSection={item.icon}
-                        active={location.pathname === item.path}
-                        onClick={() => navigate(item.path)}
-                        mb={2}
-                        size="sm"
-                        style={{ borderRadius: 6, fontSize: 13 }}
-                      />
-                    ))}
-                  </Box>
-                )}
-              </Box>
-            );
-          })}
-        </ScrollArea>
+      <Box p="sm" style={{ borderTop: '1px solid var(--mantine-color-gray-2)' }}>
+        <Group mb="sm">
+          <Avatar radius="xl" size="sm">
+            {(user.fullName || user.username || 'U').charAt(0).toUpperCase()}
+          </Avatar>
+          <Box>
+            <Text size="sm" fw={600}>{user.fullName || user.username || 'User'}</Text>
+            <Text size="xs" c="dimmed">{user.email || ''}</Text>
+          </Box>
+        </Group>
+        <Button
+          leftSection={<IconLogout size={15} />}
+          variant="light"
+          color="red"
+          onClick={handleLogout}
+          fullWidth
+          size="xs"
+        >
+          Logout
+        </Button>
+      </Box>
+    </Box>
+  );
 
-        {/* Logout */}
-        <Box pt="xs" style={{ borderTop: '1px solid var(--mantine-color-gray-2)' }}>
-          <Button
-            leftSection={<IconLogout size={16} />}
-            variant="subtle"
-            color="red"
-            onClick={() => {
-              localStorage.removeItem('token');
-              navigate('/login');
-            }}
-            fullWidth
-          >
-            Logout
-          </Button>
+  return (
+    <AppShell
+      header={{ height: HEADER_HEIGHT }}
+      navbar={{
+        width: NAVBAR_WIDTH,
+        breakpoint: 'sm',
+        collapsed: { mobile: !mobileOpened, desktop: !desktopOpened },
+      }}
+      padding={0}
+    >
+      <AppShell.Header>
+        <Group h="100%" px="md" justify="space-between">
+          <Group gap="sm">
+            <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" />
+            <Burger opened={desktopOpened} onClick={toggleDesktop} visibleFrom="sm" size="sm" />
+            <Divider orientation="vertical" />
+            <Text fw={600} size="sm">{pageTitle}</Text>
+          </Group>
+          <Text size="xs" c="dimmed" visibleFrom="sm">
+            Welcome, {user.fullName || user.username || 'User'}
+          </Text>
+        </Group>
+      </AppShell.Header>
+
+      <AppShell.Navbar p={0}>{navContent}</AppShell.Navbar>
+
+      <AppShell.Main
+        style={{
+          backgroundColor: 'var(--mantine-color-gray-0)',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100vh',
+          // Let AppShell handle its own offsets — do NOT set width/maxWidth here
+        }}
+      >
+        {/* This Box must stretch to fill all available space */}
+        <Box
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            padding: '24px',
+            boxSizing: 'border-box',
+          }}
+        >
+          <Outlet />
         </Box>
-
-      </AppShell.Navbar>
-
-      <AppShell.Main>
-        <Outlet />
       </AppShell.Main>
     </AppShell>
   );
