@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS sos_product_group_master (
+CREATE TABLE IF NOT EXISTS sos_product_group_master_t (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     product_group_id INT NOT NULL UNIQUE,
     group_name VARCHAR(30),

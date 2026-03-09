@@ -10,7 +10,111 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 @Table(name = "sos_product_master_t")
 public class SosProductMaster extends BaseAuditEntity {
 
-    @Id
+    public Integer getProductId() {
+		return productId;
+	}
+
+	public void setProductId(Integer productId) {
+		this.productId = productId;
+	}
+
+	public String getProductName() {
+		return productName;
+	}
+
+	public void setProductName(String productName) {
+		this.productName = productName;
+	}
+
+	public Integer getUomId() {
+		return uomId;
+	}
+
+	public void setUomId(Integer uomId) {
+		this.uomId = uomId;
+	}
+
+	public Integer getProductCode() {
+		return productCode;
+	}
+
+	public void setProductCode(Integer productCode) {
+		this.productCode = productCode;
+	}
+
+	public String getFgLotCode() {
+		return fgLotCode;
+	}
+
+	public void setFgLotCode(String fgLotCode) {
+		this.fgLotCode = fgLotCode;
+	}
+
+	public Integer getProductGroupId() {
+		return productGroupId;
+	}
+
+	public void setProductGroupId(Integer productGroupId) {
+		this.productGroupId = productGroupId;
+	}
+
+	public BigDecimal getRate() {
+		return rate;
+	}
+
+	public void setRate(BigDecimal rate) {
+		this.rate = rate;
+	}
+
+	public Integer getTestId() {
+		return testId;
+	}
+
+	public void setTestId(Integer testId) {
+		this.testId = testId;
+	}
+
+	public BigDecimal getConversionCost() {
+		return conversionCost;
+	}
+
+	public void setConversionCost(BigDecimal conversionCost) {
+		this.conversionCost = conversionCost;
+	}
+
+	public Integer getCapacity() {
+		return capacity;
+	}
+
+	public void setCapacity(Integer capacity) {
+		this.capacity = capacity;
+	}
+
+	public String getPackingType() {
+		return packingType;
+	}
+
+	public void setPackingType(String packingType) {
+		this.packingType = packingType;
+	}
+
+	public String getPrefix() {
+		return prefix;
+	}
+
+	public void setPrefix(String prefix) {
+		this.prefix = prefix;
+	}
+
+	public String getBrandName() {
+		return brandName;
+	}
+
+	public void setBrandName(String brandName) {
+		this.brandName = brandName;
+	}
+
+	@Id
     @Column(name = "product_id", nullable = false, unique = true)
     private Integer productId;
 

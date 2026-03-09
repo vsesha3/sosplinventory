@@ -1,10 +1,20 @@
 package com.sospl.inventory.controller.inventory.master;
 
+import com.sospl.inventory.dto.auth.ApiResponse;
+import com.sospl.inventory.dto.common.PagedResponse;
+import com.sospl.inventory.dto.inventory.master.SosPmMasterResponse;
 import com.sospl.inventory.model.inventory.master.SosPmMaster;
 import com.sospl.inventory.service.inventory.master.SosPmMasterService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -18,34 +28,85 @@ public class SosPmMasterController {
         this.service = service;
     }
 
+    // Create
     @PostMapping
-    public SosPmMaster create(@RequestBody SosPmMaster entity) {
-        return service.save(entity);
+    public ResponseEntity<ApiResponse<SosPmMaster>> create(
+            @RequestBody SosPmMaster entity) {
+        return ResponseEntity.ok(
+                ApiResponse.success("PM created successfully",
+                        service.save(entity)));
     }
 
+    // Update
     @PutMapping("/{id}")
-    public SosPmMaster update(@PathVariable Long id, @RequestBody SosPmMaster entity) {
-        return service.update(id, entity);
+    public ResponseEntity<ApiResponse<SosPmMaster>> update(
+            @PathVariable Integer id,
+            @RequestBody SosPmMaster entity) {
+        return ResponseEntity.ok(
+                ApiResponse.success("PM updated successfully",
+                        service.update(id, entity)));
     }
 
+    // Get by id
     @GetMapping("/{id}")
-    public SosPmMaster getById(@PathVariable Long id) {
-        return service.findById(id)
-                .orElseThrow(() -> new RuntimeException("Record not found"));
+    public ResponseEntity<ApiResponse<SosPmMaster>> getById(
+            @PathVariable Integer id) {
+        return ResponseEntity.ok(
+                ApiResponse.success("PM fetched successfully",
+                        service.findById(id)
+                                .orElseThrow(() -> new RuntimeException(
+                                        "PM not found"))));
     }
 
+    // Get all without pagination
+    @GetMapping("/all")
+    public ResponseEntity<ApiResponse<List<SosPmMaster>>> getAll() {
+        return ResponseEntity.ok(
+                ApiResponse.success("PMs fetched successfully",
+                        service.findAll()));
+    }
+
+    // Get all with details without pagination
+    @GetMapping("/details")
+    public ResponseEntity<ApiResponse<List<SosPmMasterResponse>>> getAllWithDetails() {
+        return ResponseEntity.ok(
+                ApiResponse.success("PMs fetched successfully",
+                        service.findAllWithDetails()));
+    }
+
+    // Get all paginated
     @GetMapping
-    public List<SosPmMaster> getAll() {
-        return service.findAll();
+    public ResponseEntity<ApiResponse<PagedResponse<SosPmMasterResponse>>> getAllPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "pmId") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
+
+        return ResponseEntity.ok(
+                ApiResponse.success("PMs fetched successfully",
+                        service.findAllPaginated(page, size, sortBy, sortDir)));
     }
 
-    @GetMapping("/page")
-    public Page<SosPmMaster> getAllWithPagination(Pageable pageable) {
-        return service.findAll(pageable);
+    // Search with pagination
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<PagedResponse<SosPmMasterResponse>>> search(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "pmId") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Search results fetched successfully",
+                        service.search(keyword, page, size, sortBy, sortDir)));
     }
 
+    // Delete
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> delete(
+            @PathVariable Integer id) {
         service.delete(id);
+        return ResponseEntity.ok(
+                ApiResponse.success("PM deleted successfully"));
     }
 }

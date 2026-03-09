@@ -13,7 +13,7 @@
 -- Extra soft-delete columns added for app layer consistency
 -- =========================================
 
-CREATE TABLE sos_test_master_t (
+CREATE TABLE IF NOT EXISTS sos_test_master_t (
     test_id             BIGINT          NOT NULL,
     test_code           VARCHAR(25),
     test_name           VARCHAR(50),

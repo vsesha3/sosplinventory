@@ -27,8 +27,87 @@ public class SosPmMaster extends BaseAuditEntity {
     private String fgLotCode;
 
  
+    public Integer getPmId() {
+		return pmId;
+	}
 
-    @Column(name = "avg_rate", precision = 11, scale = 2)
+	public void setPmId(Integer pmId) {
+		this.pmId = pmId;
+	}
+
+	public Integer getPmCode() {
+		return pmCode;
+	}
+
+	public void setPmCode(Integer pmCode) {
+		this.pmCode = pmCode;
+	}
+
+	public String getPmName() {
+		return pmName;
+	}
+
+	public void setPmName(String pmName) {
+		this.pmName = pmName;
+	}
+
+	public Integer getPmSize() {
+		return pmSize;
+	}
+
+	public void setPmSize(Integer pmSize) {
+		this.pmSize = pmSize;
+	}
+
+	public String getFgLotCode() {
+		return fgLotCode;
+	}
+
+	public void setFgLotCode(String fgLotCode) {
+		this.fgLotCode = fgLotCode;
+	}
+
+	public BigDecimal getAvgRate() {
+		return avgRate;
+	}
+
+	public void setAvgRate(BigDecimal avgRate) {
+		this.avgRate = avgRate;
+	}
+
+	public Integer getPmGroupId() {
+		return pmGroupId;
+	}
+
+	public void setPmGroupId(Integer pmGroupId) {
+		this.pmGroupId = pmGroupId;
+	}
+
+	public BigDecimal getTareWgt() {
+		return tareWgt;
+	}
+
+	public void setTareWgt(BigDecimal tareWgt) {
+		this.tareWgt = tareWgt;
+	}
+
+	public Integer getUomId() {
+		return uomId;
+	}
+
+	public void setUomId(Integer uomId) {
+		this.uomId = uomId;
+	}
+
+	public Integer gethNhId() {
+		return hNhId;
+	}
+
+	public void sethNhId(Integer hNhId) {
+		this.hNhId = hNhId;
+	}
+
+	@Column(name = "avg_rate", precision = 11, scale = 2)
     private BigDecimal avgRate;
 
     @Column(name = "pm_group_id")
