@@ -14,40 +14,31 @@ export interface ColumnDef {
   label: string;
   width?: number;
   align?: 'left' | 'right' | 'center';
+  wrap?: boolean;     // wraps cell text to next line instead of truncating
+  compact?: boolean;  // reduces font to xs for dense/long-text columns
 }
 
 export interface MasterTableProps {
-  // Data
   columns: ColumnDef[];
-  rows: React.ReactNode[];         // pre-rendered <Table.Tr> elements
+  rows: React.ReactNode[];
   totalElements: number;
   loading: boolean;
-
-  // Pagination
   page: number;
   totalPages: number;
   pageSize: number;
   onPageChange: (page: number) => void;
-
-  // Search
   searchValue: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
-
-  // Selection
   allSelected: boolean;
   someSelected: boolean;
   onToggleSelectAll: () => void;
   selectedCount: number;
-
-  // Toolbar actions
   onAdd?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onRefresh?: () => void;
   onExport?: () => void;
-
-  // Column span for empty/loading state
   colSpan: number;
 }
 
@@ -163,7 +154,6 @@ const MasterTable: React.FC<MasterTableProps> = ({
           <Table striped highlightOnHover withTableBorder withColumnBorders>
             <Table.Thead>
               <Table.Tr>
-                {/* Select all checkbox */}
                 <Table.Th w={40}>
                   <Checkbox
                     checked={allSelected}
@@ -172,13 +162,15 @@ const MasterTable: React.FC<MasterTableProps> = ({
                     size="sm"
                   />
                 </Table.Th>
-
-                {/* Dynamic column headers */}
                 {columns.map((col) => (
                   <Table.Th
                     key={col.key}
                     w={col.width}
                     ta={col.align ?? 'left'}
+                    style={{
+                      ...(col.wrap ? { whiteSpace: 'normal', minWidth: col.width ?? 160 } : {}),
+                      ...(col.compact || col.wrap ? { fontSize: '11px' } : {}),
+                    }}
                   >
                     {col.label}
                   </Table.Th>
