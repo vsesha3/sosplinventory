@@ -12,7 +12,10 @@ import {
   IconBuildingStore, IconCategory, IconScale,
   IconUser, IconBuildingWarehouse, IconTag,
   IconAtom, IconReceipt, IconStack2,
+  IconShoppingCart, IconClipboardList,
 } from '@tabler/icons-react';
+
+// ── Nav Structure ─────────────────────────────────────────────────────────────
 
 const navGroups = [
   {
@@ -31,6 +34,18 @@ const navGroups = [
     ],
   },
   {
+    group: 'Procurement',
+    icon: <IconShoppingCart size={17} />,
+    items: [
+      { label: 'Purchase Orders', path: '/procurement/purchase-orders', icon: <IconClipboardList size={17} /> },
+      // Uncomment as you build each:
+      // { label: 'RM Request',    path: '/procurement/rm-request',    icon: <IconFileText size={17} /> },
+      // { label: 'RM Inward',     path: '/procurement/rm-inward',     icon: <IconPackageImport size={17} /> },
+      // { label: 'RM Outward',    path: '/procurement/rm-outward',    icon: <IconPackageExport size={17} /> },
+      // { label: 'Consumption',   path: '/procurement/consumption',   icon: <IconChartBar size={17} /> },
+    ],
+  },
+  {
     group: 'Masters',
     icon: <IconDatabase size={17} />,
     items: [
@@ -39,7 +54,7 @@ const navGroups = [
       { label: 'Product Group Master',    path: '/masters/product-group',    icon: <IconCategory size={17} /> },
       { label: 'RM Group Master',         path: '/masters/rm-group',         icon: <IconAtom size={17} /> },
       { label: 'PM Group Master',         path: '/masters/pm-group',         icon: <IconStack2 size={17} /> },
-      { label: 'UOM Master',             path: '/masters/uom',              icon: <IconScale size={17} /> },
+      { label: 'UOM Master',              path: '/masters/uom',              icon: <IconScale size={17} /> },
       { label: 'Customer Master',         path: '/masters/customer',         icon: <IconUser size={17} /> },
       { label: 'Product Master',          path: '/masters/product',          icon: <IconBox size={17} /> },
       { label: 'Raw Material Master',     path: '/masters/raw-material',     icon: <IconAtom size={17} /> },
@@ -54,10 +69,14 @@ const navGroups = [
   },
 ];
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 const getPageTitle = (pathname: string): string => {
   for (const section of navGroups) {
     for (const item of section.items) {
-      if (item.path === pathname) return item.label;
+      if (pathname === item.path || pathname.startsWith(item.path + '/')) {
+        return item.label;
+      }
     }
   }
   return 'SOSPL IMS';
@@ -65,6 +84,8 @@ const getPageTitle = (pathname: string): string => {
 
 const NAVBAR_WIDTH = 250;
 const HEADER_HEIGHT = 56;
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 const AppLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -101,6 +122,8 @@ const AppLayout: React.FC = () => {
     if (mobileOpened) toggleMobile();
   };
 
+  // ── Sidebar ───────────────────────────────────────────────────────────────
+
   const navContent = (
     <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box px="sm" py="md" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
@@ -110,6 +133,7 @@ const AppLayout: React.FC = () => {
 
       <ScrollArea flex={1} scrollbarSize={4} py="xs" px={4}>
         {navGroups.map((section) => {
+          // Ungrouped items (Dashboard)
           if (!section.group) {
             return section.items.map((item) => (
               <NavLink
@@ -186,6 +210,8 @@ const AppLayout: React.FC = () => {
     </Box>
   );
 
+  // ── Layout ────────────────────────────────────────────────────────────────
+
   return (
     <AppShell
       header={{ height: HEADER_HEIGHT }}
@@ -218,10 +244,8 @@ const AppLayout: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           minHeight: '100vh',
-          // Let AppShell handle its own offsets — do NOT set width/maxWidth here
         }}
       >
-        {/* This Box must stretch to fill all available space */}
         <Box
           style={{
             flex: 1,

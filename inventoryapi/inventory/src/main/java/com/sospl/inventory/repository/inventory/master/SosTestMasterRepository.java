@@ -1,14 +1,19 @@
 package com.sospl.inventory.repository.inventory.master;
 
 import com.sospl.inventory.model.inventory.master.SosTestMaster;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface SosTestMasterRepository extends JpaRepository<SosTestMaster, Long> {
+public interface SosTestMasterRepository
+        extends JpaRepository<SosTestMaster, Long> {
 
     List<SosTestMaster> findAllByIsDeletedFalse();
 
@@ -16,15 +21,26 @@ public interface SosTestMasterRepository extends JpaRepository<SosTestMaster, Lo
 
     Optional<SosTestMaster> findByTestIdAndIsDeletedFalse(Long testId);
 
-    Optional<SosTestMaster> findByTestCodeAndIsDeletedFalse(String testCode);
-
     Boolean existsByTestId(Long testId);
-
-    Boolean existsByTestCodeIgnoreCaseAndIsDeletedFalse(String testCode);
 
     Boolean existsByTestNameIgnoreCaseAndIsDeletedFalse(String testName);
 
-    List<SosTestMaster> findByTestNameContainingIgnoreCaseAndIsDeletedFalse(String keyword);
+    // Get all paginated
+    @Query("""
+           SELECT t FROM SosTestMaster t
+           WHERE t.isActive = true AND t.isDeleted = false
+           """)
+    Page<SosTestMaster> findAllActivePaginated(Pageable pageable);
 
-    List<SosTestMaster> findByTestCodeContainingIgnoreCaseAndIsDeletedFalse(String keyword);
+    // Search paginated
+    @Query("""
+           SELECT t FROM SosTestMaster t
+           WHERE (t.isActive = true AND t.isDeleted = false)
+           AND (
+               LOWER(t.testName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(t.testCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           )
+           """)
+    Page<SosTestMaster> searchPaginated(
+            @Param("keyword") String keyword, Pageable pageable);
 }

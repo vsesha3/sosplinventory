@@ -40,6 +40,8 @@ export interface MasterTableProps {
   onRefresh?: () => void;
   onExport?: () => void;
   colSpan: number;
+  extraActions?: React.ReactNode;
+   expandable?: boolean;   
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -66,6 +68,8 @@ const MasterTable: React.FC<MasterTableProps> = ({
   onRefresh,
   onExport,
   colSpan,
+  extraActions,
+  expandable = false,
 }) => {
   const startRecord = totalElements === 0 ? 0 : (page - 1) * pageSize + 1;
   const endRecord   = Math.min(page * pageSize, totalElements);
@@ -126,6 +130,13 @@ const MasterTable: React.FC<MasterTableProps> = ({
                 Export
               </Button>
             </Tooltip>
+
+            {extraActions && (
+              <>
+                <Divider orientation="vertical" />
+                {extraActions}
+              </>
+            )}
           </Group>
 
           <Group gap="sm">
@@ -154,6 +165,7 @@ const MasterTable: React.FC<MasterTableProps> = ({
           <Table striped highlightOnHover withTableBorder withColumnBorders>
             <Table.Thead>
               <Table.Tr>
+                {expandable && <Table.Th w={36} />}
                 <Table.Th w={40}>
                   <Checkbox
                     checked={allSelected}

@@ -37,22 +37,31 @@ public class OracleToMySQLMigrator {
     private static final Map<String, String> COLUMN_REMAP = new HashMap<>();
     static {
         COLUMN_REMAP.put("CREATED_ON",      "created_at");
-        COLUMN_REMAP.put("LAST_UPDATED_ON",  "updated_at");
-        COLUMN_REMAP.put("LAST_UPDATED_BY",  "updated_by");
-        COLUMN_REMAP.put("ISACTIVE",         "is_active");
+        COLUMN_REMAP.put("LAST_UPDATED_ON", "updated_at");
+        COLUMN_REMAP.put("LAST_UPDATED_BY", "updated_by");
+        COLUMN_REMAP.put("ISACTIVE",        "is_active");
+
+        // ← Add these
+        COLUMN_REMAP.put("CREATED_DATE",    "created_at");
+        COLUMN_REMAP.put("UPDATED_DATE",    "updated_at");
+        COLUMN_REMAP.put("UPDATED_BY",      "updated_by");
+        COLUMN_REMAP.put("CREATED_BY",      "created_by");
     }
 
     // ── Columns that exist in Oracle but have been DROPPED in MySQL ──────────
     // (e.g. excise cols removed due to GST migration)
     // Any Oracle column whose UPPER-CASE name is in this set will be skipped.
     private static final Set<String> EXCLUDED_COLUMNS = new HashSet<>(Arrays.asList(
-        "EXCISE_TARIFF_NO",
-        "EXCISE_DECLARED_ITEM",
-        "EXCISE_RATE",
-        "E_CESS_RATE",
-        "SH_E_CESS_RATE"
-    ));
+    	    "EXCISE_TARIFF_NO",
+    	    "EXCISE_DECLARED_ITEM",
+    	    "EXCISE_RATE",
+    	    "E_CESS_RATE",
+    	    "SH_E_CESS_RATE",
 
+    	    // ← Add these if not needed
+    	    "PO_CENVAT",
+    	    "PO_CENVAT_RATE"
+    	));
     // ── Columns that store Y/N in Oracle but are TINYINT(1) in MySQL ─────────
     // 'Y' → 1,  anything else (including 'N', null) → 0
     private static final Set<String> YN_TO_BIT_COLUMNS = new HashSet<>(Arrays.asList(

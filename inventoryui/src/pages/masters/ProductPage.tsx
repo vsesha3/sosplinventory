@@ -63,6 +63,7 @@ const ProductPage: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
   useEffect(() => {
     fetchData(page, keyword);
   }, [page, keyword, fetchData]);

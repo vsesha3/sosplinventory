@@ -8,7 +8,7 @@ import PermissionsPage from '../pages/permissions/PermissionsPage';
 import ProtectedRoute from './ProtectedRoute';
 import AppLayout from '../components/layout/AppLayout';
 
-// Master placeholders
+// Masters
 import CountryPage           from '../pages/masters/CountryPage';
 import TransporterPage       from '../pages/masters/TransporterPage';
 import ProductGroupPage      from '../pages/masters/ProductGroupPage';
@@ -26,12 +26,16 @@ import SubitemPage           from '../pages/masters/SubitemPage';
 import MiscellaneousPage     from '../pages/masters/MiscellaneousPage';
 import BrandPage             from '../pages/masters/BrandPage';
 
+// Procurement — folder stays as pages/purchase-order/
+import PurchaseOrderPage     from '../pages/purchase-order/PurchaseOrderPage';
+
 const AppRouter: React.FC = () => (
   <BrowserRouter>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
+
           {/* Root */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -40,6 +44,9 @@ const AppRouter: React.FC = () => (
           <Route path="/users"       element={<UsersPage />} />
           <Route path="/roles"       element={<RolesPage />} />
           <Route path="/permissions" element={<PermissionsPage />} />
+
+          {/* Procurement — nav shows under "Procurement" group, files live in pages/purchase-order/ */}
+          <Route path="/procurement/purchase-orders" element={<PurchaseOrderPage />} />
 
           {/* Masters */}
           <Route path="/masters/country"           element={<CountryPage />} />
@@ -58,6 +65,7 @@ const AppRouter: React.FC = () => (
           <Route path="/masters/subitem"           element={<SubitemPage />} />
           <Route path="/masters/miscellaneous"     element={<MiscellaneousPage />} />
           <Route path="/masters/brand"             element={<BrandPage />} />
+
         </Route>
       </Route>
     </Routes>
