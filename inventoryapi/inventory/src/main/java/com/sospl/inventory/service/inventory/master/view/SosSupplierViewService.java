@@ -2,6 +2,7 @@ package com.sospl.inventory.service.inventory.master.view;
 
 
 
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosSupplierMasterVResponse;
 
@@ -24,4 +25,6 @@ public interface SosSupplierViewService {
     PagedResponse<SosSupplierMasterVResponse> search(
             String keyword, int page, int size,
             String sortBy, String sortDir);
+
+	List<DropDownResponse> findAllForDropDown();
 }

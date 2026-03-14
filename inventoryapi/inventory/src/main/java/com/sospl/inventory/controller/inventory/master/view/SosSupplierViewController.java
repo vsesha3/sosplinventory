@@ -3,6 +3,7 @@ package com.sospl.inventory.controller.inventory.master.view;
 // Match your actual service package
 import com.sospl.inventory.service.inventory.master.view.SosSupplierViewService;
 import com.sospl.inventory.dto.auth.ApiResponse;
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosSupplierMasterVResponse;
 import org.springframework.http.ResponseEntity;
@@ -74,5 +75,12 @@ public class SosSupplierViewController {
         return ResponseEntity.ok(
                 ApiResponse.success("Search results fetched successfully",
                         service.search(keyword, page, size, sortBy, sortDir)));
+    }
+    
+    @GetMapping("/dropdown")
+    public ResponseEntity<ApiResponse<List<DropDownResponse>>> getDropDown() {
+        return ResponseEntity.ok(
+                ApiResponse.success("Suppliers fetched successfully",
+                        service.findAllForDropDown()));
     }
 }

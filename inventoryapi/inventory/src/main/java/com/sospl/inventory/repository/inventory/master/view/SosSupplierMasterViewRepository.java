@@ -56,4 +56,13 @@ public interface SosSupplierMasterViewRepository
            """)
     Page<SosSupplierMasterView> searchActivePaginated(
             @Param("keyword") String keyword, Pageable pageable);
+    
+    
+ // Add this method to existing repository
+    @Query("""
+           SELECT s FROM SosSupplierMasterView s
+           WHERE s.isActive = true
+           ORDER BY s.supplierName ASC
+           """)
+    List<SosSupplierMasterView> findAllForDropDown();
 }

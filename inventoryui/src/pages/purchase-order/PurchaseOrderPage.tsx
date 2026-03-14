@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Title, Text, Box, Alert, Loader, Paper, Badge,
@@ -14,6 +15,7 @@ import ExpandableRow from '../../components/common/ExpandableRow';
 import type { ColumnDef } from '../../components/common/MasterTable';
 import type { ChildColumnDef } from '../../components/common/ExpandableRow';
 import type { PagedApiResponse } from '../../types/api.types';
+import PurchaseOrderForm from './PurchaseOrderForm';
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -61,11 +63,11 @@ const COLUMNS: ColumnDef[] = [
   { key: 'supplierCode',       label: 'Supplier Code',     width: 120 },
   { key: 'supplierName',       label: 'Supplier Name',     width: 160 },
   { key: 'poDeliverySchedule', label: 'Delivery Schedule', width: 140 },
-  { key: 'poType',             label: 'Type',              width: 90  },
-  { key: 'poPaymentTerms',     label: 'Payment Terms',     width: 120 },
+  { key: 'poType',             label: 'Type',              width: 130  },
+  { key: 'poPaymentTerms',     label: 'Payment Terms',     width: 90 },
   { key: 'poDeliveryTerms',    label: 'Delivery Terms',    width: 120 },
   { key: 'poClosedFlag',       label: 'Status',            width: 90  },
-  { key: 'addCharges',         label: 'Add. Charges',      width: 110, align: 'right' },
+ 
   { key: 'createdBy',          label: 'Created By',        width: 110 },
 ];
 
@@ -120,6 +122,10 @@ const PurchaseOrderPage: React.FC = () => {
   const [fromDate, setFromDate] = useState<string | null>(null);
 const [toDate, setToDate]     = useState<string | null>(null);
   const [filterActive, setFilterActive]   = useState(false);
+  const [poFormOpen, setPoformOpen] = useState(false);
+  const [editPoRefNo, setEditPoRefNo]     = useState<number | null>(null);
+  const [formMode, setFormMode]           = useState<'create' | 'update'>('create'); // 
+
 
   // ── Fetch parent POs ───────────────────────────────────────────────────────
   const fetchData = useCallback(async (
@@ -237,11 +243,7 @@ const [toDate, setToDate]     = useState<string | null>(null);
                   </Badge>
                 : <Text c="dimmed" size="sm">—</Text>}
             </Table.Td>
-            <Table.Td ta="right">
-              {item.addCharges != null
-                ? <Text size="sm" ta="right">{Number(item.addCharges).toFixed(2)}</Text>
-                : <Text c="dimmed" size="sm" ta="right">—</Text>}
-            </Table.Td>
+          
             <Table.Td>{val(item.createdBy)}</Table.Td>
           </>
         }
@@ -336,14 +338,41 @@ const [toDate, setToDate]     = useState<string | null>(null);
           someSelected={someSelected}
           onToggleSelectAll={toggleSelectAll}
           selectedCount={selected.length}
-          onAdd={() => console.log('New PO')}
-          onEdit={() => console.log('Edit', selected)}
+          onAdd={() => setPoformOpen(true)}
+          
+          onEdit={() => {
+  if (selected.length === 1) {
+    setEditPoRefNo(selected[0]); // ← pass selected po id
+    setFormMode('update');        // ← set mode
+    setPoformOpen(true);
+  }
+}}
           onDelete={() => console.log('Delete', selected)}
           onRefresh={() => fetchData(page, keyword, fromDate, toDate)}
           onExport={() => console.log('Export')}
           extraActions={extraActions}
         />
       )}
+
+      <PurchaseOrderForm
+  opened={poFormOpen}
+  onClose={() => setPoformOpen(false)}
+  onSave={(data) => {
+    console.log('Save PO', data);
+    setPoformOpen(false);
+  }}
+  onPrint={() => console.log('Print')}
+  poTypeOptions={[
+    { value: 'RAW_MATERIAL',     label: 'Raw Material' },
+    { value: 'PACKING_MATERIAL', label: 'Packing Material' },
+    { value: 'CAPITAL_GOODS',    label: 'Capital Goods' },
+    { value: 'MISCELLANEOUS',    label: 'Miscellaneous' },
+  ]}
+  supplierOptions={[]}
+  mode={formMode}                // ← pass mode
+  poRefNo={editPoRefNo} 
+  
+/>
     </Box>
   );
 };

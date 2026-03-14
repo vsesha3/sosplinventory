@@ -1,5 +1,6 @@
 package com.sospl.inventory.service.inventory.master.view.impl;
 
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosSupplierMasterVResponse;
 import com.sospl.inventory.model.inventory.master.view.SosSupplierMasterView;
@@ -129,4 +130,16 @@ public class SosSupplierViewServiceImpl implements SosSupplierViewService {
         response.setContactMobile(entity.getContactMobile());
         return response;
     }
+    
+    @Override
+    public List<DropDownResponse> findAllForDropDown() {
+        return repository.findAllForDropDown()
+                .stream()
+                .map(s -> new DropDownResponse(
+                        s.getSupplierId(),
+                        s.getSupplierName()))
+                .collect(Collectors.toList());
+    }
+    
+    
 }
