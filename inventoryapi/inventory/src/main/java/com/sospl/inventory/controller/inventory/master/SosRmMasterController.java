@@ -1,21 +1,15 @@
 package com.sospl.inventory.controller.inventory.master;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
+import com.sospl.inventory.dto.inventory.master.SosRmMasterNativeResponse;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterRequest;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterResponse;
 import com.sospl.inventory.service.inventory.master.SosRmMasterService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,7 +23,8 @@ public class SosRmMasterController {
         this.service = service;
     }
 
-    // Create
+    // ── Existing endpoints — DO NOT CHANGE ────────────────────────────────
+
     @PostMapping
     public ResponseEntity<ApiResponse<SosRmMasterResponse>> create(
             @Valid @RequestBody SosRmMasterRequest request) {
@@ -37,8 +32,21 @@ public class SosRmMasterController {
                 ApiResponse.success("RM created successfully",
                         service.create(request)));
     }
+    
+    @GetMapping("/details/long")
+    public ResponseEntity<ApiResponse<List<SosRmMasterResponse>>> getAllWithDetailsLong() {
+        return ResponseEntity.ok(
+                ApiResponse.success("RMs fetched successfully",
+                        service.findAllActiveWithDetailsLong()));
+    }
+    
+    @GetMapping("/dropdown")
+    public ResponseEntity<ApiResponse<List<DropDownResponse>>> getDropDown() {
+        return ResponseEntity.ok(
+                ApiResponse.success("RMs fetched successfully",
+                        service.findAllForDropDown()));
+    }
 
-    // Update
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<SosRmMasterResponse>> update(
             @PathVariable Integer id,
@@ -48,16 +56,6 @@ public class SosRmMasterController {
                         service.update(id, request)));
     }
 
-    // Get by id
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<SosRmMasterResponse>> getById(
-            @PathVariable Integer id) {
-        return ResponseEntity.ok(
-                ApiResponse.success("RM fetched successfully",
-                        service.findById(id)));
-    }
-
-    // Get all without pagination
     @GetMapping("/all")
     public ResponseEntity<ApiResponse<List<SosRmMasterResponse>>> getAll() {
         return ResponseEntity.ok(
@@ -65,20 +63,17 @@ public class SosRmMasterController {
                         service.findAll()));
     }
 
-    // Get all with pagination
     @GetMapping
     public ResponseEntity<ApiResponse<PagedResponse<SosRmMasterResponse>>> getAllPaginated(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "rmId") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir) {
-
         return ResponseEntity.ok(
                 ApiResponse.success("RMs fetched successfully",
                         service.findAllPaginated(page, size, sortBy, sortDir)));
     }
 
-    // Search with pagination
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PagedResponse<SosRmMasterResponse>>> search(
             @RequestParam String keyword,
@@ -86,18 +81,63 @@ public class SosRmMasterController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "rmId") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir) {
-
         return ResponseEntity.ok(
                 ApiResponse.success("Search results fetched successfully",
                         service.search(keyword, page, size, sortBy, sortDir)));
     }
 
-    // Delete
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(
             @PathVariable Integer id) {
         service.delete(id);
         return ResponseEntity.ok(
                 ApiResponse.success("RM deleted successfully"));
+    }
+
+    // ── Must be above /{id} ───────────────────────────────────────────────
+
+    // Get all active with uomName and packUomName - no pagination
+    @GetMapping("/details")
+    public ResponseEntity<ApiResponse<List<SosRmMasterNativeResponse>>> getAllWithDetails() {
+        return ResponseEntity.ok(
+                ApiResponse.success("RMs fetched successfully",
+                        service.findAllActiveWithDetails()));
+    }
+
+    // Get all active with details - paginated
+    @GetMapping("/details/page")
+    public ResponseEntity<ApiResponse<PagedResponse<SosRmMasterNativeResponse>>> getAllWithDetailsPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "rmName") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
+        return ResponseEntity.ok(
+                ApiResponse.success("RMs fetched successfully",
+                        service.findAllActiveWithDetailsPaginated(
+                                page, size, sortBy, sortDir)));
+    }
+
+    // Search active with details - paginated
+    @GetMapping("/details/search")
+    public ResponseEntity<ApiResponse<PagedResponse<SosRmMasterNativeResponse>>> searchWithDetails(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "rmName") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Search results fetched successfully",
+                        service.searchActiveWithDetails(
+                                keyword, page, size, sortBy, sortDir)));
+    }
+
+    // ── Always last ───────────────────────────────────────────────────────
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<SosRmMasterResponse>> getById(
+            @PathVariable Integer id) {
+        return ResponseEntity.ok(
+                ApiResponse.success("RM fetched successfully",
+                        service.findById(id)));
     }
 }

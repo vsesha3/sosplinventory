@@ -363,10 +363,10 @@ const [toDate, setToDate]     = useState<string | null>(null);
   }}
   onPrint={() => console.log('Print')}
   poTypeOptions={[
-    { value: 'RAW_MATERIAL',     label: 'Raw Material' },
-    { value: 'PACKING_MATERIAL', label: 'Packing Material' },
-    { value: 'CAPITAL_GOODS',    label: 'Capital Goods' },
-    { value: 'MISCELLANEOUS',    label: 'Miscellaneous' },
+    { value: 'RAW_MATERIAL',     label: 'Raw Material', prefix: 'RM' },
+    { value: 'PACKING_MATERIAL', label: 'Packing Material', prefix: 'PM' },
+    { value: 'CAPITAL_GOODS',    label: 'Capital Goods', prefix: 'CG' },
+    { value: 'MISCELLANEOUS',    label: 'Miscellaneous', prefix: 'MISC' },
   ]}
   supplierOptions={[]}
   mode={formMode}                // ← pass mode

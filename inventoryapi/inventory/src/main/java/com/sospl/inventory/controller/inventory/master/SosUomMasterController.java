@@ -1,12 +1,16 @@
 package com.sospl.inventory.controller.inventory.master;
 
+import com.sospl.inventory.dto.auth.ApiResponse;
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.model.inventory.master.SosUomMaster;
 import com.sospl.inventory.service.inventory.master.SosUomMasterService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/uom")
@@ -21,6 +25,20 @@ public class SosUomMasterController {
     @PostMapping
     public SosUomMaster create(@RequestBody SosUomMaster entity) {
         return service.save(entity);
+    }
+    
+    
+    
+    @GetMapping("/dropdown")
+    public ResponseEntity<ApiResponse<List<DropDownResponse>>> getDropDown() {
+        List<DropDownResponse> list = service.findAll()
+                .stream()
+                .map(u -> new DropDownResponse(
+                        u.getUomId(),    // Long → auto converted to String
+                        u.getUomName()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(
+                ApiResponse.success("UOMs fetched successfully", list));
     }
 
     @PutMapping("/{id}")

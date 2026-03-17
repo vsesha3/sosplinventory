@@ -50,6 +50,24 @@ export function FormDatePicker({
           zIndex: 9999,
           position: 'bottom-start',
         }}
+       getDayProps={(date) => {
+  const today = new Date();
+  const d = new Date(date);
+  const isToday =
+    today.getFullYear() === d.getFullYear() &&
+    today.getMonth() === d.getMonth() &&
+    today.getDate() === d.getDate();
+  return isToday
+    ? {
+        style: {
+          backgroundColor: 'var(--mantine-color-blue-1)',
+          color: 'var(--mantine-color-blue-7)',
+          fontWeight: 700,
+          borderRadius: '50%',
+        },
+      }
+    : {};
+}}
         styles={{
           input: {
             cursor: readOnly ? 'default' : 'pointer',

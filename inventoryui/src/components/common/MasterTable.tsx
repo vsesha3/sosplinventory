@@ -41,7 +41,7 @@ export interface MasterTableProps {
   onExport?: () => void;
   colSpan: number;
   extraActions?: React.ReactNode;
-   expandable?: boolean;   
+  footer?: React.ReactNode;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -70,6 +70,7 @@ const MasterTable: React.FC<MasterTableProps> = ({
   colSpan,
   extraActions,
   expandable = false,
+  footer,
 }) => {
   const startRecord = totalElements === 0 ? 0 : (page - 1) * pageSize + 1;
   const endRecord   = Math.min(page * pageSize, totalElements);
@@ -199,6 +200,7 @@ const MasterTable: React.FC<MasterTableProps> = ({
                 </Table.Tr>
               )}
             </Table.Tbody>
+            {footer}
           </Table>
         </ScrollArea>
       )}

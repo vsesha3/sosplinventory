@@ -1,6 +1,8 @@
 package com.sospl.inventory.service.inventory.master.impl;
 
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
+import com.sospl.inventory.dto.inventory.master.SosRmMasterNativeResponse;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterRequest;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterResponse;
 import com.sospl.inventory.mapper.inventory.master.SosRmMasterMapper;
@@ -14,6 +16,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class SosRmMasterServiceImpl implements SosRmMasterService {
@@ -57,7 +60,7 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     public SosRmMasterResponse findById(Integer id) {
         return repository.findAllWithDetails()
                 .stream()
-                .filter(r -> r.getId().equals(id))
+                .filter(r -> r.getRmId().equals(id))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("RM not found"));
     }
@@ -70,15 +73,9 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     @Override
     public PagedResponse<SosRmMasterResponse> findAllPaginated(
             int page, int size, String sortBy, String sortDir) {
-
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
-
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Pageable pageable = buildPageable(page, size, sortBy, sortDir);
         Page<SosRmMasterResponse> result =
                 repository.findAllWithDetailsPaginated(pageable);
-
         return buildPagedResponse(result);
     }
 
@@ -86,19 +83,49 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     public PagedResponse<SosRmMasterResponse> search(
             String keyword, int page, int size,
             String sortBy, String sortDir) {
-
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
-
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Pageable pageable = buildPageable(page, size, sortBy, sortDir);
         Page<SosRmMasterResponse> result =
                 repository.searchWithDetailsPaginated(keyword, pageable);
-
         return buildPagedResponse(result);
     }
 
-    // Helper
+    // ── New methods using NativeResponse ─────────────────────────────────
+
+    @Override
+    public List<SosRmMasterNativeResponse> findAllActiveWithDetails() {
+        return repository.findAllActiveWithDetails();
+    }
+
+    @Override
+    public PagedResponse<SosRmMasterNativeResponse> findAllActiveWithDetailsPaginated(
+            int page, int size, String sortBy, String sortDir) {
+        Pageable pageable = buildPageable(page, size, sortBy, sortDir);
+        Page<SosRmMasterNativeResponse> result =           // ← NativeResponse
+                repository.findAllActiveWithDetailsPaginated(pageable);
+        return buildNativePagedResponse(result);           // ← separate helper
+    }
+
+    @Override
+    public PagedResponse<SosRmMasterNativeResponse> searchActiveWithDetails(
+            String keyword, int page, int size,
+            String sortBy, String sortDir) {
+        Pageable pageable = buildPageable(page, size, sortBy, sortDir);
+        Page<SosRmMasterNativeResponse> result =           // ← NativeResponse
+                repository.searchActiveWithDetailsPaginated(keyword, pageable);
+        return buildNativePagedResponse(result);           // ← separate helper
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+
+    private Pageable buildPageable(int page, int size,
+                                    String sortBy, String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        return PageRequest.of(page, size, sort);
+    }
+
+    // For SosRmMasterResponse (existing)
     private PagedResponse<SosRmMasterResponse> buildPagedResponse(
             Page<SosRmMasterResponse> page) {
         return new PagedResponse<>(
@@ -111,4 +138,54 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
                 page.isLast()
         );
     }
+
+    // For SosRmMasterNativeResponse (new)  ← added separate helper
+    private PagedResponse<SosRmMasterNativeResponse> buildNativePagedResponse(
+            Page<SosRmMasterNativeResponse> page) {
+        return new PagedResponse<>(
+                page.getContent(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.isFirst(),
+                page.isLast()
+        );
+    }
+    
+    //drop down 
+    
+    @Override
+    public List<DropDownResponse> findAllForDropDown() {
+        return repository.findAllByIsActiveTrueAndIsDeletedFalse()
+                .stream()
+                .filter(r -> r.getRmId() != null)           // ← skip null id records
+                .map(r -> new DropDownResponse(
+                        r.getRmId(),
+                        r.getRmName() != null ? r.getRmName() : "-"))  // ← null safe name
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<SosRmMasterResponse> findAllActiveWithDetailsLong() {
+        return repository.findAllActiveWithDetails()  // ← native query with joins
+                .stream()
+                .filter(r -> r.getRmId() != null)
+                .map(r -> new SosRmMasterResponse(
+                        r.getRmId() != null
+                                ? r.getRmId().longValue() : null,    // Integer → Long
+                        r.getRmCode(),                               // Long
+                        r.getRmName() != null ? r.getRmName() : "-",
+                        r.getUomId(),                                // Long
+                        r.getUomName() != null ? r.getUomName() : "-",
+                        r.getPackUom(),                              // Long
+                        r.getPackUomName() != null
+                                ? r.getPackUomName() : "-",
+                        r.getAvgRate(),
+                        r.getPackSize()
+                ))
+                .collect(Collectors.toList());
+    }
+    
+    
 }

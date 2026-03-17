@@ -1,10 +1,13 @@
 package com.sospl.inventory.service.inventory.view.impl;
 
 import com.sospl.inventory.dto.common.PagedResponse;
+import com.sospl.inventory.dto.common.ReferenceNumberResponse;
 import com.sospl.inventory.dto.inventory.view.SosPurchaseOrderViewResponse;
 import com.sospl.inventory.model.inventory.view.SosPurchaseOrderView;
+import com.sospl.inventory.repository.inventory.view.SosPoHeaderRepository;
 import com.sospl.inventory.repository.inventory.view.SosPurchaseOrderViewRepository;
 import com.sospl.inventory.service.inventory.view.SosPurchaseOrderViewService;
+import com.sospl.inventory.util.GetCurrentFinancialYear;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,10 +22,13 @@ public class SosPurchaseOrderViewServiceImpl
         implements SosPurchaseOrderViewService {
 
     private final SosPurchaseOrderViewRepository repository;
+    private final SosPoHeaderRepository poHeaderRepository;
 
     public SosPurchaseOrderViewServiceImpl(
-            SosPurchaseOrderViewRepository repository) {
+            SosPurchaseOrderViewRepository repository,
+            SosPoHeaderRepository poHeaderRepository) {
         this.repository = repository;
+        this.poHeaderRepository = poHeaderRepository;
     }
 
     @Override
@@ -30,7 +36,7 @@ public class SosPurchaseOrderViewServiceImpl
         return repository.findByPoRefNo(poRefNo)
                 .map(this::mapToResponse)
                 .orElseThrow(() -> new RuntimeException(
-                        "Purchase order not found with id: " + poRefNo));
+                        "Purchase order not found: " + poRefNo));
     }
 
     @Override
@@ -73,6 +79,27 @@ public class SosPurchaseOrderViewServiceImpl
         Pageable pageable = PageRequest.of(page, size);
         return buildPagedResponse(
                 repository.searchPaginated(keyword, pageable));
+    }
+
+    @Override
+    public ReferenceNumberResponse generateReferenceNumber(String prefix) {
+
+        // Get current financial year from util
+        String financialYear = GetCurrentFinancialYear.getCurrentFinancialYear();
+
+        // Get next running number per prefix per financial year
+        Integer nextNumber = poHeaderRepository
+                .getNextRunningNumber(prefix, financialYear);
+        if (nextNumber == null) nextNumber = 1;
+
+        // Format 4 digit zero padded
+        String formattedNumber = String.format("%04d", nextNumber);
+
+        // Build reference number e.g. RM/0033/2025-2026
+        String referenceNumber = prefix + "/" + formattedNumber
+                + "/" + financialYear;
+
+        return new ReferenceNumberResponse(referenceNumber);
     }
 
     private PagedResponse<SosPurchaseOrderViewResponse> buildPagedResponse(

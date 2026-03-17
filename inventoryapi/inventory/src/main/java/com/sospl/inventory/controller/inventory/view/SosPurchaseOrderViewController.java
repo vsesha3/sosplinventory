@@ -2,6 +2,7 @@ package com.sospl.inventory.controller.inventory.view;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
+import com.sospl.inventory.dto.common.ReferenceNumberResponse;
 import com.sospl.inventory.dto.inventory.view.SosPurchaseOrderViewResponse;
 import com.sospl.inventory.service.inventory.view.SosPurchaseOrderViewService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,6 +22,16 @@ public class SosPurchaseOrderViewController {
         this.service = service;
     }
 
+    
+    @GetMapping("/generate-reference-number")
+    public ResponseEntity<ApiResponse<ReferenceNumberResponse>> generateReferenceNumber(
+            @RequestParam String prefix) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Reference number generated successfully",
+                        service.generateReferenceNumber(prefix)));
+    }
+    
+    
     // Get by id
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<SosPurchaseOrderViewResponse>> getById(

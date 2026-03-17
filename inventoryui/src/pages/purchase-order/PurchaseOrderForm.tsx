@@ -2,23 +2,30 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Paper, Text, Group, Button,
-  Grid, Badge, Divider, Stack, Loader, Center, Table, ScrollArea,
+  Grid, Badge, Divider, Stack, Loader, Center, Table,
 } from '@mantine/core';
 import type { DateValue } from '@mantine/dates';
 import { IconPrinter } from '@tabler/icons-react';
 import { Modal } from '@mantine/core';
 import api from '../../services/api';
+import type { ApiResponse } from '../../types/api.types';
 
 import { FormDatePicker } from '../../components/common/FormDatePicker';
 import { FormTextInput } from '../../components/common/FormTextInput';
 import { FormSelect } from '../../components/common/FormSelect';
 import { FormTextarea } from '../../components/common/FormTextarea';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import MasterTable from '../../components/common/MasterTable';
+import type { ColumnDef } from '../../components/common/MasterTable';
+import POLineItem from './Polineitem';
+import type { POLineItemData } from './Polineitem';
 
 // ── API Types ─────────────────────────────────────────────────────────────────
 
 interface DropDownOption {
   value: string;
   label: string;
+  prefix?: string;
 }
 
 interface DropDownApiResponse {
@@ -27,7 +34,6 @@ interface DropDownApiResponse {
   data: DropDownOption[];
 }
 
-// Numeric fields come as { source: "264.00", parsedValue: 264 }
 interface DecimalField {
   source: string;
   parsedValue: number;
@@ -63,8 +69,6 @@ interface PoDetailApiResponse {
   data: PurchaseOrderApiData;
 }
 
-// ── PO Line Item Types ────────────────────────────────────────────────────────
-
 interface PoLineItem {
   poDetId: number;
   poRefNo: number;
@@ -88,6 +92,10 @@ interface PoLineItemsApiResponse {
   success: boolean;
   message: string;
   data: PoLineItem[];
+}
+
+interface ReferenceNumberResponse {
+  referenceNumber: string;
 }
 
 // ── Form Types ────────────────────────────────────────────────────────────────
@@ -140,10 +148,24 @@ const defaultForm: PurchaseOrderFormData = {
   requestedBy: null,
 };
 
+// ── Line item columns for MasterTable ─────────────────────────────────────────
+
+const LINE_ITEM_COLUMNS: ColumnDef[] = [
+  { key: 'poRmCode',    label: 'RM Code',   width: 110 },
+  { key: 'poRmName',    label: 'RM Name',   width: 180 },
+  { key: 'poUom',       label: 'UOM',       width: 70  },
+  { key: 'poQty',       label: 'Qty',       width: 90,  align: 'right' },
+  { key: 'poRate',      label: 'Rate',      width: 90,  align: 'right' },
+  { key: 'poNoOfPacks', label: 'Packs',     width: 80,  align: 'right' },
+  { key: 'poPackSize',  label: 'Pack Size', width: 90,  align: 'right' },
+  { key: 'hsnCode',     label: 'HSN Code',  width: 100 },
+  { key: 'sgst',        label: 'SGST %',    width: 80,  align: 'right' },
+  { key: 'cgst',        label: 'CGST %',    width: 80,  align: 'right' },
+  { key: 'igst',        label: 'IGST %',    width: 80,  align: 'right' },
+  { key: 'igstValue',   label: 'IGST Val',  width: 90,  align: 'right' },
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-
-
 
 const pv = (field: DecimalField | null | undefined, decimals = 2): string => {
   if (field == null) return '—';
@@ -160,12 +182,11 @@ const dash = (val: string | null | undefined): string =>
 const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   initialData,
   poTypeOptions = [
-    { value: 'Raw Material',     label: 'Raw Material' },
-    { value: 'Packing Material', label: 'Packing Material' },
-    { value: 'Capital Goods',    label: 'Capital Goods' },
-    { value: 'Miscellaneous',    label: 'Miscellaneous' },
+    { value: 'Raw Material',     label: 'Raw Material',     prefix: 'RM'   },
+    { value: 'Packing Material', label: 'Packing Material', prefix: 'PM'   },
+    { value: 'Capital Goods',    label: 'Capital Goods',    prefix: 'CG'   },
+    { value: 'Miscellaneous',    label: 'Miscellaneous',    prefix: 'MISC' },
   ],
-
   onSave,
   onPrint,
   readOnly = false,
@@ -175,30 +196,30 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   poRefNo = null,
 }) => {
 
-  const [form, setForm] = useState<PurchaseOrderFormData>({
-    ...defaultForm,
-    ...initialData,
-  });
-
+  const [form, setForm]           = useState<PurchaseOrderFormData>({ ...defaultForm, ...initialData });
   const [dropdowns, setDropdowns] = useState({
     employeeOptions: [] as DropDownOption[],
     supplierOptions: [] as DropDownOption[],
   });
-
-  const [lineItems, setLineItems]     = useState<PoLineItem[]>([]);
-  const [formLoading, setFormLoading] = useState(false);
-  const [fetchError, setFetchError]   = useState<string | null>(null);
+  const [lineItems, setLineItems]             = useState<PoLineItem[]>([]);
+  const [selectedLines, setSelectedLines]     = useState<number[]>([]);
+  const [formLoading, setFormLoading]         = useState(false);
+  const [fetchError, setFetchError]           = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen]         = useState(false);
+  const [lineItemOpen, setLineItemOpen]       = useState(false);
+  const [editLineItem, setEditLineItem]       = useState<Partial<POLineItemData> | undefined>();
+  const [lineItemMode, setLineItemMode]       = useState<'create' | 'edit'>('create');
 
   // ── Fetch functions ───────────────────────────────────────────────────────
 
   const fetchEmployees = async (): Promise<DropDownOption[]> => {
     const res = await api.get<DropDownApiResponse>('/api/inventory/employees/dropdown');
-    return res.data.data;
+    return res.data.data.filter(opt => opt.label != null && opt.value != null);
   };
 
   const fetchSuppliersList = async (): Promise<DropDownOption[]> => {
     const res = await api.get<DropDownApiResponse>('/api/supplier-view/dropdown');
-    return res.data.data;
+    return res.data.data.filter(opt => opt.label != null && opt.value != null);
   };
 
   const fetchPoFormDetails = async (refNo: number): Promise<PurchaseOrderApiData> => {
@@ -217,7 +238,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     apiData: PurchaseOrderApiData,
     fetchedSupplierOptions: DropDownOption[],
   ): PurchaseOrderFormData => {
-    // Match supplier by name since dropdown value is supplierCode
     const matchedSupplier = fetchedSupplierOptions.find(
       (opt) => opt.label.toLowerCase() === (apiData.supplierName ?? '').toLowerCase()
     )?.value ?? null;
@@ -250,34 +270,28 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
         fetchEmployees(),
         fetchSuppliersList(),
       ];
-
       if (mode === 'update' && poRefNo) {
         promises.push(fetchPoFormDetails(poRefNo));
         promises.push(fetchPoLineItems(poRefNo));
       }
-
       const results = await Promise.all(promises);
       if (cancelled.value) return;
 
       const employeeOptions  = results[0] as DropDownOption[];
       const fetchedSuppliers = results[1] as DropDownOption[];
-
       setDropdowns({ employeeOptions, supplierOptions: fetchedSuppliers });
 
       if (mode === 'update' && results[2]) {
-        const apiData  = results[2] as PurchaseOrderApiData;
-        const items    = (results[3] as PoLineItem[]) ?? [];
+        const apiData = results[2] as PurchaseOrderApiData;
+        const items   = (results[3] as PoLineItem[]) ?? [];
         setForm(mapApiToForm(apiData, fetchedSuppliers));
         setLineItems(items);
       } else {
         setForm({ ...defaultForm, ...initialData });
         setLineItems([]);
       }
-
     } catch {
-      if (!cancelled.value) {
-        setFetchError('Failed to load form data. Please close and try again.');
-      }
+      if (!cancelled.value) setFetchError('Failed to load form data. Please close and try again.');
     } finally {
       if (!cancelled.value) setFormLoading(false);
     }
@@ -301,8 +315,170 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       setForm((prev) => ({ ...prev, [field]: value }));
 
   const setStr = (field: keyof PurchaseOrderFormData) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((prev) => ({ ...prev, [field]: e.currentTarget.value }));
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const value = e.currentTarget.value;
+      setForm((prev) => ({ ...prev, [field]: value }));
+    };
+
+  const handlePoTypeChange = async (value: string | null) => {
+    set('poType')(value);
+    if (!value || mode === 'update') return;
+    const selected = poTypeOptions.find(opt => opt.value === value);
+    if (!selected?.prefix) return;
+    try {
+      const res = await api.get<ApiResponse<ReferenceNumberResponse>>(
+        `/api/inventory/purchase-order/generate-reference-number`,
+        { params: { prefix: selected.prefix } }
+      );
+      setForm(prev => ({ ...prev, poNo: res.data.data.referenceNumber }));
+    } catch {
+      console.error('Failed to generate reference number');
+    }
+  };
+
+  // ── Line item selection ───────────────────────────────────────────────────
+
+  const lineIds   = lineItems.map((item) => item.poDetId);
+  const allLines  = lineIds.length > 0 && lineIds.every((id) => selectedLines.includes(id));
+  const someLines = lineIds.some((id) => selectedLines.includes(id)) && !allLines;
+
+  const toggleAllLines = () => {
+    if (allLines) setSelectedLines([]);
+    else setSelectedLines(lineIds);
+  };
+
+  const toggleLine = (id: number) =>
+    setSelectedLines((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    );
+
+  // ── Line item totals for footer ───────────────────────────────────────────
+
+  const totalQty      = lineItems.reduce((s, i) => s + (i.poQty?.parsedValue      ?? 0), 0);
+  const totalRate     = lineItems.reduce((s, i) => s + (i.poRate?.parsedValue     ?? 0), 0);
+  const totalIgstVal  = lineItems.reduce((s, i) => s + (i.igstValue?.parsedValue  ?? 0), 0);
+
+  // ── Build MasterTable rows ────────────────────────────────────────────────
+
+  const lineItemRows = lineItems.map((item) => {
+    const isSel = selectedLines.includes(item.poDetId);
+    return (
+      <Table.Tr key={item.poDetId} bg={isSel ? 'var(--mantine-color-blue-0)' : undefined}>
+        <Table.Td>
+          <input
+            type="checkbox"
+            checked={isSel}
+            onChange={() => toggleLine(item.poDetId)}
+          />
+        </Table.Td>
+        <Table.Td fw={500}>{item.poRmCode}</Table.Td>
+        <Table.Td>{item.poRmName}</Table.Td>
+        <Table.Td>{dash(item.poUom)}</Table.Td>
+        <Table.Td ta="right">{pv(item.poQty, 3)}</Table.Td>
+        <Table.Td ta="right">{pv(item.poRate, 2)}</Table.Td>
+        <Table.Td ta="right">{pv(item.poNoOfPacks, 0)}</Table.Td>
+        <Table.Td ta="right">{pv(item.poPackSize, 3)}</Table.Td>
+        <Table.Td>{dash(item.hsnCode)}</Table.Td>
+        <Table.Td ta="right">{pv(item.sgst, 2)}</Table.Td>
+        <Table.Td ta="right">{pv(item.cgst, 2)}</Table.Td>
+        <Table.Td ta="right">{pv(item.igst, 2)}</Table.Td>
+        <Table.Td ta="right">{pv(item.igstValue, 2)}</Table.Td>
+      </Table.Tr>
+    );
+  });
+
+  // ── Footer row for MasterTable ────────────────────────────────────────────
+
+  const lineItemFooter = lineItems.length > 0 ? (
+    <Table.Tfoot>
+      <Table.Tr style={{ backgroundColor: 'var(--mantine-color-gray-1)', fontWeight: 600 }}>
+        {/* checkbox col */}
+        <Table.Td />
+        {/* RM Code */}
+        <Table.Td>
+          <Text size="xs" fw={700}>Total</Text>
+        </Table.Td>
+        {/* RM Name */}
+        <Table.Td>
+          <Text size="xs" c="dimmed">{lineItems.length} item{lineItems.length !== 1 ? 's' : ''}</Text>
+        </Table.Td>
+        {/* UOM */}
+        <Table.Td />
+        {/* Qty */}
+        <Table.Td ta="right">
+          <Text size="xs" fw={700}>{totalQty.toFixed(3)}</Text>
+        </Table.Td>
+        {/* Rate */}
+        <Table.Td ta="right">
+          <Text size="xs" fw={700}>{totalRate.toFixed(2)}</Text>
+        </Table.Td>
+        {/* Packs */}
+        <Table.Td />
+        {/* Pack Size */}
+        <Table.Td />
+        {/* HSN */}
+        <Table.Td />
+        {/* SGST */}
+        <Table.Td />
+        {/* CGST */}
+        <Table.Td />
+        {/* IGST */}
+        <Table.Td />
+        {/* IGST Val */}
+        <Table.Td ta="right">
+          <Text size="xs" fw={700}>{totalIgstVal.toFixed(2)}</Text>
+        </Table.Td>
+      </Table.Tr>
+    </Table.Tfoot>
+  ) : null;
+
+  // ── Handle line item save ─────────────────────────────────────────────────
+
+  const handleLineItemSave = (data: POLineItemData) => {
+    if (lineItemMode === 'edit') {
+      setLineItems(prev =>
+        prev.map(item => item.poDetId === data.poDetId
+          ? {
+              ...item,
+              poRmCode:    data.poRmCode ?? '',
+              poRmName:    data.poRmName ?? '',
+              poUom:       data.poUom,
+              poQty:       data.poQty       ? { source: data.poQty,       parsedValue: parseFloat(data.poQty) }       : null,
+              poRate:      data.poRate      ? { source: data.poRate,      parsedValue: parseFloat(data.poRate) }      : null,
+              poNoOfPacks: data.poNoOfPacks ? { source: data.poNoOfPacks, parsedValue: parseFloat(data.poNoOfPacks) } : null,
+              poPackSize:  data.poPackSize  ? { source: data.poPackSize,  parsedValue: parseFloat(data.poPackSize) }  : null,
+              sgst:        data.sgst        ? { source: data.sgst,        parsedValue: parseFloat(data.sgst) }        : null,
+              cgst:        data.cgst        ? { source: data.cgst,        parsedValue: parseFloat(data.cgst) }        : null,
+              igst:        data.igst        ? { source: data.igst,        parsedValue: parseFloat(data.igst) }        : null,
+              hsnCode:     data.hsnCode || null,
+            }
+          : item
+        )
+      );
+    } else {
+      setLineItems(prev => [...prev, {
+        poDetId:     Date.now(),
+        poRefNo:     form.poRefNo ?? 0,
+        poRmCode:    data.poRmCode ?? '',
+        poRmName:    data.poRmName ?? '',
+        poUom:       data.poUom,
+        poQty:       data.poQty       ? { source: data.poQty,       parsedValue: parseFloat(data.poQty) }       : null,
+        poRate:      data.poRate      ? { source: data.poRate,      parsedValue: parseFloat(data.poRate) }      : null,
+        poNoOfPacks: data.poNoOfPacks ? { source: data.poNoOfPacks, parsedValue: parseFloat(data.poNoOfPacks) } : null,
+        poPackSize:  data.poPackSize  ? { source: data.poPackSize,  parsedValue: parseFloat(data.poPackSize) }  : null,
+        sgst:        data.sgst        ? { source: data.sgst,        parsedValue: parseFloat(data.sgst) }        : null,
+        sgstValue:   null,
+        cgst:        data.cgst        ? { source: data.cgst,        parsedValue: parseFloat(data.cgst) }        : null,
+        cgstValue:   null,
+        igst:        data.igst        ? { source: data.igst,        parsedValue: parseFloat(data.igst) }        : null,
+        igstValue:   null,
+        hsnCode:     data.hsnCode || null,
+      }]);
+    }
+    setLineItemOpen(false);
+  };
+
+  const confirmLabel = mode === 'update' ? 'Update' : 'Save';
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -311,7 +487,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       opened={opened}
       onClose={onClose}
       title={null}
-      size="xl"
+      size="90%"
       padding={0}
       radius="md"
       withCloseButton={false}
@@ -320,7 +496,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
           padding: 0,
           display: 'flex',
           flexDirection: 'column',
-          height: '90vh',
+          maxHeight: '90vh',
           overflow: 'hidden',
         },
       }}
@@ -328,12 +504,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       <Paper
         withBorder
         radius="md"
-        style={{
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-        }}
+        style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}
       >
 
         {/* ── Header ── */}
@@ -380,15 +551,15 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
             </Stack>
           </Center>
         ) : (
-          <Box style={{ flex: 1, overflowY: 'scroll', overflowX: 'hidden' }} p="lg">
+          <Box style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} p="lg">
 
             {fetchError && (
               <Text size="xs" c="red" mb="sm">{fetchError}</Text>
             )}
 
-            {/* ── Row 1: PO Date | PO Type | PO Number ── */}
+            {/* ── Row 1: PO Date | PO Type | Supplier Name | PO Number ── */}
             <Grid gutter="md" mb="md">
-              <Grid.Col span={4}>
+              <Grid.Col span={3}>
                 <FormDatePicker
                   label="PO Date"
                   value={form.poDate}
@@ -397,41 +568,18 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                   readOnly={readOnly}
                 />
               </Grid.Col>
-              <Grid.Col span={4}>
+              <Grid.Col span={3}>
                 <FormSelect
                   label="PO Type"
                   value={form.poType}
-                  onChange={set('poType')}
+                  onChange={handlePoTypeChange}
                   data={poTypeOptions}
                   placeholder="Select type"
                   required
                   readOnly={readOnly}
                 />
               </Grid.Col>
-              <Grid.Col span={4}>
-                <FormTextInput
-                  label="PO Number"
-                  value={form.poNo}
-                  onChange={setStr('poNo')}
-                  placeholder="e.g. RM/694/2025-2026"
-                  required
-                  readOnly={readOnly}
-                />
-              </Grid.Col>
-            </Grid>
-
-            {/* ── Row 2: Kind Attention | Supplier Name | Delivery Schedule ── */}
-            <Grid gutter="md" mb="md">
-              <Grid.Col span={4}>
-                <FormTextInput
-                  label="Kind Attention"
-                  value={form.poKindAttention}
-                  onChange={setStr('poKindAttention')}
-                  placeholder="Attention name"
-                  readOnly={readOnly}
-                />
-              </Grid.Col>
-              <Grid.Col span={4}>
+              <Grid.Col span={3}>
                 <FormSelect
                   label="Supplier Name"
                   value={form.supplierId}
@@ -443,7 +591,21 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                   readOnly={readOnly}
                 />
               </Grid.Col>
-              <Grid.Col span={4}>
+              <Grid.Col span={3}>
+                <FormTextInput
+                  label="PO Number"
+                  value={form.poNo}
+                  onChange={setStr('poNo')}
+                  placeholder="e.g. RM/694/2025-2026"
+                  required
+                  readOnly={readOnly}
+                />
+              </Grid.Col>
+            </Grid>
+
+            {/* ── Row 2: Delivery Schedule | Kind Attention | Payment Terms | Delivery Terms ── */}
+            <Grid gutter="md" mb="md">
+              <Grid.Col span={3}>
                 <FormDatePicker
                   label="Delivery Schedule"
                   value={form.poDeliverySchedule}
@@ -452,10 +614,15 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                   readOnly={readOnly}
                 />
               </Grid.Col>
-            </Grid>
-
-            {/* ── Row 3: Payment Terms | Delivery Terms | PO Reference | Other Charges ── */}
-            <Grid gutter="md" mb="md">
+              <Grid.Col span={3}>
+                <FormTextInput
+                  label="Kind Attention"
+                  value={form.poKindAttention}
+                  onChange={setStr('poKindAttention')}
+                  placeholder="Attention name"
+                  readOnly={readOnly}
+                />
+              </Grid.Col>
               <Grid.Col span={3}>
                 <FormTextInput
                   label="PO Payment Terms"
@@ -474,6 +641,10 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                   readOnly={readOnly}
                 />
               </Grid.Col>
+            </Grid>
+
+            {/* ── Row 3: PO Reference | Other Charges | Requested By | (spacer) ── */}
+            <Grid gutter="md" mb="md">
               <Grid.Col span={3}>
                 <FormTextInput
                   label="PO Reference"
@@ -493,21 +664,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                   readOnly={readOnly}
                 />
               </Grid.Col>
-            </Grid>
-
-            {/* ── Row 4: Remarks | Requested By ── */}
-            <Grid gutter="md" mb="lg">
-              <Grid.Col span={8}>
-                <FormTextarea
-                  label="Remarks"
-                  value={form.poRemarks}
-                  onChange={setStr('poRemarks')}
-                  placeholder="Enter any remarks..."
-                  minRows={3}
-                  readOnly={readOnly}
-                />
-              </Grid.Col>
-              <Grid.Col span={4}>
+              <Grid.Col span={3}>
                 <FormSelect
                   label="Requested By"
                   value={form.requestedBy}
@@ -518,9 +675,26 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                   readOnly={readOnly}
                 />
               </Grid.Col>
+              <Grid.Col span={3}>
+                {/* intentionally empty — remarks takes full width below */}
+              </Grid.Col>
             </Grid>
 
-            {/* ── Line Items ── */}
+            {/* ── Row 4: Remarks (full width) ── */}
+            <Grid gutter="md" mb="lg">
+              <Grid.Col span={12}>
+                <FormTextarea
+                  label="Remarks"
+                  value={form.poRemarks}
+                  onChange={setStr('poRemarks')}
+                  placeholder="Enter any remarks..."
+                  minRows={2}
+                  readOnly={readOnly}
+                />
+              </Grid.Col>
+            </Grid>
+
+            {/* ── Line Items via MasterTable ── */}
             <Divider
               label={
                 <Group gap="xs">
@@ -536,69 +710,61 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
               mb="md"
             />
 
-            {lineItems.length === 0 ? (
-              <Box
-                p="xl"
-                ta="center"
-                style={{
-                  border: '1px dashed var(--mantine-color-gray-4)',
-                  borderRadius: 6,
-                  minHeight: 80,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text c="dimmed" size="sm" fs="italic">
-                  No line items found
-                </Text>
-              </Box>
-            ) : (
-              <ScrollArea>
-                <Table
-                  withTableBorder
-                  withColumnBorders
-                  style={{ fontSize: 12, whiteSpace: 'nowrap' }}
-                >
-                  <Table.Thead style={{ backgroundColor: 'var(--mantine-color-blue-1)' }}>
-                    <Table.Tr>
-                      <Table.Th style={{ fontSize: 11 }}>#</Table.Th>
-                      <Table.Th style={{ fontSize: 11 }}>RM Code</Table.Th>
-                      <Table.Th style={{ fontSize: 11 }}>RM Name</Table.Th>
-                      <Table.Th style={{ fontSize: 11 }}>UOM</Table.Th>
-                      <Table.Th ta="right" style={{ fontSize: 11 }}>Qty</Table.Th>
-                      <Table.Th ta="right" style={{ fontSize: 11 }}>Rate</Table.Th>
-                      <Table.Th ta="right" style={{ fontSize: 11 }}>Packs</Table.Th>
-                      <Table.Th ta="right" style={{ fontSize: 11 }}>Pack Size</Table.Th>
-                      <Table.Th style={{ fontSize: 11 }}>HSN Code</Table.Th>
-                      <Table.Th ta="right" style={{ fontSize: 11 }}>SGST %</Table.Th>
-                      <Table.Th ta="right" style={{ fontSize: 11 }}>CGST %</Table.Th>
-                      <Table.Th ta="right" style={{ fontSize: 11 }}>IGST %</Table.Th>
-                      <Table.Th ta="right" style={{ fontSize: 11 }}>IGST Val</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {lineItems.map((item, idx) => (
-                      <Table.Tr key={item.poDetId}>
-                        <Table.Td>{idx + 1}</Table.Td>
-                        <Table.Td fw={500}>{item.poRmCode}</Table.Td>
-                        <Table.Td>{item.poRmName}</Table.Td>
-                        <Table.Td>{dash(item.poUom)}</Table.Td>
-                        <Table.Td ta="right">{pv(item.poQty, 3)}</Table.Td>
-                        <Table.Td ta="right">{pv(item.poRate, 2)}</Table.Td>
-                        <Table.Td ta="right">{pv(item.poNoOfPacks, 0)}</Table.Td>
-                        <Table.Td ta="right">{pv(item.poPackSize, 3)}</Table.Td>
-                        <Table.Td>{dash(item.hsnCode)}</Table.Td>
-                        <Table.Td ta="right">{pv(item.sgst, 2)}</Table.Td>
-                        <Table.Td ta="right">{pv(item.cgst, 2)}</Table.Td>
-                        <Table.Td ta="right">{pv(item.igst, 2)}</Table.Td>
-                        <Table.Td ta="right">{pv(item.igstValue, 2)}</Table.Td>
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              </ScrollArea>
-            )}
+            <MasterTable
+              columns={LINE_ITEM_COLUMNS}
+              rows={lineItemRows}
+              colSpan={LINE_ITEM_COLUMNS.length + 1}
+              totalElements={lineItems.length}
+              loading={false}
+              page={1}
+              totalPages={1}
+              pageSize={lineItems.length || 1}
+              onPageChange={() => {}}
+              searchValue=""
+              onSearchChange={() => {}}
+              allSelected={allLines}
+              someSelected={someLines}
+              onToggleSelectAll={toggleAllLines}
+              selectedCount={selectedLines.length}
+              footer={lineItemFooter}
+              onAdd={() => {
+                setLineItemMode('create');
+                setEditLineItem(undefined);
+                setLineItemOpen(true);
+              }}
+              onEdit={() => {
+                if (selectedLines.length === 1) {
+                  const found = lineItems.find(i => i.poDetId === selectedLines[0]);
+                  if (found) {
+                    setEditLineItem({
+                      poDetId:     found.poDetId,
+                      poRmCode:    found.poRmCode,
+                      poRmName:    found.poRmName,
+                      poUom:       found.poUom,
+                      poQty:       found.poQty?.source       ?? '',
+                      poRate:      found.poRate?.source      ?? '',
+                      poNoOfPacks: found.poNoOfPacks?.source ?? '',
+                      poPackSize:  found.poPackSize?.source  ?? '',
+                      sgst:        found.sgst?.source        ?? '',
+                      cgst:        found.cgst?.source        ?? '',
+                      igst:        found.igst?.source        ?? '',
+                      hsnCode:     found.hsnCode             ?? '',
+                    });
+                    setLineItemMode('edit');
+                    setLineItemOpen(true);
+                  }
+                }
+              }}
+              onDelete={() => {
+                setLineItems(prev =>
+                  prev.filter(i => !selectedLines.includes(i.poDetId))
+                );
+                setSelectedLines([]);
+              }}
+              onRefresh={() => {
+                if (poRefNo) fetchPoLineItems(poRefNo).then(setLineItems);
+              }}
+            />
 
           </Box>
         )}
@@ -615,12 +781,30 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
           >
             <Group justify="flex-end">
               <Button variant="default" size="sm" onClick={onClose}>Cancel</Button>
-              <Button size="sm" onClick={() => onSave?.(form)}>Save PO</Button>
+              <Button onClick={() => setConfirmOpen(true)}>Save PO</Button>
             </Group>
           </Box>
         )}
 
       </Paper>
+
+      <ConfirmDialog
+        opened={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => onSave?.(form)}
+        message={`Are you sure you want to ${confirmLabel.toLowerCase()} this Purchase Order?`}
+        confirmLabel={confirmLabel}
+      />
+
+      <POLineItem
+        opened={lineItemOpen}
+        onClose={() => setLineItemOpen(false)}
+        onSave={handleLineItemSave}
+        initialData={editLineItem}
+        mode={lineItemMode}
+        poType={form.poType}
+      />
+
     </Modal>
   );
 };
