@@ -23,9 +23,9 @@ interface DropDownApiResponse {
 }
 
 export interface POLineItemData {
-  poDetId?: number;        // present in edit mode
-  poRmCode?: string;   
-   poRmId?: string | null;    // auto-filled from RM selection
+  poDetId?: number;
+  poRmCode?: string;
+  poRmId?: string | null;
   poRmName: string | null;
   poUom: string | null;
   poQty: string;
@@ -44,12 +44,13 @@ export interface POLineItemProps {
   onSave: (data: POLineItemData) => void;
   initialData?: Partial<POLineItemData>;
   mode?: 'create' | 'edit';
-  poType?: string | null;  // passed from parent to filter RM list
+  poType?: string | null;
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
 const defaultItem: POLineItemData = {
+  poRmId:     null,
   poRmCode:   '',
   poRmName:   null,
   poUom:      null,
@@ -91,6 +92,19 @@ interface RmApiResponse {
   data: RmDetail[];
 }
 
+// ── Validation ────────────────────────────────────────────────────────────────
+
+const validateItem = (item: POLineItemData): string[] => {
+  const errors: string[] = [];
+  if (!item.poRmId && !item.poRmName)  errors.push('Raw Material is required');
+  if (!item.poUom)                     errors.push('UOM is required');
+  if (!item.poQty || item.poQty === '0' || parseFloat(item.poQty) <= 0)
+                                       errors.push('Quantity must be greater than 0');
+  if (!item.poRate || item.poRate === '0' || parseFloat(item.poRate) <= 0)
+                                       errors.push('Rate / Amount must be greater than 0');
+  return errors;
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const POLineItem: React.FC<POLineItemProps> = ({
@@ -99,7 +113,7 @@ const POLineItem: React.FC<POLineItemProps> = ({
   onSave,
   initialData,
   mode = 'create',
-  poType = null,
+
 }) => {
 
   const [item, setItem]               = useState<POLineItemData>({ ...defaultItem, ...initialData });
@@ -107,31 +121,29 @@ const POLineItem: React.FC<POLineItemProps> = ({
   const [formLoading, setFormLoading] = useState(false);
   const [fetchError, setFetchError]   = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [rmDetails, setRmDetails] = useState<RmDetail[]>([]);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [rmDetails, setRmDetails]     = useState<RmDetail[]>([]);
 
   // ── Fetch functions ───────────────────────────────────────────────────────
 
-const fetchRmList = async (): Promise<DropDownOption[]> => {
-  const res = await api.get<RmApiResponse>('/api/rm/details/long');
-  const data = Array.isArray(res.data.data)
-    ? res.data.data
-    : Object.values(res.data.data as Record<string, RmDetail>);
-  setRmDetails(data); // ← store full objects
-  return data
-    .filter(rm => rm.rmName != null && rm.rmId != null)
-    .map(rm => ({
-      value: String(rm.rmId),
-      label: `${rm.rmCode} - ${rm.rmName}`,
-    }));
-};
+  const fetchRmList = async (): Promise<DropDownOption[]> => {
+    const res = await api.get<RmApiResponse>('/api/rm/details/long');
+    const data = Array.isArray(res.data.data)
+      ? res.data.data
+      : Object.values(res.data.data as Record<string, RmDetail>);
+    setRmDetails(data);
+    return data
+      .filter(rm => rm.rmName != null && rm.rmId != null)
+      .map(rm => ({
+        value: String(rm.rmId),
+        label: `${rm.rmCode} - ${rm.rmName}`,
+      }));
+  };
 
-const fetchUomList = async (): Promise<DropDownOption[]> => {
-  const res = await api.get<DropDownApiResponse>('/api/uom/dropdown');
-  return res.data.data.filter(opt => opt.label != null && opt.value != null);
-};
-
-  // Add more fetch functions here as needed
-  // const fetchHsnList = async (): Promise<DropDownOption[]> => { ... }
+  const fetchUomList = async (): Promise<DropDownOption[]> => {
+    const res = await api.get<DropDownApiResponse>('/api/uom/dropdown');
+    return res.data.data.filter(opt => opt.label != null && opt.value != null);
+  };
 
   // ── Master loader ─────────────────────────────────────────────────────────
 
@@ -142,14 +154,11 @@ const fetchUomList = async (): Promise<DropDownOption[]> => {
       const [rmOptions, uomOptions] = await Promise.all([
         fetchRmList(),
         fetchUomList(),
-        // fetchHsnList(),  // ← add here as you expand
       ]);
       if (cancelled.value) return;
       setDropdowns({ rmOptions, uomOptions });
     } catch {
-      if (!cancelled.value) {
-        setFetchError('Failed to load form data.');
-      }
+      if (!cancelled.value) setFetchError('Failed to load form data.');
     } finally {
       if (!cancelled.value) setFormLoading(false);
     }
@@ -157,8 +166,8 @@ const fetchUomList = async (): Promise<DropDownOption[]> => {
 
   useEffect(() => {
     if (!opened) return;
-    // Reset form when opening
     setItem({ ...defaultItem, ...initialData });
+    setValidationErrors([]);
     const cancelled = { value: false };
     loadFormData(cancelled);
     return () => { cancelled.value = true; };
@@ -170,39 +179,50 @@ const fetchUomList = async (): Promise<DropDownOption[]> => {
     (value: string | null) =>
       setItem((prev) => ({ ...prev, [field]: value }));
 
-const setStr = (field: keyof POLineItemData) =>
-  (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.currentTarget.value;   // ← read value immediately before it becomes null
-    setItem((prev) => ({ ...prev, [field]: value }));
+  const setStr = (field: keyof POLineItemData) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.currentTarget.value;
+      setItem((prev) => ({ ...prev, [field]: value }));
+    };
+
+  const handleRmChange = (value: string | null) => {
+    const rm = rmDetails.find(r => String(r.rmId) === value);
+
+    const rate = rm?.avgRate != null
+      ? typeof rm.avgRate === 'object'
+        ? Number(rm.avgRate.parsedValue).toFixed(2)
+        : Number(rm.avgRate).toFixed(2)
+      : '';
+
+    const packSize = rm?.packSize != null
+      ? typeof rm.packSize === 'object'
+        ? Number(rm.packSize.parsedValue).toFixed(3)
+        : Number(rm.packSize).toFixed(3)
+      : '';
+
+    setItem(prev => ({
+      ...prev,
+      poRmId:     value,
+      poRmCode:   String(rm?.rmCode ?? ''),
+      poRmName:   rm?.rmName ?? null,
+      poUom:      rm?.uomId ? String(rm.uomId) : prev.poUom,
+      poRate:     rate,
+      poPackSize: packSize || prev.poPackSize,
+    }));
   };
 
-  // When RM is selected, auto-fill UOM if the option carries it
-const handleRmChange = (value: string | null) => {
-  const rm = rmDetails.find(r => String(r.rmId) === value);
-  console.log('Selected RM:', rm);          // ← check what avgRate looks like
-  console.log('avgRate:', rm?.avgRate);     // ← check the exact structure
-  
- const rate = rm?.avgRate != null
-  ? typeof rm.avgRate === 'object'
-    ? Number((rm.avgRate as { parsedValue: number }).parsedValue).toFixed(2)
-    : Number(rm.avgRate).toFixed(2)
-  : '';
+  // ── Handle save with validation ───────────────────────────────────────────
 
-
-  setItem(prev => ({
-    ...prev,
-    poRmId:     value,
-    poRmCode:   String(rm?.rmCode ?? ''),
-    poRmName:   rm?.rmName ?? null,
-    poUom:      rm?.uomId ? String(rm.uomId) : prev.poUom,
-    poRate:     rate,                       // ← use resolved rate
-    poPackSize: rm?.packSize != null
-      ? typeof rm.packSize === 'object'
-        ? String((rm.packSize as { parsedValue: number }).parsedValue)
-        : String(rm.packSize)
-      : prev.poPackSize,
-  }));
-};
+  const handleSaveClick = () => {
+    const errors = validateItem(item);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      setConfirmOpen(true);   // open dialog in error mode
+    } else {
+      setValidationErrors([]);
+      setConfirmOpen(true);   // open dialog in confirm mode
+    }
+  };
 
   const confirmLabel = mode === 'edit' ? 'Update' : 'Save';
 
@@ -210,6 +230,7 @@ const handleRmChange = (value: string | null) => {
 
   return (
     <>
+      {/* zIndex 300 — sits above PurchaseOrderForm modal (200) */}
       <Modal
         opened={opened}
         onClose={onClose}
@@ -218,6 +239,7 @@ const handleRmChange = (value: string | null) => {
         padding={0}
         radius="md"
         withCloseButton={false}
+        zIndex={300}
         styles={{
           body: {
             padding: 0,
@@ -226,7 +248,6 @@ const handleRmChange = (value: string | null) => {
             overflow: 'hidden',
           },
         }}
-        zIndex={300}
       >
         <Paper
           withBorder
@@ -279,15 +300,15 @@ const handleRmChange = (value: string | null) => {
               {/* ── Row 1: RM Name | UOM ── */}
               <Grid gutter="md" mb="md">
                 <Grid.Col span={8}>
-                 <FormSelect
-  label="Raw Material"
-  value={item.poRmId ?? null}   // ← was poRmCode
-  onChange={handleRmChange}
-  data={dropdowns.rmOptions}
-  placeholder="Search and select RM"
-  required
-  searchable
-/>
+                  <FormSelect
+                    label="Raw Material"
+                    value={item.poRmId ?? null}
+                    onChange={handleRmChange}
+                    data={dropdowns.rmOptions}
+                    placeholder="Search and select RM"
+                    required
+                    searchable
+                  />
                 </Grid.Col>
                 <Grid.Col span={4}>
                   <FormSelect
@@ -397,7 +418,7 @@ const handleRmChange = (value: string | null) => {
               <Button
                 size="sm"
                 disabled={formLoading}
-                onClick={() => setConfirmOpen(true)}
+                onClick={handleSaveClick}
               >
                 {confirmLabel} Item
               </Button>
@@ -407,13 +428,15 @@ const handleRmChange = (value: string | null) => {
         </Paper>
       </Modal>
 
-      {/* ── Confirm Dialog ── */}
+      {/* zIndex 400 — sits above POLineItem modal (300) */}
       <ConfirmDialog
         opened={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onConfirm={() => onSave(item)}
         message={`Are you sure you want to ${confirmLabel.toLowerCase()} this line item?`}
         confirmLabel={confirmLabel}
+        errors={validationErrors}
+        zIndex={400}
       />
     </>
   );

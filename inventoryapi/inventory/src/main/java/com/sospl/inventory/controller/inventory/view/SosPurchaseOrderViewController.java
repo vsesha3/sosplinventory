@@ -3,6 +3,7 @@ package com.sospl.inventory.controller.inventory.view;
 import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.common.ReferenceNumberResponse;
+import com.sospl.inventory.dto.inventory.SosPoHeaderRequest;
 import com.sospl.inventory.dto.inventory.view.SosPurchaseOrderViewResponse;
 import com.sospl.inventory.service.inventory.view.SosPurchaseOrderViewService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -32,14 +33,7 @@ public class SosPurchaseOrderViewController {
     }
     
     
-    // Get by id
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<SosPurchaseOrderViewResponse>> getById(
-            @PathVariable Long id) {
-        return ResponseEntity.ok(
-                ApiResponse.success("Purchase order fetched successfully",
-                        service.findById(id)));
-    }
+ 
 
     // Get all paginated - ordered by po_ref_no desc
     @GetMapping
@@ -106,5 +100,38 @@ public class SosPurchaseOrderViewController {
         return ResponseEntity.ok(
                 ApiResponse.success("Search results fetched successfully",
                         service.search(keyword, page, size)));
+    }
+    
+    
+ // ── Create PO ─────────────────────────────────────────────────────────
+    @PostMapping
+    public ResponseEntity<ApiResponse<Long>> createPo(
+            @RequestBody SosPoHeaderRequest request) {
+        Long poRefNo = service.savePo(request);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Purchase order created successfully",
+                        poRefNo));
+    }
+
+    // ── Update PO — must be above /{id} ───────────────────────────────────
+    @PutMapping("/{poRefNo}")
+    public ResponseEntity<ApiResponse<Long>> updatePo(
+            @PathVariable Long poRefNo,
+            @RequestBody SosPoHeaderRequest request) {
+        Long updatedRefNo = service.updatePo(poRefNo, request);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Purchase order updated successfully",
+                        updatedRefNo));
+    }
+    
+    // Get by id
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<SosPurchaseOrderViewResponse>> getById(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Purchase order fetched successfully",
+                        service.findById(id)));
     }
 }

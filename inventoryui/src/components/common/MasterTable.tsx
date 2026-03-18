@@ -42,6 +42,7 @@ export interface MasterTableProps {
   colSpan: number;
   extraActions?: React.ReactNode;
   footer?: React.ReactNode;
+  expandable?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────

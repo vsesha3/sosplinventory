@@ -1,6 +1,7 @@
 package com.sospl.inventory.service.inventory.view;
 
 import com.sospl.inventory.dto.common.PagedResponse;
+import com.sospl.inventory.dto.inventory.SosPoHeaderRequest;
 import com.sospl.inventory.dto.common.ReferenceNumberResponse;
 import com.sospl.inventory.dto.inventory.view.SosPurchaseOrderViewResponse;
 
@@ -29,4 +30,8 @@ public interface SosPurchaseOrderViewService {
 
     // ← Updated — returns ReferenceNumberResponse
     ReferenceNumberResponse generateReferenceNumber(String prefix);
+    
+    Long savePo(SosPoHeaderRequest request);
+
+    Long updatePo(Long poRefNo, SosPoHeaderRequest request);
 }

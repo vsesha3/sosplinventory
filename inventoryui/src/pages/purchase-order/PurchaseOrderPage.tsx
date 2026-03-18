@@ -14,8 +14,11 @@ import MasterTable from '../../components/common/MasterTable';
 import ExpandableRow from '../../components/common/ExpandableRow';
 import type { ColumnDef } from '../../components/common/MasterTable';
 import type { ChildColumnDef } from '../../components/common/ExpandableRow';
-import type { PagedApiResponse } from '../../types/api.types';
+import type { PagedApiResponse, PoLineItem } from '../../types/api.types';
 import PurchaseOrderForm from './PurchaseOrderForm';
+import type { PurchaseOrderFormData } from '../../types/api.types';
+import  {numVal} from '../../types/api.types';
+
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -202,6 +205,44 @@ const [toDate, setToDate]     = useState<string | null>(null);
   const val = (v: string | null | undefined) =>
     v && v !== '-' ? v : <Text c="dimmed" size="sm">—</Text>;
 
+const handlePoSave = async (data: PurchaseOrderFormData, lineItems: PoLineItem[]) => {
+  try {
+    const payload = {
+      ...data,
+      supplierId:         data.supplierId  ? Number(data.supplierId)  : null,
+      requestedBy:        data.requestedBy ? Number(data.requestedBy) : null,
+      poDate:             data.poDate             ? new Date(data.poDate as Date).toISOString() : null,
+      poDeliverySchedule: data.poDeliverySchedule ? new Date(data.poDeliverySchedule as Date).toISOString() : null,
+      poClosedFlag: 'N',
+      lineItems: lineItems.map(item => ({
+        poDetId:     item.poDetId > 1000000000000 ? null : item.poDetId,
+        poRmCode:    item.poRmCode,
+        poRmName:    item.poRmName,
+        poUom:       item.poUom,
+        poQty:       numVal(item.poQty),
+        poRate:      numVal(item.poRate),
+        poNoOfPacks: numVal(item.poNoOfPacks),
+        poPackSize:  numVal(item.poPackSize),
+        sgst:        numVal(item.sgst),
+        cgst:        numVal(item.cgst),
+        igst:        numVal(item.igst),
+        hsnCode:     item.hsnCode,
+      })),
+    };
+
+    if (formMode === 'update') {
+      await api.put(`/api/inventory/purchase-order/${data.poRefNo}`, payload);
+    } else {
+      await api.post('/api/inventory/purchase-order', payload);
+    }
+
+    setPoformOpen(false);
+    fetchData(page, keyword, fromDate, toDate);
+  } catch (err) {
+    console.error('Failed to save PO', err);
+  }
+};
+  
   // ── Rows using ExpandableRow ───────────────────────────────────────────────
   // colSpan = expand(1) + checkbox(1) + columns(11) = 13
   const expandColSpan = 1 + 1 + COLUMNS.length;
@@ -357,10 +398,7 @@ const [toDate, setToDate]     = useState<string | null>(null);
       <PurchaseOrderForm
   opened={poFormOpen}
   onClose={() => setPoformOpen(false)}
-  onSave={(data) => {
-    console.log('Save PO', data);
-    setPoformOpen(false);
-  }}
+  onSave={handlePoSave}
   onPrint={() => console.log('Print')}
   poTypeOptions={[
     { value: 'RAW_MATERIAL',     label: 'Raw Material', prefix: 'RM' },

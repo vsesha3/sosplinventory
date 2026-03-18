@@ -3,6 +3,7 @@ package com.sospl.inventory.service.inventory.master.view;
 
 
 import com.sospl.inventory.dto.common.DropDownResponse;
+import com.sospl.inventory.dto.inventory.view.SosPurchaseOrderRequest;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosSupplierMasterVResponse;
 
