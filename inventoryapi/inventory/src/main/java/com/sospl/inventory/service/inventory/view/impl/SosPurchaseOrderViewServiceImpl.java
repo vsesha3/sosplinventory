@@ -7,6 +7,7 @@ import com.sospl.inventory.dto.inventory.view.SosPurchaseOrderViewResponse;
 import com.sospl.inventory.model.inventory.view.SosPurchaseOrderView;
 import com.sospl.inventory.repository.inventory.view.SosPoHeaderRepository;
 import com.sospl.inventory.repository.inventory.view.SosPurchaseOrderViewRepository;
+import com.sospl.inventory.service.SosPoDetailsService;
 import com.sospl.inventory.service.inventory.view.SosPurchaseOrderViewService;
 import com.sospl.inventory.util.GetCurrentFinancialYear;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,7 @@ public class SosPurchaseOrderViewServiceImpl
 
     private final SosPurchaseOrderViewRepository repository;
     private final SosPoHeaderRepository poHeaderRepository;
+    private final SosPoDetailsService sosPoDetailsService;
     
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -37,9 +39,10 @@ public class SosPurchaseOrderViewServiceImpl
 
     public SosPurchaseOrderViewServiceImpl(
             SosPurchaseOrderViewRepository repository,
-            SosPoHeaderRepository poHeaderRepository) {
+            SosPoHeaderRepository poHeaderRepository,SosPoDetailsService _sosPoDetailService) {
         this.repository = repository;
         this.poHeaderRepository = poHeaderRepository;
+        this.sosPoDetailsService = _sosPoDetailService;
     }
 
     @Override
@@ -193,8 +196,9 @@ public class SosPurchaseOrderViewServiceImpl
         if (request.getRequestedBy() != null
                 && !request.getRequestedBy().isBlank()) {
             try {
-                header.setRequestedBy(
-                        Long.parseLong(request.getRequestedBy()));
+                
+                header.setRequestedBy(request.getRequestedBy());
+                
             } catch (NumberFormatException e) {
                 // requestedBy is employee string id like SOSPL-0161 — store as null
                 header.setRequestedBy(null);
@@ -206,6 +210,10 @@ public class SosPurchaseOrderViewServiceImpl
                 parseDateTime(request.getPoDeliverySchedule()));
 
         poHeaderRepository.save(header);
+        
+        if (request.getLineItems() != null && !request.getLineItems().isEmpty()) {
+            sosPoDetailsService.saveOrUpdateLineItems(poRefNo, request.getLineItems());
+        }
         return poRefNo;
     }
 
@@ -239,8 +247,8 @@ public class SosPurchaseOrderViewServiceImpl
         if (request.getRequestedBy() != null
                 && !request.getRequestedBy().isBlank()) {
             try {
-                header.setRequestedBy(
-                        Long.parseLong(request.getRequestedBy()));
+                
+                header.setRequestedBy(request.getRequestedBy());
             } catch (NumberFormatException e) {
                 header.setRequestedBy(null);
             }
@@ -258,6 +266,12 @@ public class SosPurchaseOrderViewServiceImpl
         }
 
         poHeaderRepository.save(header);
+        
+     // Update line items
+        if (request.getLineItems() != null && !request.getLineItems().isEmpty()) {
+            sosPoDetailsService.saveOrUpdateLineItems(poRefNo, request.getLineItems());
+        }
+
         return poRefNo;
     }
     

@@ -5,6 +5,7 @@ import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.common.ReferenceNumberResponse;
 import com.sospl.inventory.dto.inventory.SosPoHeaderRequest;
 import com.sospl.inventory.dto.inventory.view.SosPurchaseOrderViewResponse;
+import com.sospl.inventory.service.SosPoDetailsService;
 import com.sospl.inventory.service.inventory.view.SosPurchaseOrderViewService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -17,10 +18,12 @@ import java.time.LocalDateTime;
 public class SosPurchaseOrderViewController {
 
     private final SosPurchaseOrderViewService service;
+    private final SosPoDetailsService sosPoDetailsService;
 
     public SosPurchaseOrderViewController(
-            SosPurchaseOrderViewService service) {
+            SosPurchaseOrderViewService service,SosPoDetailsService _sosPodetailService) {
         this.service = service;
+        this.sosPoDetailsService = _sosPodetailService;
     }
 
     

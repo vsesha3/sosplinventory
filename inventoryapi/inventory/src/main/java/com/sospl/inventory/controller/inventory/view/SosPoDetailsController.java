@@ -2,7 +2,7 @@ package com.sospl.inventory.controller.inventory.view;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.dto.inventory.view.SosPoDetailsResponse;
-import com.sospl.inventory.service.inventory.view.SosPoDetailsService;
+import com.sospl.inventory.service.SosPoDetailsService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

@@ -255,7 +255,15 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   };
 
   useEffect(() => {
-    if (!opened) return;
+   
+    if (!opened) {
+    setForm({ ...defaultForm });   // ← reset form on close
+    setLineItems([]);
+    setSelectedLines([]);
+    setValidationErrors([]);
+    setFetchError(null);
+    return;
+  }
     const cancelled = { value: false };
     loadFormData(cancelled);
     return () => { cancelled.value = true; };

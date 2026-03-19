@@ -206,11 +206,12 @@ const [toDate, setToDate]     = useState<string | null>(null);
     v && v !== '-' ? v : <Text c="dimmed" size="sm">—</Text>;
 
 const handlePoSave = async (data: PurchaseOrderFormData, lineItems: PoLineItem[]) => {
+  console.log('Saving PO', data, lineItems);
   try {
     const payload = {
       ...data,
       supplierId:         data.supplierId  ? Number(data.supplierId)  : null,
-      requestedBy:        data.requestedBy ? Number(data.requestedBy) : null,
+      requestedBy:        data.requestedBy ? data.requestedBy : null,
       poDate:             data.poDate             ? new Date(data.poDate as Date).toISOString() : null,
       poDeliverySchedule: data.poDeliverySchedule ? new Date(data.poDeliverySchedule as Date).toISOString() : null,
       poClosedFlag: 'N',
@@ -397,7 +398,11 @@ const handlePoSave = async (data: PurchaseOrderFormData, lineItems: PoLineItem[]
 
       <PurchaseOrderForm
   opened={poFormOpen}
-  onClose={() => setPoformOpen(false)}
+  onClose={() => {
+    setPoformOpen(false);
+    setEditPoRefNo(null);      // ← reset selected PO
+    setFormMode('create');     // ← reset mode
+  }}
   onSave={handlePoSave}
   onPrint={() => console.log('Print')}
   poTypeOptions={[

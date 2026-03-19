@@ -21,7 +21,7 @@ public class SosPurchaseOrderViewResponse {
     private BigDecimal poVat;
     private BigDecimal poCst;
     private Long poRefGenNo;
-    private Long requestedBy;
+    private String  requestedBy;
     private BigDecimal addCharges;
     private String poClosedFlag;
     private Boolean isActive;
@@ -78,8 +78,8 @@ public class SosPurchaseOrderViewResponse {
     public Long getPoRefGenNo() { return poRefGenNo; }
     public void setPoRefGenNo(Long poRefGenNo) { this.poRefGenNo = poRefGenNo; }
 
-    public Long getRequestedBy() { return requestedBy; }
-    public void setRequestedBy(Long requestedBy) { this.requestedBy = requestedBy; }
+    public String getRequestedBy() { return requestedBy; }
+    public void setRequestedBy(String requestedBy) { this.requestedBy = requestedBy; }
 
     public BigDecimal getAddCharges() { return addCharges; }
     public void setAddCharges(BigDecimal addCharges) { this.addCharges = addCharges; }

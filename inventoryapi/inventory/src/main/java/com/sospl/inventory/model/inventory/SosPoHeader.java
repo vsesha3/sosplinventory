@@ -59,7 +59,7 @@ public class SosPoHeader extends BaseAuditEntity {
     private String poDeliveryTerms;
 
     @Column(name = "requested_by")
-    private Long requestedBy;
+    private String requestedBy;
 
     @Column(name = "add_charges", precision = 11, scale = 2)
     private BigDecimal addCharges;
@@ -109,8 +109,8 @@ public class SosPoHeader extends BaseAuditEntity {
     public String getPoDeliveryTerms() { return poDeliveryTerms; }
     public void setPoDeliveryTerms(String poDeliveryTerms) { this.poDeliveryTerms = poDeliveryTerms; }
 
-    public Long getRequestedBy() { return requestedBy; }
-    public void setRequestedBy(Long requestedBy) { this.requestedBy = requestedBy; }
+    public String getRequestedBy() { return requestedBy; }
+    public void setRequestedBy(String requestedBy) { this.requestedBy = requestedBy; }
 
     public BigDecimal getAddCharges() { return addCharges; }
     public void setAddCharges(BigDecimal addCharges) { this.addCharges = addCharges; }

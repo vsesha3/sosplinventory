@@ -2,6 +2,7 @@ package com.sospl.inventory.dto.inventory;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class SosPoHeaderRequest {
 
@@ -18,6 +19,8 @@ public class SosPoHeaderRequest {
     private String poRemarks;
     private BigDecimal addCharges;
     private String requestedBy;     // employee id string
+    
+    private List<SosPoDetailsRequestDto> lineItems;
 
     public Long getPoRefNo() { return poRefNo; }
     public void setPoRefNo(Long poRefNo) { this.poRefNo = poRefNo; }
@@ -57,4 +60,13 @@ public class SosPoHeaderRequest {
 
     public String getRequestedBy() { return requestedBy; }
     public void setRequestedBy(String requestedBy) { this.requestedBy = requestedBy; }
+	public List<SosPoDetailsRequestDto> getLineItems() {
+		return lineItems;
+	}
+	public void setLineItems(List<SosPoDetailsRequestDto> lineItems) {
+		this.lineItems = lineItems;
+	}
+    
+    
+    
 }

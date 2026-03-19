@@ -1,19 +1,14 @@
-package com.sospl.inventory.model.inventory;
+package com.sospl.inventory.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import org.hibernate.annotations.Immutable;
-
+import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
-@Immutable
 @Table(name = "sos_po_details_t")
-public class SosPoDetails {
+public class SosPoDetails{
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "po_det_id")
     private Long poDetId;
 
@@ -65,6 +60,7 @@ public class SosPoDetails {
     @Column(name = "is_active")
     private Boolean isActive;
 
+    // Getters
     public Long getPoDetId() { return poDetId; }
     public Long getPoRefNo() { return poRefNo; }
     public String getPoRmCode() { return poRmCode; }
@@ -82,4 +78,23 @@ public class SosPoDetails {
     public BigDecimal getIgstValue() { return igstValue; }
     public String getHSnCode() { return hSnCode; }
     public Boolean getIsActive() { return isActive; }
+
+    // Setters
+    public void setPoDetId(Long poDetId) { this.poDetId = poDetId; }
+    public void setPoRefNo(Long poRefNo) { this.poRefNo = poRefNo; }
+    public void setPoRmCode(String poRmCode) { this.poRmCode = poRmCode; }
+    public void setPoRmName(String poRmName) { this.poRmName = poRmName; }
+    public void setPoQty(BigDecimal poQty) { this.poQty = poQty; }
+    public void setPoRate(BigDecimal poRate) { this.poRate = poRate; }
+    public void setPoUom(String poUom) { this.poUom = poUom; }
+    public void setSgst(BigDecimal sgst) { this.sgst = sgst; }
+    public void setSgstValue(BigDecimal sgstValue) { this.sgstValue = sgstValue; }
+    public void setPoNoOfPacks(BigDecimal poNoOfPacks) { this.poNoOfPacks = poNoOfPacks; }
+    public void setPoPackSize(BigDecimal poPackSize) { this.poPackSize = poPackSize; }
+    public void setCgst(BigDecimal cgst) { this.cgst = cgst; }
+    public void setCgstValue(BigDecimal cgstValue) { this.cgstValue = cgstValue; }
+    public void setIgst(BigDecimal igst) { this.igst = igst; }
+    public void setIgstValue(BigDecimal igstValue) { this.igstValue = igstValue; }
+    public void setHSnCode(String hSnCode) { this.hSnCode = hSnCode; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 }

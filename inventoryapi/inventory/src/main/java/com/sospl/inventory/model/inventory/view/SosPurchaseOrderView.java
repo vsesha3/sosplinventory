@@ -93,7 +93,7 @@ public class SosPurchaseOrderView {
     private Long poRefGenNo;
 
     @Column(name = "requested_by")
-    private Long requestedBy;
+    private String requestedBy;
 
     @Column(name = "add_charges")
     private java.math.BigDecimal addCharges;
@@ -132,7 +132,7 @@ public class SosPurchaseOrderView {
     public java.math.BigDecimal getPoVat() { return poVat; }
     public java.math.BigDecimal getPoCst() { return poCst; }
     public Long getPoRefGenNo() { return poRefGenNo; }
-    public Long getRequestedBy() { return requestedBy; }
+    public String getRequestedBy() { return requestedBy; }
     public java.math.BigDecimal getAddCharges() { return addCharges; }
     public String getPoClosedFlag() { return poClosedFlag; }
     public Boolean getIsActive() { return isActive; }
