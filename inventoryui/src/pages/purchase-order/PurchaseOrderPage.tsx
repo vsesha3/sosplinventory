@@ -7,7 +7,7 @@ import {
 import { Table, Checkbox } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import {
-  IconAlertCircle, IconPrinter, IconMail, IconFilter, IconX,
+  IconAlertCircle, IconPrinter,  IconFilter, IconX,
 } from '@tabler/icons-react';
 import api from '../../services/api';
 import MasterTable from '../../components/common/MasterTable';
@@ -243,6 +243,53 @@ const handlePoSave = async (data: PurchaseOrderFormData, lineItems: PoLineItem[]
     console.error('Failed to save PO', err);
   }
 };
+
+// ── Download functions ─────────────────────────────────────────────────────
+
+const downloadPoPdf = async (poNo: string) => {
+  try {
+    
+     const response = await api.get('/api/reports/po/pdf', {
+    params: { poNo },              // ← query param, no encoding issues
+    responseType: 'blob'
+  });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `PO_${poNo.replace(/\//g, '_')}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Failed to download PDF', err);
+  }
+};
+
+/* const downloadPoExcel = async (poNo: string) => {
+  try {
+    const response = await api.get(
+      `/api/reports/po/excel/${encodeURIComponent(poNo)}`,
+      { responseType: 'blob' }
+    );
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `PO_${poNo.replace(/\//g, '_')}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Failed to download Excel', err);
+  }
+}; */
+
+// Get poNo from selected poRefNo
+const getSelectedPoNo = (): string | null => {
+  if (selected.length !== 1) return null;
+  return data.find(item => item.poRefNo === selected[0])?.poNo ?? null;
+};
   
   // ── Rows using ExpandableRow ───────────────────────────────────────────────
   // colSpan = expand(1) + checkbox(1) + columns(11) = 13
@@ -294,26 +341,24 @@ const handlePoSave = async (data: PurchaseOrderFormData, lineItems: PoLineItem[]
   });
 
   // ── Extra toolbar ──────────────────────────────────────────────────────────
-  const extraActions = (
-    <Group gap="xs">
-      <Tooltip label="Print selected PO(s)">
-        <Button size="xs" variant="subtle" color="dark"
-          leftSection={<IconPrinter size={14} />}
-          disabled={selected.length === 0}
-          onClick={() => console.log('Print', selected)}>
-          Print
-        </Button>
-      </Tooltip>
-      <Tooltip label="Email selected PO(s)">
-        <Button size="xs" variant="subtle" color="cyan"
-          leftSection={<IconMail size={14} />}
-          disabled={selected.length === 0}
-          onClick={() => console.log('Email', selected)}>
-          Email
-        </Button>
-      </Tooltip>
-    </Group>
-  );
+const extraActions = (
+  <Group gap="xs">
+    <Tooltip label="Download selected PO as PDF">
+      <Button
+        size="xs" variant="subtle" color="dark"
+        leftSection={<IconPrinter size={14} />}
+        disabled={selected.length !== 1}
+        onClick={() => {
+          const poNo = getSelectedPoNo();
+          if (poNo) downloadPoPdf(poNo);
+        }}
+      >
+        Print PDF
+      </Button>
+    </Tooltip>
+   
+  </Group>
+);
 
   return (
     <Box p="md" style={{ width: '100%', overflowX: 'auto' }}>

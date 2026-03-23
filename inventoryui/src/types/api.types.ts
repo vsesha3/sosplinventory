@@ -57,13 +57,13 @@ export interface PoLineItem {
   poRefNo: number;
   poRmCode: string;
   poRmName: string;
-  poQty: DecimalField | null;
-  poRate: DecimalField | null;
+  poQty: DecimalField |number | null;
+  poRate: DecimalField |number| null;
   poUom: string | null;
   sgst: DecimalField | null;
-  sgstValue: DecimalField | null;
-  poNoOfPacks: DecimalField | null;
-  poPackSize: DecimalField | null;
+  sgstValue: DecimalField |number | null;
+  poNoOfPacks: DecimalField | number |null;
+  poPackSize: DecimalField | number | null;
   cgst: DecimalField | null;
   cgstValue: DecimalField | null;
   igst: DecimalField | null;

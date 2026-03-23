@@ -123,9 +123,9 @@ const defaultForm: PurchaseOrderFormData = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const pv = (field: DecimalField | null | undefined, decimals = 2): string => {
+const pv = (field: DecimalField | number | null | undefined, decimals = 2): string => {
   if (field == null) return '—';
-  if (typeof field === 'number') return (field as number).toFixed(decimals);
+  if (typeof field === 'number') return isNaN(field) ? '—' : field.toFixed(decimals);
   if (field.parsedValue == null) return field.source ?? '—';
   return field.parsedValue.toFixed(decimals);
 };
@@ -330,8 +330,8 @@ const numVal = (field: DecimalField | null | undefined | number): number => {
 
   const computeLine = (item: PoLineItem) => {
    
-    const qty     = Number(item.poQty);
-    const rate    = Number(item.poRate);
+    const qty     = numVal(item.poQty);
+    const rate    = numVal(item.poRate);
     const sgst    = numVal(item.sgst);
     const cgst    = numVal(item.cgst);
     const igst    = numVal(item.igst);
@@ -414,6 +414,12 @@ const numVal = (field: DecimalField | null | undefined | number): number => {
   if (!form.requestedBy)  errors.push('Requested By is required');
   //if (lineItems.length === 0) errors.push('At least one line item is required');
   return errors;
+};
+
+const getSource = (field: DecimalField | number | null | undefined): string => {
+  if (field == null) return '';
+  if (typeof field === 'number') return isNaN(field) ? '' : String(field);
+  return field.source ?? '';
 };
 
   // ── Build rows ────────────────────────────────────────────────────────────
@@ -676,7 +682,7 @@ const numVal = (field: DecimalField | null | undefined | number): number => {
                 <FormDatePicker label="PO Date" value={form.poDate} onChange={setDate('poDate')} required readOnly={readOnly} />
               </Grid.Col>
               <Grid.Col span={4}>
-                <FormSelect label="PO Type" value={form.poType} onChange={handlePoTypeChange} data={poTypeOptions} placeholder="Select type" required readOnly={readOnly} />
+                <FormSelect label="PO Type" value={form.poType} onChange={handlePoTypeChange} data={poTypeOptions} placeholder="Select type" required readOnly={readOnly || mode === 'update'} />
               </Grid.Col>
               <Grid.Col span={4}>
                 <FormSelect label="Supplier Name" value={form.supplierId} onChange={set('supplierId')} data={dropdowns.supplierOptions} placeholder="Select supplier" required searchable readOnly={readOnly} />
@@ -765,12 +771,12 @@ const numVal = (field: DecimalField | null | undefined | number): number => {
                       poRmCode:    found.poRmCode,
                       poRmName:    found.poRmName,
                       poUom:       found.poUom,
-                      poQty:       found.poQty?.source       ?? '',
-                      poRate:      found.poRate?.source      ?? '',
-                      poNoOfPacks: found.poNoOfPacks?.source ?? '',
-                      poPackSize:  found.poPackSize?.source  ?? '',
-                      sgst:        found.sgst?.source        ?? '',
-                      cgst:        found.cgst?.source        ?? '',
+                      poQty:       getSource(found.poQty),
+                      poRate:      getSource(found.poRate),
+                      poNoOfPacks: getSource(found.poNoOfPacks),
+                      poPackSize:  getSource(found.poPackSize),
+                      sgst:        getSource(found.sgst),
+                      cgst:        getSource(found.cgst),
                       igst:        found.igst?.source        ?? '',
                       hsnCode:     found.hsnCode             ?? '',
                     });
