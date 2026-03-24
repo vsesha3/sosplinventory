@@ -4,6 +4,8 @@ import com.sospl.inventory.dto.inventory.SosPoDetailsRequestDto;
 import com.sospl.inventory.dto.inventory.view.SosPoDetailsResponse;
 import com.sospl.inventory.model.SosPoDetails;
 import com.sospl.inventory.repository.SosPoDetailsRepository;
+import com.sospl.inventory.repository.inventory.master.SosUomMasterRepository;
+
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -15,9 +17,12 @@ import java.util.stream.Collectors;
 public class SosPoDetailsService {
 
     private final SosPoDetailsRepository sosPoDetailsRepository;
+    
+    private final SosUomMasterRepository sosUomMasterRepository;
 
-    public SosPoDetailsService(SosPoDetailsRepository sosPoDetailsRepository) {
+    public SosPoDetailsService(SosPoDetailsRepository sosPoDetailsRepository,SosUomMasterRepository _sosUomMasterRepository) {
         this.sosPoDetailsRepository = sosPoDetailsRepository;
+        this.sosUomMasterRepository = _sosUomMasterRepository;
     }
 
     // ── READ ──────────────────────────────────────────────────────────────────
@@ -54,13 +59,26 @@ public class SosPoDetailsService {
 
     private SosPoDetailsResponse mapEntityToResponse(SosPoDetails entity) {
         SosPoDetailsResponse response = new SosPoDetailsResponse();
+       
+        String uomName = null;
+        if (entity.getPoUom() != null && !entity.getPoUom().isBlank()) {
+            try {
+                Long uomId = Long.parseLong(entity.getPoUom());
+                uomName = sosUomMasterRepository.findById(uomId)
+                        .map(uom -> uom.getUomName())
+                        .orElse(entity.getPoUom()); // fallback to raw value if not found
+            } catch (NumberFormatException e) {
+                uomName = entity.getPoUom(); // fallback if not numeric
+            }
+        }
+        
         response.setPoDetId(entity.getPoDetId());
         response.setPoRefNo(entity.getPoRefNo());
         response.setPoRmCode(entity.getPoRmCode());
         response.setPoRmName(entity.getPoRmName());
         response.setPoQty(entity.getPoQty());
         response.setPoRate(entity.getPoRate());
-        response.setPoUom(entity.getPoUom());
+        response.setPoUom(uomName);
         response.setSgst(entity.getSgst());
         response.setSgstValue(entity.getSgstValue());
         response.setCgst(entity.getCgst());

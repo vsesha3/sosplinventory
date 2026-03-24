@@ -372,13 +372,12 @@ const numVal = (field: DecimalField | null | undefined | number): number => {
   const LINE_ITEM_COLUMNS_ACTIVE: ColumnDef[] = [
     { key: 'poRmCode',    label: 'RM Code',     width: 110 },
     { key: 'poRmName',    label: 'RM Name',     width: 180 },
-    { key: 'poUom',       label: 'UOM',         width: 70  },
     { key: 'poQty',       label: 'Qty',         width: 90,  align: 'right' },
     { key: 'poRate',      label: 'Rate',        width: 90,  align: 'right' },
     { key: 'amount',      label: 'Sub Total',   width: 110, align: 'right' },
     { key: 'poNoOfPacks', label: 'Packs',       width: 80,  align: 'right' },
     { key: 'poPackSize',  label: 'Pack Size',   width: 90,  align: 'right' },
-    { key: 'hsnCode',     label: 'HSN Code',    width: 100 },
+  
     ...(hasSgstCgst && !hasIgst ? [
       { key: 'sgst', label: 'SGST %', width: 75, align: 'right' as const },
       { key: 'cgst', label: 'CGST %', width: 75, align: 'right' as const },
@@ -434,13 +433,12 @@ const getSource = (field: DecimalField | number | null | undefined): string => {
         </Table.Td>
         <Table.Td fw={500}>{item.poRmCode}</Table.Td>
         <Table.Td>{item.poRmName}</Table.Td>
-        <Table.Td>{dash(item.poUom)}</Table.Td>
-        <Table.Td ta="right">{pv(item.poQty, 3)}</Table.Td>
+        <Table.Td ta="right">{pv(item.poQty, 3)} {dash(item.poUom)}</Table.Td>
         <Table.Td ta="right">{pv(item.poRate, 2)}</Table.Td>
         <Table.Td ta="right">{amount.toFixed(2)}</Table.Td>
         <Table.Td ta="right">{pv(item.poNoOfPacks, 0)}</Table.Td>
         <Table.Td ta="right">{pv(item.poPackSize, 3)}</Table.Td>
-        <Table.Td>{dash(item.hsnCode)}</Table.Td>
+      
         {hasSgstCgst && !hasIgst && <Table.Td ta="right">{pv(item.sgst, 2)}</Table.Td>}
         {hasSgstCgst && !hasIgst && <Table.Td ta="right">{pv(item.cgst, 2)}</Table.Td>}
         {hasIgst     &&             <Table.Td ta="right">{pv(item.igst, 2)}</Table.Td>}

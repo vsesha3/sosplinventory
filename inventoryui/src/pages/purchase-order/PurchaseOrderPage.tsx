@@ -7,7 +7,7 @@ import {
 import { Table, Checkbox } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import {
-  IconAlertCircle, IconPrinter,  IconFilter, IconX,
+  IconAlertCircle, IconPrinter,  IconFilter, IconX, IconClipboardList,
 } from '@tabler/icons-react';
 import api from '../../services/api';
 import MasterTable from '../../components/common/MasterTable';
@@ -18,6 +18,9 @@ import type { PagedApiResponse, PoLineItem } from '../../types/api.types';
 import PurchaseOrderForm from './PurchaseOrderForm';
 import type { PurchaseOrderFormData } from '../../types/api.types';
 import  {numVal} from '../../types/api.types';
+
+
+import RawMaterialInwardReceipt from '../raw-material/Rawmaterialinwardreceipt';
 
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
@@ -62,10 +65,10 @@ const PAGE_SIZE = 10;
 // ── Parent columns ────────────────────────────────────────────────────────────
 const COLUMNS: ColumnDef[] = [
   { key: 'poNo',               label: 'PO No',             width: 110 },
-  { key: 'poDate',             label: 'PO Date',           width: 110 },
-  { key: 'supplierCode',       label: 'Supplier Code',     width: 120 },
+  { key: 'poDate',             label: 'PO Date',           width: 100 },
+
   { key: 'supplierName',       label: 'Supplier Name',     width: 160 },
-  { key: 'poDeliverySchedule', label: 'Delivery Schedule', width: 140 },
+  { key: 'poDeliverySchedule', label: 'Delivery Schedule', width: 100 },
   { key: 'poType',             label: 'Type',              width: 130  },
   { key: 'poPaymentTerms',     label: 'Payment Terms',     width: 90 },
   { key: 'poDeliveryTerms',    label: 'Delivery Terms',    width: 120 },
@@ -78,7 +81,6 @@ const COLUMNS: ColumnDef[] = [
 const CHILD_COLUMNS: ChildColumnDef[] = [
   { key: 'poRmCode',    label: 'RM Code',     width: 100 },
   { key: 'poRmName',    label: 'RM Name',     width: 180 },
-  { key: 'poUom',       label: 'UOM',         width: 70  },
   { key: 'poQty',       label: 'Qty',         width: 80,  align: 'right',
     render: (v) => v != null ? Number(v).toFixed(3) : '—' },
   { key: 'poRate',      label: 'Rate',        width: 90,  align: 'right',
@@ -87,7 +89,6 @@ const CHILD_COLUMNS: ChildColumnDef[] = [
     render: (v) => v != null ? Number(v).toFixed(0) : '—' },
   { key: 'poPackSize',  label: 'Pack Size',   width: 90,  align: 'right',
     render: (v) => v != null ? Number(v).toFixed(3) : '—' },
-  { key: 'hSnCode',     label: 'HSN Code',    width: 100 },
   { key: 'sgst',        label: 'SGST %',      width: 80,  align: 'right',
     render: (v) => v != null ? Number(v).toFixed(2) : '—' },
   { key: 'cgst',        label: 'CGST %',      width: 80,  align: 'right',
@@ -128,6 +129,10 @@ const [toDate, setToDate]     = useState<string | null>(null);
   const [poFormOpen, setPoformOpen] = useState(false);
   const [editPoRefNo, setEditPoRefNo]     = useState<number | null>(null);
   const [formMode, setFormMode]           = useState<'create' | 'update'>('create'); // 
+
+  const [inwardOpen, setInwardOpen]       = useState(false);
+const [inwardPoRefNo, setInwardPoRefNo] = useState<number | null>(null);
+const [inwardPoNo, setInwardPoNo]       = useState<string | null>(null);
 
 
   // ── Fetch parent POs ───────────────────────────────────────────────────────
@@ -315,7 +320,7 @@ const getSelectedPoNo = (): string | null => {
               {item.poNo}
             </Table.Td>
             <Table.Td>{fmtDate(item.poDate)}</Table.Td>
-            <Table.Td>{item.supplierCode}</Table.Td>
+          
             <Table.Td>{item.supplierName}</Table.Td>
             <Table.Td>{fmtDate(item.poDeliverySchedule)}</Table.Td>
             <Table.Td>
@@ -356,6 +361,21 @@ const extraActions = (
         Print PDF
       </Button>
     </Tooltip>
+    <Tooltip label="Inward Receipt — record goods received against PO">
+  <Button size="xs" variant="subtle" color="green"
+    leftSection={<IconClipboardList size={14} />}
+    disabled={selected.length !== 1}
+    onClick={() => {
+      const po = data.find(item => item.poRefNo === selected[0]);
+      if (po) {
+        setInwardPoRefNo(po.poRefNo);
+        setInwardPoNo(po.poNo);
+        setInwardOpen(true);
+      }
+    }}>
+    Inward Receipt
+  </Button>
+</Tooltip>
    
   </Group>
 );
@@ -461,6 +481,22 @@ const extraActions = (
   poRefNo={editPoRefNo} 
   
 />
+
+<RawMaterialInwardReceipt
+  opened={inwardOpen}
+  onClose={() => {
+    setInwardOpen(false);
+    setInwardPoRefNo(null);
+    setInwardPoNo(null);
+  }}
+  onSave={(data) => {
+    console.log('Inward Receipt Save', data);
+    // TODO: wire to API
+  }}
+  poRefNo={inwardPoRefNo}
+  poNo={inwardPoNo}
+/>
+
     </Box>
   );
 };
