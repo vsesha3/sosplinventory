@@ -2,36 +2,25 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
-  Grid, Badge, Stack, Loader, Center, Table, Divider,
+  Grid, Badge, Stack, Loader, Center, Divider,
 } from '@mantine/core';
 import { IconClipboardCheck } from '@tabler/icons-react';
+import type { DateValue } from '@mantine/dates';
 import { FormTextInput } from '../../components/common/FormTextInput';
 import { FormSelect } from '../../components/common/FormSelect';
 import { FormDatePicker } from '../../components/common/FormDatePicker';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
-import MasterTable from '../../components/common/MasterTable';
-import type { ColumnDef } from '../../components/common/MasterTable';
-import type { DateValue } from '@mantine/dates';
+import FormHeader from '../common/Formheader';
+import InwardReceiptLineTable from '../common/Inwardreceiptlinetable';
+import type { InwardReceiptLine } from '../common/Inwardreceiptlinetable';
 import api from '../../services/api';
+import { PO_TYPE_LABELS } from '../../types/api.types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface DropDownOption {
   value: string;
   label: string;
-}
-
-interface PoLineItemDetail {
-  poDetId: number;
-  poRefNo: number;
-  poRmCode: string;
-  poRmName: string;
-  poQty: number | null;
-  poRate: number | null;
-  poUom: string | null;
-  poNoOfPacks: number | null;
-  poPackSize: number | null;
-  hsnCode: string | null;
 }
 
 interface PoListItem {
@@ -50,31 +39,42 @@ interface PoListApiResponse {
   };
 }
 
+interface PoLineItemDetail {
+  poDetId: number;
+  poRefNo: number;
+  poRmCode: string;
+  poRmName: string;
+  poQty: number | null;
+  poUom: string | null;
+  poNoOfPacks: number | null;
+  poPackSize: number | null;
+   sgst:       any | null;   // ← add
+  cgst:       any | null;   // ← add
+  igst:       any | null;   // ← add
+  poRate:     any | null;   // ← add (for pre-filling rate)
+}
+
 interface PoLineItemsApiResponse {
   success: boolean;
   message: string;
   data: PoLineItemDetail[];
 }
 
-// ── Inward Receipt Line Item ───────────────────────────────────────────────────
-
-export interface InwardReceiptLine {
-  poDetId: number;
-  poRmCode: string;
-  poRmName: string;
-  poUom: string | null;
-  rmOrderQty: number;
-  rmReceivedQty: string;          // editable
-  expectedDeliveryDate: DateValue;// editable
-  actualDeliveryDate: DateValue;  // editable
-  inspectedBy: string;            // editable
-  approvedBy: string;             // editable
-}
-
-// ── Inward Receipt Form Data ───────────────────────────────────────────────────
+// ── Form Data ─────────────────────────────────────────────────────────────────
 
 export interface InwardReceiptFormData {
-  invoiceNumber: string;
+  actualDateTimeOfReceipt: DateValue;
+  dateTimeOfReceipt: DateValue;
+  grnNo: string;
+  ircNo: string;
+  supplierId: string | null;
+
+  transporterId: string | null;
+  stnCommercialInvoiceNo: string;
+  invoiceDate: DateValue;
+  modvatCopyNo: string;
+  sapPo: string;
+  lrNumber: string;
   poRefNo: string | null;
   poDate: string | null;
   lines: InwardReceiptLine[];
@@ -84,34 +84,42 @@ export interface RawMaterialInwardReceiptProps {
   opened: boolean;
   onClose: () => void;
   onSave?: (data: InwardReceiptFormData) => void;
-  poRefNo?: number | null;   // pre-select a PO if opened from PO list
+  poRefNo?: number | null;
   poNo?: string | null;
 }
 
-// ── Columns ───────────────────────────────────────────────────────────────────
+// ── Defaults ──────────────────────────────────────────────────────────────────
 
-const LINE_COLUMNS: ColumnDef[] = [
-  { key: 'poRmCode',             label: 'RM Code',              width: 110 },
-  { key: 'poRmName',             label: 'RM Description',       width: 200 },
-  { key: 'poUom',                label: 'UOM',                  width: 70  },
-  { key: 'rmOrderQty',           label: 'RM Order Qty',         width: 110, align: 'right' },
-  { key: 'rmReceivedQty',        label: 'RM Received Qty',      width: 130, align: 'right' },
-  { key: 'expectedDeliveryDate', label: 'Expected Delivery',    width: 140 },
-  { key: 'actualDeliveryDate',   label: 'Actual Delivery',      width: 140 },
-  { key: 'inspectedBy',          label: 'Inspected By',         width: 130 },
-  { key: 'approvedBy',           label: 'Approved By',          width: 130 },
-];
+const defaultForm = {
+  actualDateTimeOfReceipt: null as DateValue,
+  dateTimeOfReceipt: null as DateValue,
+  grnNo: '',
+  ircNo: '',
+  supplierId: null as string | null,
 
-const dash = (v: any) => (v != null && v !== '' ? v : '—');
+  transporterId: null as string | null,
+  stnCommercialInvoiceNo: '',
+  invoiceDate: null as DateValue,
+  modvatCopyNo: '',
+  sapPo: '',
+  lrNumber: '',
+  poRefNo: null as string | null,
+  poDate: null as string | null,
+  poType: null as string | null,
+};
 
 const fmtDate = (val: string | null) => {
-  if (!val) return '—';
+  if (!val) return '';
   try {
     return new Date(val).toLocaleDateString('en-IN', {
       day: '2-digit', month: 'short', year: 'numeric',
     });
   } catch { return val; }
 };
+
+// ── Reusable label cell ───────────────────────────────────────────────────────
+
+
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -120,67 +128,59 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
   onClose,
   onSave,
   poRefNo: initialPoRefNo = null,
-  poNo: initialPoNo = null,
 }) => {
 
-  const [invoiceNumber, setInvoiceNumber]   = useState('');
-  const [selectedPoRefNo, setSelectedPoRefNo] = useState<string | null>(
-    initialPoRefNo ? String(initialPoRefNo) : null
-  );
-  const [poDate, setPoDate]                 = useState<string | null>(null);
-  const [poOptions, setPoOptions]           = useState<DropDownOption[]>([]);
-  const [lines, setLines]                   = useState<InwardReceiptLine[]>([]);
-  const [selectedLines, setSelectedLines]   = useState<number[]>([]);
-  const [loading, setLoading]               = useState(false);
-  const [linesLoading, setLinesLoading]     = useState(false);
-  const [fetchError, setFetchError]         = useState<string | null>(null);
-  const [confirmOpen, setConfirmOpen]       = useState(false);
+  const [form, setForm] = useState({ ...defaultForm });
+  const [lines, setLines] = useState<InwardReceiptLine[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [linesLoading, setLinesLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [editingCell, setEditingCell]       = useState<{ detId: number; field: string } | null>(null);
 
-  // ── Load PO dropdown ───────────────────────────────────────────────────────
+  const [poOptions, setPoOptions] = useState<DropDownOption[]>([]);
+  const [supplierOptions, setSupplierOptions] = useState<DropDownOption[]>([]);
+
+  const [transporterOptions, setTransporterOptions] = useState<DropDownOption[]>([]);
+
+  // ── Load ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!opened) {
-      // reset on close
-      setInvoiceNumber('');
-      setSelectedPoRefNo(initialPoRefNo ? String(initialPoRefNo) : null);
-      setPoDate(null);
+      setForm({ ...defaultForm });
       setLines([]);
-      setSelectedLines([]);
       setFetchError(null);
       setValidationErrors([]);
       return;
     }
 
-    const loadPoList = async () => {
+    const load = async () => {
       setLoading(true);
       try {
-        const res = await api.get<PoListApiResponse>('/api/inventory/purchase-order', {
-          params: { page: 0, size: 200 },
-        });
-        const opts = res.data.data.content.map(po => ({
-          value: String(po.poRefNo),
-          label: po.poNo,
-        }));
-        setPoOptions(opts);
+        const [poRes, supplierRes, transporterRes] = await Promise.all([
+          api.get<PoListApiResponse>('/api/inventory/purchase-order', { params: { page: 0, size: 200 } }),
+          api.get('/api/supplier-view/dropdown'),
 
-        // if pre-selected, load its line items
+          api.get('/api/transporter/dropdown').catch(() => ({ data: { data: [] } })),
+        ]);
+        setPoOptions(poRes.data.data.content.map(po => ({ value: String(po.poRefNo), label: po.poNo })));
+        setSupplierOptions(supplierRes.data.data ?? []);
+
+        setTransporterOptions(transporterRes.data.data ?? []);
+
         if (initialPoRefNo) {
-          setSelectedPoRefNo(String(initialPoRefNo));
+          setForm(prev => ({ ...prev, poRefNo: String(initialPoRefNo) }));
           await loadPoLines(initialPoRefNo);
         }
       } catch {
-        setFetchError('Failed to load purchase orders.');
+        setFetchError('Failed to load form data.');
       } finally {
         setLoading(false);
       }
     };
 
-    loadPoList();
+    load();
   }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Load PO line items when PO selected ───────────────────────────────────
 
   const loadPoLines = async (refNo: number) => {
     setLinesLoading(true);
@@ -190,19 +190,40 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
         api.get(`/api/inventory/purchase-order/${refNo}`),
       ]);
       const items = linesRes.data.data ?? [];
-      setPoDate(headerRes.data.data?.poDate ?? null);
-      setLines(items.map(item => ({
-        poDetId:              item.poDetId,
-        poRmCode:             item.poRmCode,
-        poRmName:             item.poRmName,
-        poUom:                item.poUom,
-        rmOrderQty:           Number(item.poQty) || 0,
-        rmReceivedQty:        '',
-        expectedDeliveryDate: null,
-        actualDeliveryDate:   null,
-        inspectedBy:          '',
-        approvedBy:           '',
-      })));
+      const header = headerRes.data.data;
+      const poDeliverySchedule = header?.poDeliverySchedule ?? null;
+
+      setForm(prev => ({
+        ...prev,
+        poDate: header?.poDate ?? null,
+        supplierId: header?.supplierId ? String(header.supplierId) : prev.supplierId,
+        // ← pre-fill dateTimeOfReceipt from PO delivery schedule
+        dateTimeOfReceipt: poDeliverySchedule ? new Date(poDeliverySchedule) : prev.dateTimeOfReceipt,
+        poType:   header?.poType ?? null
+            }));
+
+    setLines(items.map(item => ({
+  poDetId:              item.poDetId,
+  poRmCode:             item.poRmCode,
+  poRmName:             item.poRmName,
+  poUom:                item.poUom,
+  rmOrderQty:           Number(item.poQty) || 0,
+  rmReceivedQty:        '',
+  // ← add
+  sgst:                  item.sgst ?? '',      // ← add
+  cgst:                 item.cgst ?? '',      // ← add
+  igst:                 item.igst ?? '',  
+   receivedRate:         item.poRate != null
+                          ? (typeof item.poRate === 'object'
+                              ? String(item.poRate.parsedValue ?? item.poRate.source ?? '')
+                              : String(item.poRate))
+                          : '',    // ← add
+  expectedDeliveryDate: poDeliverySchedule ? new Date(poDeliverySchedule) : null,
+  actualDeliveryDate:   form.actualDateTimeOfReceipt ?? null,
+  inspectedBy:          '',
+  approvedBy:           '',
+  lotNumber:            '',      // ← add
+})));
     } catch {
       setFetchError('Failed to load PO line items.');
     } finally {
@@ -210,135 +231,46 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
     }
   };
 
-  const handlePoChange = async (value: string | null) => {
-    setSelectedPoRefNo(value);
-    setLines([]);
-    setPoDate(null);
-    if (value) await loadPoLines(Number(value));
-  };
+ 
+  // ── Form helpers ──────────────────────────────────────────────────────────
 
-  // ── Line editing helpers ───────────────────────────────────────────────────
+  const setStr = (field: keyof typeof defaultForm) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm(prev => ({ ...prev, [field]: e.currentTarget.value }));
 
-  const updateLine = (poDetId: number, field: keyof InwardReceiptLine, value: any) => {
-    setLines(prev => prev.map(l => l.poDetId === poDetId ? { ...l, [field]: value } : l));
-  };
+  const setDate = (field: keyof typeof defaultForm) =>
+    (value: DateValue) =>
+      setForm(prev => ({ ...prev, [field]: value }));
 
-  // ── Selection ─────────────────────────────────────────────────────────────
+  const setSelect = (field: keyof typeof defaultForm) =>
+    (value: string | null) =>
+      setForm(prev => ({ ...prev, [field]: value }));
 
-  const lineIds   = lines.map(l => l.poDetId);
-  const allLines  = lineIds.length > 0 && lineIds.every(id => selectedLines.includes(id));
-  const someLines = lineIds.some(id => selectedLines.includes(id)) && !allLines;
-  const toggleAllLines = () => allLines ? setSelectedLines([]) : setSelectedLines(lineIds);
-  const toggleLine = (id: number) =>
-    setSelectedLines(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
-
-  // ── Validation ─────────────────────────────────────────────────────────────
+  // ── Validation ────────────────────────────────────────────────────────────
 
   const validateForm = (): string[] => {
     const errors: string[] = [];
-    if (!invoiceNumber.trim())  errors.push('Invoice Number is required');
-    if (!selectedPoRefNo)       errors.push('PO Number is required');
-    if (lines.length === 0)     errors.push('No line items found for this PO');
-    const hasReceivedQty = lines.some(l => l.rmReceivedQty && parseFloat(l.rmReceivedQty) > 0);
-    if (!hasReceivedQty)        errors.push('At least one line item must have Received Quantity > 0');
+    if (!form.actualDateTimeOfReceipt) errors.push('Actual Date & Time of Receipt is required');
+    if (!form.dateTimeOfReceipt) errors.push('Date & Time of Receipt is required');
+    if (!form.supplierId) errors.push('Supplier Name is required');
+    // if (!form.companyId)                    errors.push('Company is required');
+    // if (!form.transporterId)                errors.push('Transporter is required');
+    if (!form.stnCommercialInvoiceNo.trim()) errors.push('STN Commercial Invoice No. is required');
+    if (!form.poRefNo) errors.push('PO Number is required');
+    if (lines.length === 0) errors.push('No line items found for this PO');
+    const hasReceived = lines.some(l => l.rmReceivedQty && parseFloat(l.rmReceivedQty) > 0);
+    if (!hasReceived) errors.push('At least one line item must have Received Quantity > 0');
     return errors;
   };
 
-  // ── Build rows ────────────────────────────────────────────────────────────
-
-  const lineRows = lines.map(line => {
-    const isSel = selectedLines.includes(line.poDetId);
-    return (
-      <Table.Tr key={line.poDetId} bg={isSel ? 'var(--mantine-color-blue-0)' : undefined}>
-        <Table.Td>
-          <input type="checkbox" checked={isSel} onChange={() => toggleLine(line.poDetId)} />
-        </Table.Td>
-        <Table.Td fw={500}>{line.poRmCode}</Table.Td>
-        <Table.Td>{line.poRmName}</Table.Td>
-        <Table.Td>{dash(line.poUom)}</Table.Td>
-        <Table.Td ta="right">{line.rmOrderQty.toFixed(3)}</Table.Td>
-
-        {/* Received Qty — editable */}
-        <Table.Td ta="right">
-          <input
-            type="number"
-            value={line.rmReceivedQty}
-            onChange={e => updateLine(line.poDetId, 'rmReceivedQty', e.currentTarget.value)}
-            placeholder="0.000"
-            style={{
-              width: '100%', textAlign: 'right', border: '1px solid var(--mantine-color-gray-4)',
-              borderRadius: 4, padding: '2px 6px', fontSize: 13,
-              backgroundColor: 'var(--mantine-color-yellow-0)',
-            }}
-          />
-        </Table.Td>
-
-        {/* Expected Delivery Date — editable */}
-        <Table.Td>
-          <input
-            type="date"
-            value={line.expectedDeliveryDate
-              ? new Date(line.expectedDeliveryDate as Date).toISOString().split('T')[0]
-              : ''}
-            onChange={e => updateLine(line.poDetId, 'expectedDeliveryDate',
-              e.currentTarget.value ? new Date(e.currentTarget.value) : null)}
-            style={{
-              width: '100%', border: '1px solid var(--mantine-color-gray-4)',
-              borderRadius: 4, padding: '2px 6px', fontSize: 12,
-              backgroundColor: 'var(--mantine-color-yellow-0)',
-            }}
-          />
-        </Table.Td>
-
-        {/* Actual Delivery Date — editable */}
-        <Table.Td>
-          <input
-            type="date"
-            value={line.actualDeliveryDate
-              ? new Date(line.actualDeliveryDate as Date).toISOString().split('T')[0]
-              : ''}
-            onChange={e => updateLine(line.poDetId, 'actualDeliveryDate',
-              e.currentTarget.value ? new Date(e.currentTarget.value) : null)}
-            style={{
-              width: '100%', border: '1px solid var(--mantine-color-gray-4)',
-              borderRadius: 4, padding: '2px 6px', fontSize: 12,
-              backgroundColor: 'var(--mantine-color-yellow-0)',
-            }}
-          />
-        </Table.Td>
-
-        {/* Inspected By — editable */}
-        <Table.Td>
-          <input
-            type="text"
-            value={line.inspectedBy}
-            onChange={e => updateLine(line.poDetId, 'inspectedBy', e.currentTarget.value)}
-            placeholder="Name"
-            style={{
-              width: '100%', border: '1px solid var(--mantine-color-gray-4)',
-              borderRadius: 4, padding: '2px 6px', fontSize: 12,
-              backgroundColor: 'var(--mantine-color-yellow-0)',
-            }}
-          />
-        </Table.Td>
-
-        {/* Approved By — editable */}
-        <Table.Td>
-          <input
-            type="text"
-            value={line.approvedBy}
-            onChange={e => updateLine(line.poDetId, 'approvedBy', e.currentTarget.value)}
-            placeholder="Name"
-            style={{
-              width: '100%', border: '1px solid var(--mantine-color-gray-4)',
-              borderRadius: 4, padding: '2px 6px', fontSize: 12,
-              backgroundColor: 'var(--mantine-color-yellow-0)',
-            }}
-          />
-        </Table.Td>
-      </Table.Tr>
-    );
-  });
+  // In RawMaterialInwardReceipt — sync actualDeliveryDate when actualDateTimeOfReceipt changes
+  useEffect(() => {
+    if (!form.actualDateTimeOfReceipt || lines.length === 0) return;
+    setLines(prev => prev.map(l => ({
+      ...l,
+      actualDeliveryDate: form.actualDateTimeOfReceipt,
+    })));
+  }, [form.actualDateTimeOfReceipt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -366,26 +298,15 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
         <Paper withBorder radius="md"
           style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
 
-          {/* ── Header ── */}
-          <Box px="lg" py="sm"
-            style={{
-              backgroundColor: '#2c6e49',
-              display: 'flex', alignItems: 'center',
-              justifyContent: 'space-between', flexShrink: 0,
-            }}
-          >
-            <Group gap="sm">
-              <IconClipboardCheck size={18} color="white" />
-              <Text fw={700} size="md" c="white">PO Receipt Form</Text>
-              {selectedPoRefNo && (
-                <Badge variant="filled"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}>
-                  PO Ref # {selectedPoRefNo}
-                </Badge>
-              )}
-            </Group>
-            <Button size="xs" variant="white" color="dark" onClick={onClose}>Cancel</Button>
-          </Box>
+          {/* ── Shared FormHeader ── */}
+      <FormHeader
+  title={`${PO_TYPE_LABELS[form.poType ?? ''] ?? ''} Inward Receipt — PO: ${
+    poOptions.find(p => p.value === form.poRefNo)?.label ?? '...'
+  }${form.poDate ? ` | ${fmtDate(form.poDate)}` : ''}`}
+  icon={<IconClipboardCheck size={18} color="white" />}
+  color="#4a6fa5"
+  onClose={onClose}
+/>
 
           {/* ── Body ── */}
           {loading ? (
@@ -400,39 +321,59 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
 
               {fetchError && <Text size="xs" c="red" mb="sm">{fetchError}</Text>}
 
-              {/* ── Header Fields ── */}
-              <Paper withBorder p="md" mb="lg" radius="sm"
+              {/* ── Header fields: 3 per row ── */}
+              {/* Each row: [label | input | label | input | label | input] */}
+              {/* Grid columns=24: label=3, input=5 per field → 3×(3+5)=24 */}
+              <Paper withBorder p="md" mb="md" radius="sm"
                 style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
-                <Grid columns={12} gutter="md">
-                  <Grid.Col span={4}>
-                    <FormTextInput
-                      label="Invoice Number"
-                      value={invoiceNumber}
-                      onChange={e => setInvoiceNumber(e.currentTarget.value)}
-                      placeholder="Enter invoice number"
-                      required
-                    />
+                <Grid columns={12} gutter="sm">
+
+                  {/* ── Row 1: Actual Date | STN Invoice No | Invoice Date | Date & Time of Receipt ── */}
+                  <Grid.Col span={3}>
+                    <FormDatePicker label="* Actual Date & Time of Receipt" value={form.actualDateTimeOfReceipt} onChange={setDate('actualDateTimeOfReceipt')} required />
                   </Grid.Col>
-                  <Grid.Col span={4}>
-                    <FormSelect
-                      label="PO Number"
-                      value={selectedPoRefNo}
-                      onChange={handlePoChange}
-                      data={poOptions}
-                      placeholder="Select PO"
-                      required
-                      searchable
-                    />
+                  <Grid.Col span={3}>
+                    <FormTextInput label="* STN Commercial Invoice No." value={form.stnCommercialInvoiceNo} onChange={setStr('stnCommercialInvoiceNo')} placeholder="Enter invoice no" required />
                   </Grid.Col>
-                  <Grid.Col span={4}>
-                    <FormTextInput
-                      label="PO Date"
-                      value={poDate ? fmtDate(poDate) : ''}
-                      onChange={() => {}}
-                      placeholder="—"
-                      readOnly={true}
-                    />
+                  <Grid.Col span={3}>
+                    <FormDatePicker label="Invoice Date" value={form.invoiceDate} onChange={setDate('invoiceDate')} />
                   </Grid.Col>
+                  <Grid.Col span={3}>
+                    <FormDatePicker label="* Date & Time of Receipt" value={form.dateTimeOfReceipt} onChange={setDate('dateTimeOfReceipt')} required />
+                  </Grid.Col>
+
+                  {/* ── Row 2: GRN No | IRC No | Modvat Copy No | SAP PO ── */}
+                  <Grid.Col span={3}>
+                    <FormTextInput label="GRN No." value={form.grnNo} onChange={setStr('grnNo')} placeholder="Auto / manual" />
+                  </Grid.Col>
+                  <Grid.Col span={3}>
+                    <FormTextInput label="IRC No." value={form.ircNo} onChange={setStr('ircNo')} placeholder="" />
+                  </Grid.Col>
+                  <Grid.Col span={3}>
+                    <FormTextInput label="Modvat Copy No." value={form.modvatCopyNo} onChange={setStr('modvatCopyNo')} placeholder="" />
+                  </Grid.Col>
+                  <Grid.Col span={3}>
+                    <FormTextInput label="SAP PO" value={form.sapPo} onChange={setStr('sapPo')} placeholder="" />
+                  </Grid.Col>
+
+                  {/* ── Row 3: Supplier Name | Company | Transporter | L.R's Number ── */}
+                  <Grid.Col span={3}>
+                    <FormSelect label="* Supplier Name" value={form.supplierId} onChange={setSelect('supplierId')} data={supplierOptions} placeholder="--------Select----------" required searchable />
+                  </Grid.Col>
+                  <Grid.Col span={3}>
+                    <FormSelect label="Transporter" value={form.transporterId} onChange={setSelect('transporterId')} data={transporterOptions} placeholder="--------Select----------" searchable />
+                  </Grid.Col>
+                  <Grid.Col span={3}>
+                    <FormTextInput label="L.R's Number" value={form.lrNumber} onChange={setStr('lrNumber')} placeholder="" />
+                  </Grid.Col>
+
+                  {/* ── Row 4: PO Number | PO Date ── */}
+                
+                  <Grid.Col span={3}>
+                    <FormTextInput label="PO Date" value={fmtDate(form.poDate)} onChange={() => { }} placeholder="—" readOnly />
+                  </Grid.Col>
+                  <Grid.Col span={6} />
+
                 </Grid>
               </Paper>
 
@@ -442,7 +383,7 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
                   <Group gap="xs">
                     <Text size="sm" fw={500}>PO Receipt</Text>
                     {lines.length > 0 && (
-                      <Badge size="xs" variant="light" color="green">
+                      <Badge size="xs" variant="light" color="blue">
                         {lines.length} item{lines.length !== 1 ? 's' : ''}
                       </Badge>
                     )}
@@ -460,37 +401,18 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
                   </Stack>
                 </Center>
               ) : (
-                <MasterTable
-                  columns={LINE_COLUMNS}
-                  rows={lineRows}
-                  colSpan={LINE_COLUMNS.length + 1}
-                  totalElements={lines.length}
+                <InwardReceiptLineTable
+                  lines={lines}
+                  onChange={setLines}
                   loading={false}
-                  page={1}
-                  totalPages={1}
-                  pageSize={lines.length || 1}
-                  onPageChange={() => {}}
-                  searchValue=""
-                  onSearchChange={() => {}}
-                  allSelected={allLines}
-                  someSelected={someLines}
-                  onToggleSelectAll={toggleAllLines}
-                  selectedCount={selectedLines.length}
-                  onAdd={undefined}
-                  onEdit={undefined}
-                  onDelete={() => {
-                    setLines(prev => prev.filter(l => !selectedLines.includes(l.poDetId)));
-                    setSelectedLines([]);
-                  }}
-                  onRefresh={() => {
-                    if (selectedPoRefNo) loadPoLines(Number(selectedPoRefNo));
-                  }}
                 />
               )}
 
               {lines.length === 0 && !linesLoading && (
                 <Text size="sm" c="dimmed" ta="center" py="xl">
-                  {selectedPoRefNo ? 'No line items found for this PO.' : 'Select a PO Number to load line items.'}
+                  {form.poRefNo
+                    ? 'No line items found for this PO.'
+                    : 'Select a PO Number to load line items.'}
                 </Text>
               )}
 
@@ -512,32 +434,15 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
                   : 'No items loaded'}
               </Text>
               <Group gap="sm">
-                <Button variant="light" color="red" size="sm"
-                  disabled={selectedLines.length === 0}
-                  onClick={() => {
-                    setLines(prev => prev.filter(l => !selectedLines.includes(l.poDetId)));
-                    setSelectedLines([]);
-                  }}>
-                  Delete Selected
-                </Button>
+                <Button variant="light" size="sm" color="red" onClick={onClose}>Cancel</Button>
                 <Button variant="light" size="sm"
                   disabled={lines.length === 0}
-                  onClick={() => {
-                    // Submit — just save as-is (Close PO variant)
-                    const errors = validateForm();
-                    setValidationErrors(errors);
-                    if (errors.length === 0) setConfirmOpen(true);
-                    else setConfirmOpen(true);
-                  }}>
+                  onClick={() => { setValidationErrors(validateForm()); setConfirmOpen(true); }}>
                   Close PO
                 </Button>
-                <Button size="sm" color="green"
+                <Button size="sm" color="blue"
                   disabled={lines.length === 0}
-                  onClick={() => {
-                    const errors = validateForm();
-                    setValidationErrors(errors);
-                    setConfirmOpen(true);
-                  }}>
+                  onClick={() => { setValidationErrors(validateForm()); setConfirmOpen(true); }}>
                   Submit
                 </Button>
               </Group>
@@ -551,12 +456,7 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
         opened={confirmOpen}
         onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
         onConfirm={() => {
-          onSave?.({
-            invoiceNumber,
-            poRefNo: selectedPoRefNo,
-            poDate,
-            lines,
-          });
+          onSave?.({ ...form, lines });
           setConfirmOpen(false);
           onClose();
         }}
