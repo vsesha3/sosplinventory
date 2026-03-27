@@ -21,6 +21,11 @@ import  {numVal} from '../../types/api.types';
 
 
 import RawMaterialInwardReceipt from '../raw-material/Rawmaterialinwardreceipt';
+import type {InwardReceiptFormData } from '../raw-material/Rawmaterialinwardreceipt';
+
+import type { MaterialReceiptRequest} from '../../types/api.types';
+import type { SaveStatus } from '../common/Savestatusbanner';
+import SaveStatusBanner from '../common/Savestatusbanner';
 
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
@@ -133,7 +138,8 @@ const [toDate, setToDate]     = useState<string | null>(null);
   const [inwardOpen, setInwardOpen]       = useState(false);
 const [inwardPoRefNo, setInwardPoRefNo] = useState<number | null>(null);
 const [inwardPoNo, setInwardPoNo]       = useState<string | null>(null);
-
+const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+const [saveMessage, setSaveMessage] = useState<string>('');
 
   // ── Fetch parent POs ───────────────────────────────────────────────────────
   const fetchData = useCallback(async (
@@ -380,6 +386,69 @@ const extraActions = (
   </Group>
 );
 
+// ── Material Receipt Save ─────────────────────────────────────────────────────
+
+const formatDate = (val: any): string => {
+  if (!val) return '';
+  try { return new Date(val).toISOString(); } catch { return ''; }
+};
+
+const handleInwardReceiptSave = async (data: InwardReceiptFormData) => {
+  setSaveStatus('saving');
+  try {
+    const payload: MaterialReceiptRequest = {
+      actualDateTimeOfReceipt: formatDate(data.actualDateTimeOfReceipt),
+      dateTimeOfReceipt:       formatDate(data.dateTimeOfReceipt),
+      grnNo:                   data.grnNo          ?? '',
+      ircNo:                   data.ircNo          ?? '',
+      supplierId:              data.supplierId     ?? '',
+      transporterId:           data.transporterId  ?? null,
+      stnCommercialInvoiceNo:  data.stnCommercialInvoiceNo ?? '',
+      invoiceDate:             formatDate(data.invoiceDate),
+      modvatCopyNo:            data.modvatCopyNo   ?? '',
+      sapPo:                   data.sapPo          ?? '',
+      lrNumber:                data.lrNumber       ?? '',
+      poRefNo:                 data.poRefNo        ?? '',
+      poDate:                  data.poDate         ?? '',
+      poType:                  data.poType         ?? '',
+      lines: data.lines.map(line => ({
+        poDetId:              String(line.poDetId),
+        poRmCode:             line.poRmCode        ?? '',
+        poRmName:             line.poRmName        ?? '',
+        poUom:                line.poUom           ?? '',
+        rmOrderQty:           String(line.rmOrderQty),
+        rmReceivedQty:        line.rmReceivedQty   ?? '',
+        sgst:                 line.sgst            ?? '',
+        cgst:                 line.cgst            ?? '',
+        igst:                 line.igst            ?? '',
+        receivedRate:         line.receivedRate    ?? '',
+        expectedDeliveryDate: formatDate(line.expectedDeliveryDate),
+        actualDeliveryDate:   formatDate(line.actualDeliveryDate),
+        inspectedBy:          line.inspectedBy     ?? '',
+        approvedBy:           line.approvedBy      ?? '',
+        lotNumber:            line.lotNumber       ?? '',
+      })),
+    };
+
+    await api.post('/api/inventory/material-receipt/save', payload);
+
+    setSaveStatus('success');
+    setSaveMessage('Inward Receipt saved successfully!');
+    setInwardOpen(false);
+    setInwardPoRefNo(null);
+    setInwardPoNo(null);
+    fetchData(page, keyword, fromDate, toDate);
+    console.log(saveMessage);
+  } catch (err: any) {
+    setSaveStatus('error');
+    
+    setSaveMessage(err?.response?.data?.message || 'Failed to save Inward Receipt.');
+    console.error('Failed to save inward receipt', err?.response?.data?.message || err);
+  }
+};
+
+
+
   return (
     <Box p="md" style={{ width: '100%', overflowX: 'auto' }}>
       <Box mb="md">
@@ -489,12 +558,15 @@ const extraActions = (
     setInwardPoRefNo(null);
     setInwardPoNo(null);
   }}
-  onSave={(data) => {
-    console.log('Inward Receipt Save', data);
-    // TODO: wire to API
-  }}
+  onSave={handleInwardReceiptSave}
   poRefNo={inwardPoRefNo}
   poNo={inwardPoNo}
+/>
+<SaveStatusBanner
+  status={saveStatus}
+  successMessage="Saved!"
+  errorMessage="Failed to save."
+  onDismiss={() => setSaveStatus('idle')}
 />
 
     </Box>

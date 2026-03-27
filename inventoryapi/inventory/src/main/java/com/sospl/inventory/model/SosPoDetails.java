@@ -3,9 +3,11 @@ package com.sospl.inventory.model;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 
+import com.sospl.inventory.model.common.BaseAuditEntity;
+
 @Entity
 @Table(name = "sos_po_details_t")
-public class SosPoDetails{
+public class SosPoDetails extends BaseAuditEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -59,8 +61,23 @@ public class SosPoDetails{
 
     @Column(name = "is_active")
     private Boolean isActive;
+    
+    @Column(name = "receipt_det_id")
+    private Long receiptDetId;
 
-    // Getters
+    public String gethSnCode() {
+		return hSnCode;
+	}
+	public void sethSnCode(String hSnCode) {
+		this.hSnCode = hSnCode;
+	}
+	public Long getReceiptDetId() {
+		return receiptDetId;
+	}
+	public void setReceiptDetId(Long receiptDetId) {
+		this.receiptDetId = receiptDetId;
+	}
+	// Getters
     public Long getPoDetId() { return poDetId; }
     public Long getPoRefNo() { return poRefNo; }
     public String getPoRmCode() { return poRmCode; }

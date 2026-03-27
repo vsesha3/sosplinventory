@@ -1,4 +1,4 @@
-package com.sospl.inventory.model.inventory;
+package com.sospl.inventory.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

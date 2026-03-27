@@ -52,6 +52,12 @@ interface PoLineItemDetail {
   cgst:       any | null;   // ← add
   igst:       any | null;   // ← add
   poRate:     any | null;   // ← add (for pre-filling rate)
+  rmReceivedQty: number | null; // ← add (for received qty from receipt if exists)
+  expDateDel: string | null; // ← add (for expected delivery date)
+  actDateDel: string | null; // ← add (for actual delivery date)
+  inspectedBy: string | null; // ← add
+  approvedBy:  string | null; // ← add
+  lotNumber:   string | null; // ← add
 }
 
 interface PoLineItemsApiResponse {
@@ -78,6 +84,7 @@ export interface InwardReceiptFormData {
   poRefNo: string | null;
   poDate: string | null;
   lines: InwardReceiptLine[];
+  poType: string | null;
 }
 
 export interface RawMaterialInwardReceiptProps {
@@ -106,6 +113,7 @@ const defaultForm = {
   poRefNo: null as string | null,
   poDate: null as string | null,
   poType: null as string | null,
+  materialDetId : null as number | null,
 };
 
 const fmtDate = (val: string | null) => {
@@ -145,6 +153,8 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
+  
+
   useEffect(() => {
     if (!opened) {
       setForm({ ...defaultForm });
@@ -158,20 +168,76 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
       setLoading(true);
       try {
         const [poRes, supplierRes, transporterRes] = await Promise.all([
-          api.get<PoListApiResponse>('/api/inventory/purchase-order', { params: { page: 0, size: 200 } }),
+          api.get<PoListApiResponse>('/api/inventory/purchase-order', {
+            params: { page: 0, size: 200 }
+          }),
           api.get('/api/supplier-view/dropdown'),
-
-          api.get('/api/transporter/dropdown').catch(() => ({ data: { data: [] } })),
+          api.get('/api/transporter/dropdown').catch(() => ({
+            data: { data: [] }
+          })),
         ]);
-        setPoOptions(poRes.data.data.content.map(po => ({ value: String(po.poRefNo), label: po.poNo })));
-        setSupplierOptions(supplierRes.data.data ?? []);
 
+        setPoOptions(
+          poRes.data.data.content.map(po => ({
+            value: String(po.poRefNo),
+            label: po.poNo
+          }))
+        );
+        setSupplierOptions(supplierRes.data.data ?? []);
         setTransporterOptions(transporterRes.data.data ?? []);
 
         if (initialPoRefNo) {
-          setForm(prev => ({ ...prev, poRefNo: String(initialPoRefNo) }));
+          setForm(prev => ({
+            ...prev,
+            poRefNo: String(initialPoRefNo)
+          }));
+
+          // Load PO lines
           await loadPoLines(initialPoRefNo);
+          
+
+          // ── Fetch existing receipt header if already saved ────────────
+          try {
+            const receiptRes = await api.get(
+              `/api/inventory/material-receipt/header/po/${initialPoRefNo}`,
+              { params: { materialType: form.poType } } // ← pass poType if available
+            );
+
+            const header = receiptRes.data.data;
+
+            if (header) {
+              // ── Map header fields to form ─────────────────────────────
+              setForm(prev => ({
+                ...prev,
+                poRefNo:                  String(initialPoRefNo),
+                grnNo:                    header.grnNo ?? '',
+                ircNo:                    header.ircNo ?? '',
+                stnCommercialInvoiceNo:   header.invoiceNo ?? '',
+                invoiceDate:              header.invoiceDate ?? '',
+                modvatCopyNo:             header.modvatCopyNo ?? '',
+                sapPo:                    header.sapPo ?? '',
+                lrNumber:                 header.lrNumber ?? '',
+                supplierId:               header.supplierId
+                                            ? String(header.supplierId)
+                                            : '',
+                transporterId:            header.transporterId
+                                            ? String(header.transporterId)
+                                            : null,
+                dateTimeOfReceipt:        header.receiptDateTime ?? '',
+                actualDateTimeOfReceipt:  header.actualReceiptDateTime ?? '',
+              }));
+            }
+          } catch {
+            // No existing receipt — form stays as default
+            // This is not an error — just means no receipt saved yet
+              console.info('No receipt found for PO:', initialPoRefNo);
+            console.info(
+              'No existing receipt for PO:',
+              initialPoRefNo
+            );
+          }
         }
+
       } catch {
         setFetchError('Failed to load form data.');
       } finally {
@@ -182,11 +248,12 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
     load();
   }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
+
   const loadPoLines = async (refNo: number) => {
     setLinesLoading(true);
     try {
       const [linesRes, headerRes] = await Promise.all([
-        api.get<PoLineItemsApiResponse>(`/api/inventory/po-details/${refNo}`),
+        api.get<PoLineItemsApiResponse>(`/api/inventory/po-details/with-receipt/${refNo}`),
         api.get(`/api/inventory/purchase-order/${refNo}`),
       ]);
       const items = linesRes.data.data ?? [];
@@ -202,27 +269,58 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
         poType:   header?.poType ?? null
             }));
 
-    setLines(items.map(item => ({
-  poDetId:              item.poDetId,
-  poRmCode:             item.poRmCode,
-  poRmName:             item.poRmName,
-  poUom:                item.poUom,
-  rmOrderQty:           Number(item.poQty) || 0,
-  rmReceivedQty:        '',
-  // ← add
-  sgst:                  item.sgst ?? '',      // ← add
-  cgst:                 item.cgst ?? '',      // ← add
-  igst:                 item.igst ?? '',  
-   receivedRate:         item.poRate != null
-                          ? (typeof item.poRate === 'object'
-                              ? String(item.poRate.parsedValue ?? item.poRate.source ?? '')
-                              : String(item.poRate))
-                          : '',    // ← add
-  expectedDeliveryDate: poDeliverySchedule ? new Date(poDeliverySchedule) : null,
-  actualDeliveryDate:   form.actualDateTimeOfReceipt ?? null,
-  inspectedBy:          '',
-  approvedBy:           '',
-  lotNumber:            '',      // ← add
+ setLines(items.map(item => ({
+    poDetId:              item.poDetId,
+    poRmCode:             item.poRmCode  ?? '',
+    poRmName:             item.poRmName  ?? '',
+    poUom:                item.poUom     ?? '',
+
+    // Order qty from PO
+    rmOrderQty:           Number(item.poQty) || 0,
+
+    // Received qty — from receipt if exists else empty
+    rmReceivedQty:        item.rmReceivedQty != null
+                              ? String(item.rmReceivedQty)
+                              : '',
+
+    // Tax fields — from receipt if exists else from PO
+    sgst:                 item.sgst != null
+                              ? String(item.sgst)
+                              : '',
+    cgst:                 item.cgst != null
+                              ? String(item.cgst)
+                              : '',
+    igst:                 item.igst != null
+                              ? String(item.igst)
+                              : '',
+
+    // Rate — handle both object and primitive
+    receivedRate:         item.poRate != null
+                              ? (typeof item.poRate === 'object'
+                                  ? String(
+                                      item.poRate.parsedValue
+                                      ?? item.poRate.source
+                                      ?? '')
+                                  : String(item.poRate))
+                              : '',
+
+    // Dates — from receipt if exists else from PO delivery schedule
+    expectedDeliveryDate: item.expDateDel
+                              ? new Date(item.expDateDel)
+                              : poDeliverySchedule
+                                  ? new Date(poDeliverySchedule)
+                                  : null,
+
+    actualDeliveryDate:   item.actDateDel
+                              ? new Date(item.actDateDel)
+                              : form.actualDateTimeOfReceipt
+                                  ? new Date(form.actualDateTimeOfReceipt)
+                                  : null,
+
+    // From receipt if exists else empty
+    inspectedBy:          item.inspectedBy ?? '',
+    approvedBy:           item.approvedBy  ?? '',
+    lotNumber:            item.lotNumber   ?? '',
 })));
     } catch {
       setFetchError('Failed to load PO line items.');
@@ -236,7 +334,7 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
 
   const setStr = (field: keyof typeof defaultForm) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm(prev => ({ ...prev, [field]: e.currentTarget.value }));
+      setForm(prev => ({ ...prev, [field]: e.target.value }));
 
   const setDate = (field: keyof typeof defaultForm) =>
     (value: DateValue) =>

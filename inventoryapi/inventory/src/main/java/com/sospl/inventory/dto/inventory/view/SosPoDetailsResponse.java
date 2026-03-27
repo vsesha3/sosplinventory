@@ -21,8 +21,65 @@ public class SosPoDetailsResponse {
     private BigDecimal poPackSize;
     private String hSnCode;
     private Boolean isActive;
+    
+ // ── From sos_po_receipt_t ─────────────────────────────────────────────
+    private BigDecimal rmReceivedQty;
+    private String inspectedBy;
+    private String approvedBy;
+    private String lotNumber;
+    private String expDateDel;
+    private String actDateDel;
+    private Long poReceiptNo;
 
-    // Getters
+    public String gethSnCode() {
+		return hSnCode;
+	}
+	public void sethSnCode(String hSnCode) {
+		this.hSnCode = hSnCode;
+	}
+	public BigDecimal getRmReceivedQty() {
+		return rmReceivedQty;
+	}
+	public void setRmReceivedQty(BigDecimal rmReceivedQty) {
+		this.rmReceivedQty = rmReceivedQty;
+	}
+	public String getInspectedBy() {
+		return inspectedBy;
+	}
+	public void setInspectedBy(String inspectedBy) {
+		this.inspectedBy = inspectedBy;
+	}
+	public String getApprovedBy() {
+		return approvedBy;
+	}
+	public void setApprovedBy(String approvedBy) {
+		this.approvedBy = approvedBy;
+	}
+	public String getLotNumber() {
+		return lotNumber;
+	}
+	public void setLotNumber(String lotNumber) {
+		this.lotNumber = lotNumber;
+	}
+	public String getExpDateDel() {
+		return expDateDel;
+	}
+	public void setExpDateDel(String expDateDel) {
+		this.expDateDel = expDateDel;
+	}
+	public String getActDateDel() {
+		return actDateDel;
+	}
+	public void setActDateDel(String actDateDel) {
+		this.actDateDel = actDateDel;
+	}
+	public Long getPoReceiptNo() {
+		return poReceiptNo;
+	}
+	public void setPoReceiptNo(Long poReceiptNo) {
+		this.poReceiptNo = poReceiptNo;
+	}
+	// Getters
     public Long getPoDetId() { return poDetId; }
     public Long getPoRefNo() { return poRefNo; }
     public String getPoRmCode() { return poRmCode; }

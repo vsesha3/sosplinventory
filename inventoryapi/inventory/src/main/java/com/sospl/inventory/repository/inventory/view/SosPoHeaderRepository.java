@@ -1,6 +1,6 @@
 package com.sospl.inventory.repository.inventory.view;
 
-import com.sospl.inventory.model.inventory.SosPoHeader;
+import com.sospl.inventory.model.SosPoHeader;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

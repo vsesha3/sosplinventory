@@ -82,3 +82,40 @@ export const PO_TYPE_OPTIONS = [
 export const PO_TYPE_LABELS: Record<string, string> = Object.fromEntries(
   PO_TYPE_OPTIONS.map(o => [o.value, o.label])
 );
+
+
+export interface MaterialReceiptLineRequest {
+  poDetId: string;
+  poRmCode: string;
+  poRmName: string;
+  poUom: string;
+  rmOrderQty: string;
+  rmReceivedQty: string;
+  sgst: string;
+  cgst: string;
+  igst: string;
+  receivedRate: string;
+  expectedDeliveryDate: string;
+  actualDeliveryDate: string;
+  inspectedBy: string;
+  approvedBy: string;
+  lotNumber: string;
+}
+
+export interface MaterialReceiptRequest {
+  actualDateTimeOfReceipt: string;
+  dateTimeOfReceipt: string;
+  grnNo: string;
+  ircNo: string;
+  supplierId: string;
+  transporterId: string | null;
+  stnCommercialInvoiceNo: string;
+  invoiceDate: string;
+  modvatCopyNo: string;
+  sapPo: string;
+  lrNumber: string;
+  poRefNo: string;
+  poDate: string;
+  poType: string;
+  lines: MaterialReceiptLineRequest[];
+}

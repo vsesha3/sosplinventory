@@ -1,4 +1,4 @@
-package com.sospl.inventory.controller.inventory;
+package com.sospl.inventory.controller;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.dto.common.PoItemDropDownResponse;

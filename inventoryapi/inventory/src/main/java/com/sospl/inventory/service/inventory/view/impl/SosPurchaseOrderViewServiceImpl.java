@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 
 import com.sospl.inventory.dto.inventory.SosPoHeaderRequest;
-import com.sospl.inventory.model.inventory.SosPoHeader;
+import com.sospl.inventory.model.SosPoHeader;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 

@@ -55,4 +55,10 @@ public abstract class BaseAuditEntity {
     public void setDeletedBy(String deletedBy) { this.deletedBy = deletedBy; }
 
     public LocalDateTime getDeletedAt() { return deletedAt; }
+    
+ // Add these missing setters to BaseAuditEntity.java
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+   
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
 }

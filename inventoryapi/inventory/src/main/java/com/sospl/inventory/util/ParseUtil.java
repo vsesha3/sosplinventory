@@ -1,0 +1,134 @@
+package com.sospl.inventory.util;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+public class ParseUtil {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(ParseUtil.class);
+
+    // ── Private constructor — utility class ───────────────────────────────
+    private ParseUtil() {}
+
+    // ── Date / DateTime ───────────────────────────────────────────────────
+
+    /**
+     * Parses date string — handles multiple formats:
+     * "2026-03-18"
+     * "2026-03-18T00:00:00.000Z"
+     * "2026-03-18T00:00:00"
+     * "2026-03-18T00:00:00.000+05:30"
+     */
+    public static LocalDate parseDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) return null;
+        try {
+            String cleaned = dateStr
+                    .replace("Z", "")
+                    .replaceAll("\\.\\d+", "")
+                    .replaceAll("[+-]\\d{2}:\\d{2}$", "");
+            if (cleaned.contains("T")) {
+                return LocalDate.parse(cleaned.substring(0, 10));
+            }
+            return LocalDate.parse(cleaned);
+        } catch (Exception e) {
+            log.warn("Invalid date format: {}", dateStr);
+            return null;
+        }
+    }
+
+    /**
+     * Parses datetime string — handles multiple formats:
+     * "2026-03-18T00:00:00.000Z"
+     * "2026-03-18T00:00:00"
+     * "2026-03-18"
+     * "2026-03-18T00:00:00.000+05:30"
+     */
+    public static LocalDateTime parseDateTime(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) return null;
+        try {
+            String cleaned = dateStr
+                    .replace("Z", "")
+                    .replaceAll("\\.\\d+", "")
+                    .replaceAll("[+-]\\d{2}:\\d{2}$", "");
+            if (cleaned.contains("T")) {
+                return LocalDateTime.parse(cleaned);
+            }
+            return LocalDateTime.parse(cleaned + "T00:00:00");
+        } catch (Exception e) {
+            log.warn("Invalid datetime format: {}", dateStr);
+            return null;
+        }
+    }
+
+    // ── Number Parsers ────────────────────────────────────────────────────
+
+    /**
+     * Safely parses String to BigDecimal
+     * Returns null if blank or invalid
+     */
+    public static BigDecimal parseBigDecimal(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return new BigDecimal(value.trim());
+        } catch (NumberFormatException e) {
+            log.warn("Invalid BigDecimal value: {}", value);
+            return null;
+        }
+    }
+
+    /**
+     * Safely parses String to Integer
+     * Returns null if blank or invalid
+     */
+    public static Integer parseInteger(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            log.warn("Invalid Integer value: {}", value);
+            return null;
+        }
+    }
+
+    /**
+     * Safely parses String to Long
+     * Returns null if blank or invalid
+     */
+    public static Long parseLong(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            log.warn("Invalid Long value: {}", value);
+            return null;
+        }
+    }
+
+    /**
+     * Safely parses String to Double
+     * Returns null if blank or invalid
+     */
+    public static Double parseDouble(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            log.warn("Invalid Double value: {}", value);
+            return null;
+        }
+    }
+
+    /**
+     * Safely parses String to Boolean
+     * Returns null if blank or invalid
+     */
+    public static Boolean parseBoolean(String value) {
+        if (value == null || value.isBlank()) return null;
+        return Boolean.parseBoolean(value.trim());
+    }
+}

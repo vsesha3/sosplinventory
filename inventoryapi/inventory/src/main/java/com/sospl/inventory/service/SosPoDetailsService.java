@@ -53,7 +53,12 @@ public class SosPoDetailsService {
             mapDtoToEntity(dto, entity, poRefNo);
             sosPoDetailsRepository.save(entity);
         }
+        
+        
     }
+    
+    
+   
 
     // ── MAPPERS ───────────────────────────────────────────────────────────────
 
@@ -124,4 +129,71 @@ public class SosPoDetailsService {
             }
         }
     }
+    
+    
+
+    public List<SosPoDetailsResponse> findByPoRefNoWithReceipt(Long poRefNo) {
+        List<Object[]> results = sosPoDetailsRepository
+                .findByPoRefNoWithReceipt(poRefNo);
+        return results.stream()
+                .map(row -> {
+                    SosPoDetailsResponse response = new SosPoDetailsResponse();
+                    response.setPoDetId(toLong(row[0]));
+                    response.setPoRefNo(toLong(row[1]));
+                    response.setPoRmCode(toString(row[2]));
+                    response.setPoRmName(toString(row[3]));
+                    response.setPoQty(toBigDecimal(row[4]));
+                    response.setPoRate(toBigDecimal(row[5]));
+                    response.setPoUom(toString(row[6]));
+                    response.setSgst(toBigDecimal(row[7]));
+                    response.setSgstValue(toBigDecimal(row[8]));
+                    response.setCgst(toBigDecimal(row[9]));
+                    response.setCgstValue(toBigDecimal(row[10]));
+                    response.setIgst(toBigDecimal(row[11]));
+                    response.setIgstValue(toBigDecimal(row[12]));
+                    response.setPoNoOfPacks(toBigDecimal(row[13]));
+                    response.setPoPackSize(toBigDecimal(row[14]));
+                    response.setHSnCode(toString(row[15]));
+                    response.setIsActive(toBoolean(row[16]));  // ← safe
+                    response.setRmReceivedQty(toBigDecimal(row[17]));
+                    response.setInspectedBy(toString(row[18]));
+                    response.setApprovedBy(toString(row[19]));
+                    response.setLotNumber(toString(row[20]));
+                    response.setExpDateDel(toString(row[21]));
+                    response.setActDateDel(toString(row[22]));
+                    response.setPoReceiptNo(toLong(row[23]));
+                    return response;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // ── Safe conversion helpers ───────────────────────────────────────────────
+
+    private Long toLong(Object val) {
+        if (val == null) return null;
+        if (val instanceof Long) return (Long) val;
+        if (val instanceof Number) return ((Number) val).longValue();
+        try { return Long.parseLong(String.valueOf(val)); }
+        catch (Exception e) { return null; }
+    }
+
+    private BigDecimal toBigDecimal(Object val) {
+        if (val == null) return null;
+        if (val instanceof BigDecimal) return (BigDecimal) val;
+        try { return new BigDecimal(String.valueOf(val)); }
+        catch (Exception e) { return null; }
+    }
+
+    private String toString(Object val) {
+        if (val == null) return null;
+        return String.valueOf(val);
+    }
+
+    private Boolean toBoolean(Object val) {
+        if (val == null) return null;
+        if (val instanceof Boolean) return (Boolean) val;
+        if (val instanceof Number) return ((Number) val).intValue() == 1;
+        return Boolean.parseBoolean(String.valueOf(val));
+    }
+
 }
