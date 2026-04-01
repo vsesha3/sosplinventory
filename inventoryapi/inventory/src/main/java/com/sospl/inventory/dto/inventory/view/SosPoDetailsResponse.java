@@ -30,8 +30,15 @@ public class SosPoDetailsResponse {
     private String expDateDel;
     private String actDateDel;
     private Long poReceiptNo;
-
-    public String gethSnCode() {
+    private String freight;
+    
+    public String getFreight() {
+		return freight;
+	}
+	public void setFreight(String freight) {
+		this.freight = freight;
+	}
+	public String gethSnCode() {
 		return hSnCode;
 	}
 	public void sethSnCode(String hSnCode) {

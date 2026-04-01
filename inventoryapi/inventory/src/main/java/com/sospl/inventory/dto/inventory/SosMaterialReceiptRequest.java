@@ -19,8 +19,16 @@ public class SosMaterialReceiptRequest {
     private String poRefNo;
     private String poDate;
     private String poType;
-
-    // ── Line items → sos_material_receipt_t ──────────────────────────────
+    private String freight;
+    
+    
+    public String getFreight() {
+		return freight;
+	}
+	public void setFreight(String freight) {
+		this.freight = freight;
+	}
+	// ── Line items → sos_material_receipt_t ──────────────────────────────
     private List<SosMaterialReceiptLineRequest> lines;
 
     // ── Getters and Setters ───────────────────────────────────────────────

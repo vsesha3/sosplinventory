@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface SosMaterialReceiptRepository
@@ -52,4 +53,6 @@ public interface SosMaterialReceiptRepository
             @Param("materialType") String materialType,
             @Param("keyword") String keyword,
             Pageable pageable);
+
+	Optional<SosMaterialReceipt> findByPoDetIdAndReceiptDetIdAndIsDeletedFalse(Long poDetId, Long receiptDetId);
 }

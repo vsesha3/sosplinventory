@@ -187,7 +187,8 @@ public class SosMaterialReceiptDet extends BaseAuditEntity {
     
     @Column(name = "po_ref_no",length=250)
     private int poRefNo;
-
+    
+   
     // ── Getters ───────────────────────────────────────────────────────────
 
     public Long getReceiptDetId() { return receiptDetId; }

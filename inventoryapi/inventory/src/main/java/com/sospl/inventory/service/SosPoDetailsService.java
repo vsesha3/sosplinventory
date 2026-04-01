@@ -162,6 +162,8 @@ public class SosPoDetailsService {
                     response.setExpDateDel(toString(row[21]));
                     response.setActDateDel(toString(row[22]));
                     response.setPoReceiptNo(toLong(row[23]));
+                    response.setFreight(toString(row[24]));
+                    
                     return response;
                 })
                 .collect(Collectors.toList());

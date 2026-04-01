@@ -1,5 +1,6 @@
 package com.sospl.inventory.repository;
 
+import com.sospl.inventory.model.SosMaterialReceipt;
 import com.sospl.inventory.model.SosMaterialReceiptDet;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -72,6 +73,7 @@ public interface SosMaterialReceiptDetRepository
  // Find by po_ref_no
     Optional<SosMaterialReceiptDet> findByPoRefNoAndIsDeletedFalse(
             Long poRefNo);
-
+    
+    
     
 }

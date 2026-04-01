@@ -99,15 +99,16 @@ public class SosMaterialReceiptServiceImpl
     @Override
     @Transactional
     public Long saveReceipt(SosMaterialReceiptRequest request) {
-    	
-    	Long poRefNo = ParseUtil.parseLong(request.getPoRefNo());
-    	
-    	SosMaterialReceiptDet det = detRepository
-    	        .findByPoRefNoAndIsDeletedFalse(poRefNo)
-    	        .orElse(new SosMaterialReceiptDet());
 
-        // ── Step 1 — Save header to sos_material_receipt_det_t ───────────────
-    	boolean isNew = det.getReceiptDetId() == null;
+        Long poRefNo = ParseUtil.parseLong(request.getPoRefNo());
+
+        // ── Step 1 — Save or Update header ───────────────────────────────────
+        SosMaterialReceiptDet det = detRepository
+                .findByPoRefNoAndIsDeletedFalse(poRefNo)
+                .orElse(new SosMaterialReceiptDet());
+
+        boolean isNew = det.getReceiptDetId() == null;
+
         det.setMaterialType(request.getPoType());
         det.setGrnNo(request.getGrnNo());
         det.setIrcNo(request.getIrcNo());
@@ -117,54 +118,50 @@ public class SosMaterialReceiptServiceImpl
         det.setLrNumber(request.getLrNumber());
         det.setIsActive(true);
         det.setIsDeleted(false);
-        det.setCreatedAt(LocalDateTime.now());
-        det.setPoRefNo((ParseUtil.parseInteger(request.getPoRefNo())));
-
-        // Parse supplierId
+        det.setPoRefNo(ParseUtil.parseInteger(request.getPoRefNo()));
         det.setSupplierId(ParseUtil.parseLong(request.getSupplierId()));
-
-        // Parse transporterId
         det.setTransporterId(ParseUtil.parseLong(request.getTransporterId()));
-
-        // Parse dates
         det.setInvoiceDate(ParseUtil.parseDate(request.getInvoiceDate()));
         det.setReceiptDateTime(
                 ParseUtil.parseDateTime(request.getDateTimeOfReceipt()));
         det.setActualReceiptDateTime(
                 ParseUtil.parseDate(request.getActualDateTimeOfReceipt()));
         
+        
+        det.setFreightRs(ParseUtil.parseBigDecimal(request.getFreight()));
+
         if (isNew) {
-            // New record
-            det.setIsActive(true);
-            det.setIsDeleted(false);
             det.setCreatedAt(LocalDateTime.now());
             log.info("Creating new header for poRefNo: {}", poRefNo);
         } else {
-            // Existing record — update only
             det.setUpdatedAt(LocalDateTime.now());
             log.info("Updating existing header — receiptDetId: {}",
                     det.getReceiptDetId());
         }
-        
 
-        // Save header
         SosMaterialReceiptDet savedDet = detRepository.save(det);
         Long receiptDetId = savedDet.getReceiptDetId();
-
         log.info("Header saved — receiptDetId: {}", receiptDetId);
 
-        // ── Step 2 — Parse poRefNo and poDate from request ───────────────────
-       
+        // ── Step 2 — Parse poDate ─────────────────────────────────────────────
         LocalDate poDate = ParseUtil.parseDate(request.getPoDate());
 
-        // ── Step 3 — Save each line ───────────────────────────────────────────
+        // ── Step 3 — Save or Update each line ────────────────────────────────
         if (request.getLines() != null && !request.getLines().isEmpty()) {
             for (SosMaterialReceiptLineRequest line : request.getLines()) {
 
                 Long poDetId = ParseUtil.parseLong(line.getPoDetId());
 
-                // ── 3a — Save to sos_material_receipt_t ──────────────────────
-                SosMaterialReceipt receipt = new SosMaterialReceipt();
+                // ── 3a — Upsert sos_material_receipt_t ───────────────────────
+                SosMaterialReceipt receipt = (poDetId != null)
+                        ? receiptRepository
+                                .findByPoDetIdAndReceiptDetIdAndIsDeletedFalse(
+                                        poDetId, receiptDetId)
+                                .orElse(new SosMaterialReceipt())
+                        : new SosMaterialReceipt();
+
+                boolean isNewReceipt = receipt.getReceiptId() == null;
+
                 receipt.setMaterialType(request.getPoType());
                 receipt.setReceiptDetId(receiptDetId);
                 receipt.setReceiptMainId(receiptDetId);
@@ -181,13 +178,29 @@ public class SosMaterialReceiptServiceImpl
                         line.getExpectedDeliveryDate()));
                 receipt.setIsActive(true);
                 receipt.setIsDeleted(false);
-                receipt.setCreatedAt(LocalDateTime.now());
+
+                if (isNewReceipt) {
+                    receipt.setCreatedAt(LocalDateTime.now());
+                    log.info("Creating new receipt line — poDetId: {}",
+                            poDetId);
+                } else {
+                    receipt.setUpdatedAt(LocalDateTime.now());
+                    log.info("Updating existing receipt line — poDetId: {}",
+                            poDetId);
+                }
 
                 receiptRepository.save(receipt);
-                log.info("Line saved — poDetId: {}", poDetId);
 
-                // ── 3b — Save to sos_po_receipt_t ────────────────────────────
-                SosPoReceipt poReceipt = new SosPoReceipt();
+                // ── 3b — Upsert sos_po_receipt_t ─────────────────────────────
+                SosPoReceipt poReceipt = (poDetId != null)
+                        ? poReceiptRepository
+                                .findByPoDetIdAndReceiptDetIdAndIsDeletedFalse(
+                                        poDetId, receiptDetId)
+                                .orElse(new SosPoReceipt())
+                        : new SosPoReceipt();
+
+                boolean isNewPoReceipt = poReceipt.getPoReceiptNo() == null;
+
                 poReceipt.setReceiptDetId(receiptDetId);
                 poReceipt.setPoNo(poRefNo);
                 poReceipt.setPoDate(poDate);
@@ -206,10 +219,18 @@ public class SosMaterialReceiptServiceImpl
                 poReceipt.setInvoiceNo(request.getStnCommercialInvoiceNo());
                 poReceipt.setIsActive(true);
                 poReceipt.setIsDeleted(false);
-                poReceipt.setCreatedAt(LocalDateTime.now());
+
+                if (isNewPoReceipt) {
+                    poReceipt.setCreatedAt(LocalDateTime.now());
+                    log.info("Creating new PO receipt — poDetId: {}",
+                            poDetId);
+                } else {
+                    poReceipt.setUpdatedAt(LocalDateTime.now());
+                    log.info("Updating existing PO receipt — poDetId: {}",
+                            poDetId);
+                }
 
                 poReceiptRepository.save(poReceipt);
-                log.info("PO receipt saved — poDetId: {}", poDetId);
 
                 // ── 3c — Update sos_po_details_t ─────────────────────────────
                 if (poDetId != null) {
@@ -234,8 +255,6 @@ public class SosMaterialReceiptServiceImpl
 
         return receiptDetId;
     }
-    
-   
     
     @Override
     public Optional<SosMaterialReceiptDet> findHeaderByPoRefNoAndMaterialType(

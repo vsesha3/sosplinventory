@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface SosPoReceiptRepository
@@ -19,4 +20,8 @@ public interface SosPoReceiptRepository
 
     // Find all by po_det_id
     List<SosPoReceipt> findAllByPoDetIdAndIsDeletedFalse(Long poDetId);
+    
+    Optional<SosPoReceipt> findByPoDetIdAndReceiptDetIdAndIsDeletedFalse(
+            Long poDetId, Long receiptDetId);
+    
 }

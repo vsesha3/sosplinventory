@@ -395,6 +395,8 @@ const formatDate = (val: any): string => {
 
 const handleInwardReceiptSave = async (data: InwardReceiptFormData) => {
   setSaveStatus('saving');
+
+  
   try {
     const payload: MaterialReceiptRequest = {
       actualDateTimeOfReceipt: formatDate(data.actualDateTimeOfReceipt),
@@ -411,26 +413,39 @@ const handleInwardReceiptSave = async (data: InwardReceiptFormData) => {
       poRefNo:                 data.poRefNo        ?? '',
       poDate:                  data.poDate         ?? '',
       poType:                  data.poType         ?? '',
-      lines: data.lines.map(line => ({
-        poDetId:              String(line.poDetId),
-        poRmCode:             line.poRmCode        ?? '',
-        poRmName:             line.poRmName        ?? '',
-        poUom:                line.poUom           ?? '',
-        rmOrderQty:           String(line.rmOrderQty),
-        rmReceivedQty:        line.rmReceivedQty   ?? '',
-        sgst:                 line.sgst            ?? '',
-        cgst:                 line.cgst            ?? '',
-        igst:                 line.igst            ?? '',
-        receivedRate:         line.receivedRate    ?? '',
-        expectedDeliveryDate: formatDate(line.expectedDeliveryDate),
-        actualDeliveryDate:   formatDate(line.actualDeliveryDate),
-        inspectedBy:          line.inspectedBy     ?? '',
-        approvedBy:           line.approvedBy      ?? '',
-        lotNumber:            line.lotNumber       ?? '',
-      })),
+      freight:                 data.freight        ?? '',
+      lines: data.lines
+  .filter(line => line.rmReceivedQty && parseFloat(line.rmReceivedQty) > 0)  // ← only received lines
+  .map(line => ({
+    poDetId:              String(line.poDetId),
+    poRmCode:             line.poRmCode        ?? '',
+    poRmName:             line.poRmName        ?? '',
+    poUom:                line.poUom           ?? '',
+    rmOrderQty:           String(line.rmOrderQty),
+    rmReceivedQty:        line.rmReceivedQty   ?? '',
+    sgst:                 line.sgst            ?? '',
+    cgst:                 line.cgst            ?? '',
+    igst:                 line.igst            ?? '',
+    receivedRate:         line.receivedRate    ?? '',
+    expectedDeliveryDate: formatDate(line.expectedDeliveryDate),
+    actualDeliveryDate:   formatDate(line.actualDeliveryDate),
+    inspectedBy:          line.inspectedBy     ?? '',
+    approvedBy:           line.approvedBy      ?? '',
+    lotNumber:            line.lotNumber       ?? '',
+  })),
     };
 
-    await api.post('/api/inventory/material-receipt/save', payload);
+    const filteredLines = data.lines.filter(
+  line => line.rmReceivedQty && parseFloat(line.rmReceivedQty) > 0
+);
+
+if (filteredLines.length === 0) {
+  setSaveStatus('error');
+  setSaveMessage('No line items with received quantity. Please enter received qty for at least one item.');
+  return;
+}
+
+   await api.post('/api/inventory/material-receipt/save', payload);
 
     setSaveStatus('success');
     setSaveMessage('Inward Receipt saved successfully!');

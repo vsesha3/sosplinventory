@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
   Grid, Badge, Stack, Loader, Center, Divider,
@@ -48,16 +48,16 @@ interface PoLineItemDetail {
   poUom: string | null;
   poNoOfPacks: number | null;
   poPackSize: number | null;
-   sgst:       any | null;   // ← add
-  cgst:       any | null;   // ← add
-  igst:       any | null;   // ← add
-  poRate:     any | null;   // ← add (for pre-filling rate)
+  sgst: any | null;   // ← add
+  cgst: any | null;   // ← add
+  igst: any | null;   // ← add
+  poRate: any | null;   // ← add (for pre-filling rate)
   rmReceivedQty: number | null; // ← add (for received qty from receipt if exists)
   expDateDel: string | null; // ← add (for expected delivery date)
   actDateDel: string | null; // ← add (for actual delivery date)
   inspectedBy: string | null; // ← add
-  approvedBy:  string | null; // ← add
-  lotNumber:   string | null; // ← add
+  approvedBy: string | null; // ← add
+  lotNumber: string | null; // ← add
 }
 
 interface PoLineItemsApiResponse {
@@ -85,6 +85,8 @@ export interface InwardReceiptFormData {
   poDate: string | null;
   lines: InwardReceiptLine[];
   poType: string | null;
+  freight: string;
+   freightTaxPct: string;
 }
 
 export interface RawMaterialInwardReceiptProps {
@@ -93,6 +95,7 @@ export interface RawMaterialInwardReceiptProps {
   onSave?: (data: InwardReceiptFormData) => void;
   poRefNo?: number | null;
   poNo?: string | null;
+ 
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
@@ -113,7 +116,9 @@ const defaultForm = {
   poRefNo: null as string | null,
   poDate: null as string | null,
   poType: null as string | null,
-  materialDetId : null as number | null,
+  materialDetId: null as number | null,
+  freight: '',
+  freightTaxPct: '' as string,
 };
 
 const fmtDate = (val: string | null) => {
@@ -153,7 +158,7 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
-  
+
 
   useEffect(() => {
     if (!opened) {
@@ -194,7 +199,7 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
 
           // Load PO lines
           await loadPoLines(initialPoRefNo);
-          
+
 
           // ── Fetch existing receipt header if already saved ────────────
           try {
@@ -209,28 +214,29 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
               // ── Map header fields to form ─────────────────────────────
               setForm(prev => ({
                 ...prev,
-                poRefNo:                  String(initialPoRefNo),
-                grnNo:                    header.grnNo ?? '',
-                ircNo:                    header.ircNo ?? '',
-                stnCommercialInvoiceNo:   header.invoiceNo ?? '',
-                invoiceDate:              header.invoiceDate ?? '',
-                modvatCopyNo:             header.modvatCopyNo ?? '',
-                sapPo:                    header.sapPo ?? '',
-                lrNumber:                 header.lrNumber ?? '',
-                supplierId:               header.supplierId
-                                            ? String(header.supplierId)
-                                            : '',
-                transporterId:            header.transporterId
-                                            ? String(header.transporterId)
-                                            : null,
-                dateTimeOfReceipt:        header.receiptDateTime ?? '',
-                actualDateTimeOfReceipt:  header.actualReceiptDateTime ?? '',
+                poRefNo: String(initialPoRefNo),
+                grnNo: header.grnNo ?? '',
+                ircNo: header.ircNo ?? '',
+                stnCommercialInvoiceNo: header.invoiceNo ?? '',
+                invoiceDate: header.invoiceDate ?? '',
+                modvatCopyNo: header.modvatCopyNo ?? '',
+                sapPo: header.sapPo ?? '',
+                lrNumber: header.lrNumber ?? '',
+                supplierId: header.supplierId
+                  ? String(header.supplierId)
+                  : '',
+                transporterId: header.transporterId
+                  ? String(header.transporterId)
+                  : null,
+                dateTimeOfReceipt: header.receiptDateTime ?? '',
+                actualDateTimeOfReceipt: header.actualReceiptDateTime ?? '',
+                freight: header.freightRs ?? '',
               }));
             }
           } catch {
             // No existing receipt — form stays as default
             // This is not an error — just means no receipt saved yet
-              console.info('No receipt found for PO:', initialPoRefNo);
+            console.info('No receipt found for PO:', initialPoRefNo);
             console.info(
               'No existing receipt for PO:',
               initialPoRefNo
@@ -266,62 +272,62 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
         supplierId: header?.supplierId ? String(header.supplierId) : prev.supplierId,
         // ← pre-fill dateTimeOfReceipt from PO delivery schedule
         dateTimeOfReceipt: poDeliverySchedule ? new Date(poDeliverySchedule) : prev.dateTimeOfReceipt,
-        poType:   header?.poType ?? null
-            }));
+        poType: header?.poType ?? null
+      }));
 
- setLines(items.map(item => ({
-    poDetId:              item.poDetId,
-    poRmCode:             item.poRmCode  ?? '',
-    poRmName:             item.poRmName  ?? '',
-    poUom:                item.poUom     ?? '',
+      setLines(items.map(item => ({
+        poDetId: item.poDetId,
+        poRmCode: item.poRmCode ?? '',
+        poRmName: item.poRmName ?? '',
+        poUom: item.poUom ?? '',
 
-    // Order qty from PO
-    rmOrderQty:           Number(item.poQty) || 0,
+        // Order qty from PO
+        rmOrderQty: Number(item.poQty) || 0,
 
-    // Received qty — from receipt if exists else empty
-    rmReceivedQty:        item.rmReceivedQty != null
-                              ? String(item.rmReceivedQty)
-                              : '',
+        // Received qty — from receipt if exists else empty
+        rmReceivedQty: item.rmReceivedQty != null
+          ? String(item.rmReceivedQty)
+          : '',
 
-    // Tax fields — from receipt if exists else from PO
-    sgst:                 item.sgst != null
-                              ? String(item.sgst)
-                              : '',
-    cgst:                 item.cgst != null
-                              ? String(item.cgst)
-                              : '',
-    igst:                 item.igst != null
-                              ? String(item.igst)
-                              : '',
+        // Tax fields — from receipt if exists else from PO
+        sgst: item.sgst != null
+          ? String(item.sgst)
+          : '',
+        cgst: item.cgst != null
+          ? String(item.cgst)
+          : '',
+        igst: item.igst != null
+          ? String(item.igst)
+          : '',
 
-    // Rate — handle both object and primitive
-    receivedRate:         item.poRate != null
-                              ? (typeof item.poRate === 'object'
-                                  ? String(
-                                      item.poRate.parsedValue
-                                      ?? item.poRate.source
-                                      ?? '')
-                                  : String(item.poRate))
-                              : '',
+        // Rate — handle both object and primitive
+        receivedRate: item.poRate != null
+          ? (typeof item.poRate === 'object'
+            ? String(
+              item.poRate.parsedValue
+              ?? item.poRate.source
+              ?? '')
+            : String(item.poRate))
+          : '',
 
-    // Dates — from receipt if exists else from PO delivery schedule
-    expectedDeliveryDate: item.expDateDel
-                              ? new Date(item.expDateDel)
-                              : poDeliverySchedule
-                                  ? new Date(poDeliverySchedule)
-                                  : null,
+        // Dates — from receipt if exists else from PO delivery schedule
+        expectedDeliveryDate: item.expDateDel
+          ? new Date(item.expDateDel)
+          : poDeliverySchedule
+            ? new Date(poDeliverySchedule)
+            : null,
 
-    actualDeliveryDate:   item.actDateDel
-                              ? new Date(item.actDateDel)
-                              : form.actualDateTimeOfReceipt
-                                  ? new Date(form.actualDateTimeOfReceipt)
-                                  : null,
+        actualDeliveryDate: item.actDateDel
+          ? new Date(item.actDateDel)
+          : form.actualDateTimeOfReceipt
+            ? new Date(form.actualDateTimeOfReceipt)
+            : null,
 
-    // From receipt if exists else empty
-    inspectedBy:          item.inspectedBy ?? '',
-    approvedBy:           item.approvedBy  ?? '',
-    lotNumber:            item.lotNumber   ?? '',
-})));
+        // From receipt if exists else empty
+        inspectedBy: item.inspectedBy ?? '',
+        approvedBy: item.approvedBy ?? '',
+        lotNumber: item.lotNumber ?? '',
+      })));
     } catch {
       setFetchError('Failed to load PO line items.');
     } finally {
@@ -329,7 +335,7 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
     }
   };
 
- 
+
   // ── Form helpers ──────────────────────────────────────────────────────────
 
   const setStr = (field: keyof typeof defaultForm) =>
@@ -372,6 +378,46 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
 
   // ── Render ────────────────────────────────────────────────────────────────
 
+  const safe = (val: string) => { const n = parseFloat(val); return isNaN(n) ? 0 : n; };
+  const freightTaxOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: { value: string; label: string }[] = [
+      { value: '', label: 'Inclusive of GST (no calc)' },
+    ];
+    lines.forEach(l => {
+      const igst = safe(l.igst);
+      const sgst = safe(l.sgst);
+      const cgst = safe(l.cgst);
+      if (igst > 0 && !seen.has(String(igst))) {
+        seen.add(String(igst));
+        opts.push({ value: String(igst), label: `IGST ${igst}%` });
+      }
+      if ((sgst > 0 || cgst > 0) && !seen.has(`${sgst}+${cgst}`)) {
+        seen.add(`${sgst}+${cgst}`);
+        opts.push({ value: String(sgst + cgst), label: `SGST ${sgst}% + CGST ${cgst}%` });
+      }
+    });
+    return opts;
+  }, [lines]);
+
+  const freightAmt = safe(form.freight);
+  const freightTaxPct = safe(form.freightTaxPct);
+  const freightTaxAmt = form.freightTaxPct
+    ? freightAmt * freightTaxPct / 100
+    : 0;
+  const freightTotal = freightAmt + freightTaxAmt;
+  const linesTotalNett = lines
+    .filter(l => l.rmReceivedQty && parseFloat(l.rmReceivedQty) > 0)
+    .reduce((s, l) => {
+      const qty = safe(l.rmReceivedQty);
+      const rate = safe(l.receivedRate);
+      const amt = qty * rate;
+      const taxPct = safe(l.igst) > 0 ? safe(l.igst) : (safe(l.sgst) + safe(l.cgst));
+      return s + amt + amt * taxPct / 100;
+    }, 0);
+  const grandTotal = linesTotalNett + freightTotal;
+
+
   return (
     <>
       <Modal
@@ -397,14 +443,13 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
           style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
 
           {/* ── Shared FormHeader ── */}
-      <FormHeader
-  title={`${PO_TYPE_LABELS[form.poType ?? ''] ?? ''} Inward Receipt — PO: ${
-    poOptions.find(p => p.value === form.poRefNo)?.label ?? '...'
-  }${form.poDate ? ` | ${fmtDate(form.poDate)}` : ''}`}
-  icon={<IconClipboardCheck size={18} color="white" />}
-  color="#4a6fa5"
-  onClose={onClose}
-/>
+          <FormHeader
+            title={`${PO_TYPE_LABELS[form.poType ?? ''] ?? ''} Inward Receipt — PO: ${poOptions.find(p => p.value === form.poRefNo)?.label ?? '...'
+              }${form.poDate ? ` | ${fmtDate(form.poDate)}` : ''}`}
+            icon={<IconClipboardCheck size={18} color="white" />}
+            color="#4a6fa5"
+            onClose={onClose}
+          />
 
           {/* ── Body ── */}
           {loading ? (
@@ -465,12 +510,45 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
                     <FormTextInput label="L.R's Number" value={form.lrNumber} onChange={setStr('lrNumber')} placeholder="" />
                   </Grid.Col>
 
-                  {/* ── Row 4: PO Number | PO Date ── */}
-                
+
+                  {/* ── Row 4: Freight | Tax on Freight | Freight Total ── */}
                   <Grid.Col span={3}>
-                    <FormTextInput label="PO Date" value={fmtDate(form.poDate)} onChange={() => { }} placeholder="—" readOnly />
+                    <FormTextInput
+                      label="Other Charges / Freight"
+                      value={form.freight}
+                      onChange={setStr('freight')}
+                      placeholder="0.00"
+                    />
                   </Grid.Col>
-                  <Grid.Col span={6} />
+                  <Grid.Col span={3}>
+                    <FormSelect
+                      label="Tax on Freight"
+                      value={form.freightTaxPct}
+                      onChange={setSelect('freightTaxPct')}
+                      data={freightTaxOptions}
+                      placeholder="Inclusive of GST"
+                    />
+                  </Grid.Col>
+                
+                    <Grid.Col span={3}>
+                    <FormTextInput
+                      label="Freight Tax Amount"
+                      value={freightTaxAmt > 0 ? freightTaxAmt.toFixed(2) : ''}
+                      onChange={() => { }}
+                      placeholder="—"
+                      readOnly
+                    />
+                  </Grid.Col>
+                    <Grid.Col span={3}>
+                    <FormTextInput
+                      label="Freight Total"
+                      value={freightTotal > 0 ? freightTotal.toFixed(2) : ''}
+                      onChange={() => { }}
+                      placeholder="—"
+                      readOnly
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={3} />
 
                 </Grid>
               </Paper>
@@ -526,11 +604,21 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
             }}
           >
             <Group justify="space-between" align="center">
-              <Text size="xs" c="dimmed">
-                {lines.length > 0
-                  ? `${lines.filter(l => l.rmReceivedQty && parseFloat(l.rmReceivedQty) > 0).length} of ${lines.length} items with received qty`
-                  : 'No items loaded'}
-              </Text>
+              <Stack gap={2}>
+                <Text size="xs" c="dimmed">
+                  {lines.length > 0
+                    ? `${lines.filter(l => l.rmReceivedQty && parseFloat(l.rmReceivedQty) > 0).length} of ${lines.length} items with received qty`
+                    : 'No items loaded'}
+                  {freightAmt > 0
+                    ? ` | Freight: ₹${freightTotal.toFixed(2)}${form.freightTaxPct ? ` (tax @ ${freightTaxPct}%)` : ' (incl. GST)'}`
+                    : ''}
+                </Text>
+                {grandTotal > 0 && (
+                  <Text size="xs" fw={700} c="blue">
+                    Grand Total (Lines + Freight): ₹{grandTotal.toFixed(2)}
+                  </Text>
+                )}
+              </Stack>
               <Group gap="sm">
                 <Button variant="light" size="sm" color="red" onClick={onClose}>Cancel</Button>
                 <Button variant="light" size="sm"

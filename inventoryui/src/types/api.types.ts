@@ -118,4 +118,5 @@ export interface MaterialReceiptRequest {
   poDate: string;
   poType: string;
   lines: MaterialReceiptLineRequest[];
+  freight: string;
 }

@@ -48,7 +48,9 @@ public interface SosPoDetailsRepository extends JpaRepository<SosPoDetails, Long
     	           mr.lot_no           AS lotNumber,
     	           pr.exp_date_del     AS expDateDel,
     	           pr.act_date_del     AS actDateDel,
-    	           pr.po_receipt_no    AS poReceiptNo
+    	           pr.po_receipt_no    AS poReceiptNo,
+    	           md.freight_rs AS freight 
+    	          
     	       FROM sos_po_details_t pd
     	       LEFT JOIN sos_po_receipt_t pr
     	           ON pd.po_det_id = pr.po_det_id
@@ -56,6 +58,7 @@ public interface SosPoDetailsRepository extends JpaRepository<SosPoDetails, Long
     	       LEFT JOIN sos_material_receipt_t mr
     	           ON pd.po_det_id = mr.po_det_id
     	           AND mr.is_deleted = 0
+	           LEFT JOIN sos_material_receipt_det_t md  ON pd.po_det_id = md.po_ref_no and md.is_deleted= 0 
     	       WHERE pd.po_ref_no = :poRefNo
     	       AND pd.is_deleted = 0
     	       """, nativeQuery = true)
