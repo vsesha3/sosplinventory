@@ -163,6 +163,7 @@ public class SosPoDetailsService {
                     response.setActDateDel(toString(row[22]));
                     response.setPoReceiptNo(toLong(row[23]));
                     response.setFreight(toString(row[24]));
+                    response.setRmRcvdQty(toBigDecimal(row[25]));
                     
                     return response;
                 })

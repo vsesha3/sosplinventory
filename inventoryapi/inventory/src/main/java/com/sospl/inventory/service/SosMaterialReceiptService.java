@@ -1,6 +1,8 @@
 package com.sospl.inventory.service;
 
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptRequest;
+import com.sospl.inventory.dto.inventory.SosMaterialReceiptSummaryResponse;
+import com.sospl.inventory.dto.inventory.SosMaterialReceiptWithRMDetailsResponse;
 import com.sospl.inventory.model.SosMaterialReceipt;
 import com.sospl.inventory.model.SosMaterialReceiptDet;
 import com.sospl.inventory.service.common.BaseMasterService;
@@ -36,4 +38,12 @@ public interface SosMaterialReceiptService
             Long poRefNo);
 
     Optional<SosMaterialReceiptDet> findHeaderByPoRefNo(Long poRefNo);
+    
+    List<SosMaterialReceiptSummaryResponse> findAllReceiptSummary();
+    List<SosMaterialReceiptSummaryResponse> findAllReceiptSummaryByMaterialType(
+            String materialType);
+    List<SosMaterialReceiptSummaryResponse> findAllReceiptSummaryByPoRefNo(
+           Long  poRefNo);
+    
+    List<SosMaterialReceiptWithRMDetailsResponse> findAllReceiptWithRMDetailsByReceiptMainId(Long receiptMainId);
 }

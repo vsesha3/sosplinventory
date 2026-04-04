@@ -29,6 +29,7 @@ public class SosPurchaseOrderViewResponse {
     private LocalDateTime createdAt;
     private String updatedBy;
     private LocalDateTime updatedAt;
+   
 
     public Long getPoRefNo() { return poRefNo; }
     public void setPoRefNo(Long poRefNo) { this.poRefNo = poRefNo; }

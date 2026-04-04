@@ -2,6 +2,9 @@ package com.sospl.inventory.service.impl;
 
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptLineRequest;
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptRequest;
+import com.sospl.inventory.dto.inventory.SosMaterialReceiptSummaryResponse;
+import com.sospl.inventory.dto.inventory.SosMaterialReceiptWithRMDetailsResponse;
+import com.sospl.inventory.mapper.inventory.SosMaterialReceiptWithRMDetailsMapper;
 import com.sospl.inventory.model.SosMaterialReceipt;
 import com.sospl.inventory.model.SosMaterialReceiptDet;
 import com.sospl.inventory.model.SosPoReceipt;
@@ -19,12 +22,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.sospl.inventory.util.ParseUtil;
-
+import com.sospl.inventory.util.ParseUtil;
 @Service
 public class SosMaterialReceiptServiceImpl
         extends BaseMasterServiceImpl<SosMaterialReceipt, Long>
@@ -37,6 +41,8 @@ public class SosMaterialReceiptServiceImpl
     
     private final SosPoReceiptRepository poReceiptRepository;
     
+    private final SosMaterialReceiptWithRMDetailsMapper receiptWithRMMapper;
+    
     private static final Logger log =
             LoggerFactory.getLogger(SosMaterialReceiptServiceImpl.class);
 
@@ -44,12 +50,13 @@ public class SosMaterialReceiptServiceImpl
             SosMaterialReceiptRepository repository,
             SosMaterialReceiptDetRepository detRepository,
             SosPoDetailsRepository poDetailsRepository,
-            SosPoReceiptRepository poReceiptRepository) {
+            SosPoReceiptRepository poReceiptRepository,SosMaterialReceiptWithRMDetailsMapper _receiptWithRMMapper) {
         super(repository);
         this.receiptRepository = repository;
         this.detRepository = detRepository;
         this.poDetailsRepository = poDetailsRepository;
         this.poReceiptRepository = poReceiptRepository;
+        this.receiptWithRMMapper = _receiptWithRMMapper;
     }
 
     
@@ -129,6 +136,7 @@ public class SosMaterialReceiptServiceImpl
         
         
         det.setFreightRs(ParseUtil.parseBigDecimal(request.getFreight()));
+        det.setFreightGst(request.getFreightGst());
 
         if (isNew) {
             det.setCreatedAt(LocalDateTime.now());
@@ -270,6 +278,60 @@ public class SosMaterialReceiptServiceImpl
         return detRepository
                 .findByPoRefNoAndIsDeletedFalse(poRefNo);
     }
+    @Override
+    public List<SosMaterialReceiptSummaryResponse> findAllReceiptSummary() {
+        return mapToSummaryResponse(
+                detRepository.findAllReceiptSummary());
+    }
+
+    @Override
+    public List<SosMaterialReceiptSummaryResponse> findAllReceiptSummaryByMaterialType(
+            String materialType) {
+        return mapToSummaryResponse(
+                detRepository.findAllReceiptSummaryByMaterialType(
+                        materialType));
+    }
     
+    public List<SosMaterialReceiptSummaryResponse> findAllReceiptSummaryByPoRefNo(
+            Long poRefNo) {
+        return mapToSummaryResponse(
+                detRepository.findAllReceiptSummaryByPoRefNo(
+                        poRefNo));
+    }
+    
+    
+
+    private List<SosMaterialReceiptSummaryResponse> mapToSummaryResponse(
+            List<Object[]> results) {
+        return results.stream()
+                .map(row -> {
+                    SosMaterialReceiptSummaryResponse res =
+                            new SosMaterialReceiptSummaryResponse();
+                    res.setReceiptDetId(ParseUtil.toLong(row[0]));
+                    res.setPoRefNo(ParseUtil.toLong(row[1]));
+                    res.setMaterialType(ParseUtil.toString(row[2]));
+                    res.setInvoiceNo(ParseUtil.toString(row[3]));
+                    res.setSupplierId(ParseUtil.toLong(row[4]));
+                    res.setInvoiceDate(ParseUtil.toString(row[5]));
+                    res.setSgstValue(ParseUtil.toBigDecimal(row[6]));
+                    res.setCgstValue(ParseUtil.toBigDecimal(row[7]));
+                    res.setIgstValue(ParseUtil.toBigDecimal(row[8]));
+                    res.setNoOfReceived(ParseUtil.toBigDecimal(row[9]));
+                    res.setNetAmount(ParseUtil.toBigDecimal(row[10]));
+                    res.setTotalAmount(ParseUtil.toBigDecimal(row[11]));
+                    return res;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SosMaterialReceiptWithRMDetailsResponse> findAllReceiptWithRMDetailsByReceiptMainId(
+            Long receiptMainId) {
+        return receiptWithRMMapper.mapRows(
+                detRepository.findAllReceiptWithRMDetailsByReceiptMainId(receiptMainId)                               // ← receiptRepository not repository
+                        );
+    }
+	    
+   
     
 }

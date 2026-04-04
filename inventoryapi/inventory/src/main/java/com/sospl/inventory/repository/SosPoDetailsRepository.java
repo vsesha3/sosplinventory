@@ -49,8 +49,8 @@ public interface SosPoDetailsRepository extends JpaRepository<SosPoDetails, Long
     	           pr.exp_date_del     AS expDateDel,
     	           pr.act_date_del     AS actDateDel,
     	           pr.po_receipt_no    AS poReceiptNo,
-    	           md.freight_rs AS freight 
-    	          
+    	           md.freight_rs AS freight ,
+    	           mr.no_of_received AS rmRcvdQty
     	       FROM sos_po_details_t pd
     	       LEFT JOIN sos_po_receipt_t pr
     	           ON pd.po_det_id = pr.po_det_id

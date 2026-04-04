@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState, useCallback } from 'react';
+
+
+import InwardReceiptLanding from '../raw-material/InwardReceiptLanding';
+
 import {
   Title, Text, Box, Alert, Loader, Paper, Badge,
   Group, Button, Tooltip,
@@ -20,7 +24,7 @@ import type { PurchaseOrderFormData } from '../../types/api.types';
 import  {numVal} from '../../types/api.types';
 
 
-import RawMaterialInwardReceipt from '../raw-material/Rawmaterialinwardreceipt';
+
 import type {InwardReceiptFormData } from '../raw-material/Rawmaterialinwardreceipt';
 
 import type { MaterialReceiptRequest} from '../../types/api.types';
@@ -135,11 +139,12 @@ const [toDate, setToDate]     = useState<string | null>(null);
   const [editPoRefNo, setEditPoRefNo]     = useState<number | null>(null);
   const [formMode, setFormMode]           = useState<'create' | 'update'>('create'); // 
 
-  const [inwardOpen, setInwardOpen]       = useState(false);
+
 const [inwardPoRefNo, setInwardPoRefNo] = useState<number | null>(null);
 const [inwardPoNo, setInwardPoNo]       = useState<string | null>(null);
 const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
 const [saveMessage, setSaveMessage] = useState<string>('');
+const [receiptListOpen, setReceiptListOpen] = useState(false);
 
   // ── Fetch parent POs ───────────────────────────────────────────────────────
   const fetchData = useCallback(async (
@@ -371,14 +376,14 @@ const extraActions = (
   <Button size="xs" variant="subtle" color="green"
     leftSection={<IconClipboardList size={14} />}
     disabled={selected.length !== 1}
-    onClick={() => {
-      const po = data.find(item => item.poRefNo === selected[0]);
-      if (po) {
-        setInwardPoRefNo(po.poRefNo);
-        setInwardPoNo(po.poNo);
-        setInwardOpen(true);
-      }
-    }}>
+   onClick={() => {
+  const po = data.find(item => item.poRefNo === selected[0]);
+  if (po) {
+    setInwardPoRefNo(po.poRefNo);   // ← add
+    setInwardPoNo(po.poNo);         // ← add
+    setReceiptListOpen(true);
+  }
+}} >
     Inward Receipt
   </Button>
 </Tooltip>
@@ -414,6 +419,8 @@ const handleInwardReceiptSave = async (data: InwardReceiptFormData) => {
       poDate:                  data.poDate         ?? '',
       poType:                  data.poType         ?? '',
       freight:                 data.freight        ?? '',
+      freightGst:              data.freightTaxPct    ?? '',
+      receiptDetId:                data.receiptDetId     ?? null,
       lines: data.lines
   .filter(line => line.rmReceivedQty && parseFloat(line.rmReceivedQty) > 0)  // ← only received lines
   .map(line => ({
@@ -449,7 +456,7 @@ if (filteredLines.length === 0) {
 
     setSaveStatus('success');
     setSaveMessage('Inward Receipt saved successfully!');
-    setInwardOpen(false);
+   
     setInwardPoRefNo(null);
     setInwardPoNo(null);
     fetchData(page, keyword, fromDate, toDate);
@@ -566,17 +573,19 @@ if (filteredLines.length === 0) {
   
 />
 
-<RawMaterialInwardReceipt
-  opened={inwardOpen}
+<InwardReceiptLanding
+  opened={receiptListOpen}
   onClose={() => {
-    setInwardOpen(false);
+    setReceiptListOpen(false);
     setInwardPoRefNo(null);
     setInwardPoNo(null);
   }}
-  onSave={handleInwardReceiptSave}
   poRefNo={inwardPoRefNo}
   poNo={inwardPoNo}
+  materialType={data.find(d => d.poRefNo === inwardPoRefNo)?.poType ?? undefined}
+  onSave={handleInwardReceiptSave}
 />
+
 <SaveStatusBanner
   status={saveStatus}
   successMessage="Saved!"

@@ -31,8 +31,15 @@ public class SosPoDetailsResponse {
     private String actDateDel;
     private Long poReceiptNo;
     private String freight;
+    private BigDecimal rmRcvdQty;
     
-    public String getFreight() {
+    public BigDecimal getRmRcvdQty() {
+		return rmRcvdQty;
+	}
+	public void setRmRcvdQty(BigDecimal rmRcvdQty) {
+		this.rmRcvdQty = rmRcvdQty;
+	}
+	public String getFreight() {
 		return freight;
 	}
 	public void setFreight(String freight) {

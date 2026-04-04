@@ -5,6 +5,7 @@ import MasterTable from '../../components/common/MasterTable';
 import type { ColumnDef } from '../../components/common/MasterTable';
 import InwardReceiptLineEditor from './Inwardreceiptlineeditor';
 import type { InwardReceiptLine } from './Inwardreceiptlineeditor';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 
 // ── Re-export type for consumers ──────────────────────────────────────────────
 export type { InwardReceiptLine };
@@ -26,6 +27,8 @@ const safe = (val: string): number => {
   const n = parseFloat(val);
   return isNaN(n) ? 0 : n;
 };
+
+
 
 const computeLine = (line: any) => {
   const qty      = safe(line.rmReceivedQty);
@@ -104,15 +107,27 @@ const InwardReceiptLineTable: React.FC<InwardReceiptLineTableProps> = ({
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  const handleEdit = () => {
-    if (selectedLines.length !== 1) return;
-    const found = lines.find(l => l.poDetId === selectedLines[0]);
-    if (found) {
-      setEditingLine({ ...found });
-      setEditorMode('edit');
-      setEditorOpen(true);
-    }
-  };
+const handleEdit = () => {
+  if (selectedLines.length !== 1) return;
+  const found = lines.find(l => l.poDetId === selectedLines[0]);
+  if (!found) return;
+
+  const ordered  = found.rmOrderQty ?? 0;
+  const received = parseFloat(found.rmReceivedQty || '0');
+
+  if (ordered > 0 && received >= ordered) {
+    setErrorMessages([
+      `${found.poRmName} (${found.poRmCode}) has already been fully received.`,
+      `Order Qty: ${ordered.toFixed(3)}, Received Qty: ${received.toFixed(3)}`,
+    ]);
+    setErrorDialogOpen(true);
+    return; // ← block editor from opening
+  }
+
+  setEditingLine({ ...found });
+  setEditorMode('edit');
+  setEditorOpen(true);
+};
 
   const handleDelete = () => {
     onChange(lines.filter(l => !selectedLines.includes(l.poDetId)));
@@ -124,6 +139,8 @@ const InwardReceiptLineTable: React.FC<InwardReceiptLineTableProps> = ({
     setEditorOpen(false);
     setSelectedLines([]);
   };
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+const [errorMessages, setErrorMessages]     = useState<string[]>([]);
 
   // ── Build rows ────────────────────────────────────────────────────────────
 
@@ -316,6 +333,14 @@ const InwardReceiptLineTable: React.FC<InwardReceiptLineTableProps> = ({
         line={editingLine}
         mode={editorMode}
       />
+      <ConfirmDialog
+  opened={errorDialogOpen}
+  onClose={() => setErrorDialogOpen(false)}
+  onConfirm={() => {}}
+  message=""
+  errors={errorMessages}
+  zIndex={500}
+/>
     </>
   );
 };

@@ -1,11 +1,13 @@
 package com.sospl.inventory.util;
 
 import org.slf4j.Logger;
+
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
 
 public class ParseUtil {
 
@@ -130,5 +132,72 @@ public class ParseUtil {
     public static Boolean parseBoolean(String value) {
         if (value == null || value.isBlank()) return null;
         return Boolean.parseBoolean(value.trim());
+    }
+    
+ // ── Object Row Helpers — for native query Object[] mapping ───────────────
+
+    /**
+     * Safely converts Object to Long
+     * Handles Long, Integer, BigDecimal, String
+     */
+    public static Long toLong(Object val) {
+        if (val == null) return null;
+        if (val instanceof Long) return (Long) val;
+        if (val instanceof Number) return ((Number) val).longValue();
+        try {
+            return Long.parseLong(String.valueOf(val).trim());
+        } catch (NumberFormatException e) {
+            log.warn("Cannot convert to Long: {}", val);
+            return null;
+        }
+    }
+
+    /**
+     * Safely converts Object to BigDecimal
+     * Handles BigDecimal, Double, Float, Integer, Long, String
+     */
+    public static BigDecimal toBigDecimal(Object val) {
+        if (val == null) return null;
+        if (val instanceof BigDecimal) return (BigDecimal) val;
+        try {
+            return new BigDecimal(String.valueOf(val).trim());
+        } catch (NumberFormatException e) {
+            log.warn("Cannot convert to BigDecimal: {}", val);
+            return null;
+        }
+    }
+
+    /**
+     * Safely converts Object to String
+     */
+    public static String toString(Object val) {
+        if (val == null) return null;
+        return String.valueOf(val);
+    }
+
+    /**
+     * Safely converts Object to Boolean
+     * Handles Boolean, TINYINT(1) as Integer, String
+     */
+    public static Boolean toBoolean(Object val) {
+        if (val == null) return null;
+        if (val instanceof Boolean) return (Boolean) val;
+        if (val instanceof Number) return ((Number) val).intValue() == 1;
+        return Boolean.parseBoolean(String.valueOf(val).trim());
+    }
+
+    /**
+     * Safely converts Object to Integer
+     */
+    public static Integer toInteger(Object val) {
+        if (val == null) return null;
+        if (val instanceof Integer) return (Integer) val;
+        if (val instanceof Number) return ((Number) val).intValue();
+        try {
+            return Integer.parseInt(String.valueOf(val).trim());
+        } catch (NumberFormatException e) {
+            log.warn("Cannot convert to Integer: {}", val);
+            return null;
+        }
     }
 }

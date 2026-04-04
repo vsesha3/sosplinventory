@@ -233,9 +233,20 @@ const InwardReceiptLineEditor: React.FC<InwardReceiptLineEditorProps> = ({
                   <Text size="xs" c="dimmed">UOM</Text>
                   <Text size="sm" fw={600}>{form.poUom || '—'}</Text>
                 </Stack>
-                <Stack gap={2}>
+                   <Stack gap={2}>
                   <Text size="xs" c="dimmed">PO Order Qty</Text>
-                  <Text size="sm" fw={600}>{form.rmOrderQty.toFixed(3)}</Text>
+                  
+<Text size="sm" fw={600}>
+ 
+   <Text size="sm" fw={600}>{form.rmReceivedQty || '—'}</Text>
+</Text>
+                </Stack>
+                <Stack gap={2}>
+                  <Text size="xs" c="dimmed">Remaining Qty</Text>
+                  
+<Text size="sm" fw={600}>
+  {(( form.rmOrderQty ?? 0) - parseFloat(form.rmReceivedQty || '0')).toFixed(3)}
+</Text>
                 </Stack>
               </Group>
             </Paper>

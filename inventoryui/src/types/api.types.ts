@@ -119,4 +119,6 @@ export interface MaterialReceiptRequest {
   poType: string;
   lines: MaterialReceiptLineRequest[];
   freight: string;
+  freightGst: string;
+  receiptDetId?: number | null;
 }

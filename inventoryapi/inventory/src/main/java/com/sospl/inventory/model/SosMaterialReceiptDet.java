@@ -188,6 +188,9 @@ public class SosMaterialReceiptDet extends BaseAuditEntity {
     @Column(name = "po_ref_no",length=250)
     private int poRefNo;
     
+    @Column(name="freight_gst",length=250)
+    private String freightGst;
+    
    
     // ── Getters ───────────────────────────────────────────────────────────
 
@@ -256,6 +259,14 @@ public class SosMaterialReceiptDet extends BaseAuditEntity {
 	}
 	public void setPoRefNo(int poRefNo) {
 		this.poRefNo = poRefNo;
+	}
+	
+	
+	public String getFreightGst() {
+		return freightGst;
+	}
+	public void setFreightGst(String freightGst) {
+		this.freightGst = freightGst;
 	}
 	public void setReceiptDetId(Long receiptDetId) { this.receiptDetId = receiptDetId; }
     public void setMaterialType(String materialType) { this.materialType = materialType; }

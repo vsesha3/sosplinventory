@@ -20,9 +20,16 @@ public class SosMaterialReceiptRequest {
     private String poDate;
     private String poType;
     private String freight;
+    private String freightGst;
     
     
-    public String getFreight() {
+    public String getFreightGst() {
+		return freightGst;
+	}
+	public void setFreightGst(String freightGst) {
+		this.freightGst = freightGst;
+	}
+	public String getFreight() {
 		return freight;
 	}
 	public void setFreight(String freight) {

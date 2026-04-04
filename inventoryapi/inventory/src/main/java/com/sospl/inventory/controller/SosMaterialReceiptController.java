@@ -2,6 +2,8 @@ package com.sospl.inventory.controller;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptRequest;
+import com.sospl.inventory.dto.inventory.SosMaterialReceiptSummaryResponse;
+import com.sospl.inventory.dto.inventory.SosMaterialReceiptWithRMDetailsResponse;
 import com.sospl.inventory.model.SosMaterialReceipt;
 import com.sospl.inventory.model.SosMaterialReceiptDet;
 import com.sospl.inventory.service.SosMaterialReceiptService;
@@ -138,6 +140,47 @@ public class SosMaterialReceiptController {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "Receipt deleted successfully", null));
+    }
+    
+ // Get receipt summary — all
+    @GetMapping("/summary")
+    public ResponseEntity<ApiResponse<List<SosMaterialReceiptSummaryResponse>>> getSummary() {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Receipt summary fetched successfully",
+                        service.findAllReceiptSummary()));
+    }
+
+    // Get receipt summary — by material type
+    @GetMapping("/summary/type")
+    public ResponseEntity<ApiResponse<List<SosMaterialReceiptSummaryResponse>>> getSummaryByMaterialType(
+            @RequestParam String materialType) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Receipt summary fetched successfully",
+                        service.findAllReceiptSummaryByMaterialType(
+                                materialType)));
+    }
+    
+    @GetMapping("/summary/porefno/{poRefNo}")
+    public ResponseEntity<ApiResponse<List<SosMaterialReceiptSummaryResponse>>> getSummaryByPoRefNo(
+            @PathVariable Long poRefNo) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Receipt summary fetched successfully",
+                        service.findAllReceiptSummaryByPoRefNo(
+                                poRefNo)));
+    }
+    
+ // Get RM details by receipt main id
+    @GetMapping("/rmlist/{rmMainId}")
+    public ResponseEntity<ApiResponse<List<SosMaterialReceiptWithRMDetailsResponse>>> getRMListByReceiptMainId(
+            @PathVariable Long rmMainId) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "RM list fetched successfully",
+                        service.findAllReceiptWithRMDetailsByReceiptMainId(
+                                rmMainId)));
     }
 
     // Get by id — ALWAYS LAST
