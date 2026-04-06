@@ -1,6 +1,8 @@
 package com.sospl.inventory.repository.inventory;
 
 import com.sospl.inventory.model.SosMaterialReceipt;
+import com.sospl.inventory.model.SosMaterialReceiptDet;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -55,4 +57,9 @@ public interface SosMaterialReceiptRepository
             Pageable pageable);
 
 	Optional<SosMaterialReceipt> findByPoDetIdAndReceiptDetIdAndIsDeletedFalse(Long poDetId, Long receiptDetId);
+	Optional<SosMaterialReceiptDet> findByReceiptDetIdAndIsDeletedFalse(Long receiptDetId);
+
+	List<SosMaterialReceipt> findAllByReceiptMainIdAndIsDeletedFalse(Long receiptDetId);
+	
+	
 }

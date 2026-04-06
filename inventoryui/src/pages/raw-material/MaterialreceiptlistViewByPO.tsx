@@ -23,47 +23,61 @@ import RawMaterialInwardReceipt from '../raw-material/Rawmaterialinwardreceipt';
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 export interface MaterialReceiptListModalProps {
-  opened:        boolean;
-  onClose:       () => void;
-  poRefNo:       number | null;
-  poNo?:         string | null;
+  opened: boolean;
+  onClose: () => void;
+  poRefNo: number | null;
+  poNo?: string | null;
   materialType?: string;
-   onSaveReceipt?:   (data: InwardReceiptFormData) => void;
+  onSaveReceipt?: (data: InwardReceiptFormData) => void;
 }
 
 // ── Parent columns ────────────────────────────────────────────────────────────
 
 const COLUMNS: ColumnDef[] = [
-  { key: 'receiptDetId', label: 'Receipt ID',   width: 100 },
-  { key: 'invoiceNo',    label: 'Invoice No',    width: 150 },
-  { key: 'invoiceDate',  label: 'Invoice Date',  width: 120 },
+  { key: 'receiptDetId', label: 'Receipt ID', width: 100 },
+  { key: 'invoiceNo', label: 'Invoice No', width: 150 },
+  { key: 'invoiceDate', label: 'Invoice Date', width: 120 },
   { key: 'materialType', label: 'Material Type', width: 130 },
-  { key: 'noOfReceived', label: 'Qty Received',  width: 110, align: 'right' },
-  { key: 'netAmount',    label: 'Net Amount',    width: 110, align: 'right' },
-  { key: 'sgstValue',    label: 'SGST Amt',      width: 100, align: 'right' },
-  { key: 'cgstValue',    label: 'CGST Amt',      width: 100, align: 'right' },
-  { key: 'igstValue',    label: 'IGST Amt',      width: 100, align: 'right' },
-  { key: 'totalAmount',  label: 'Total Amount',  width: 120, align: 'right' },
+  { key: 'noOfReceived', label: 'Qty Received', width: 110, align: 'right' },
+  { key: 'netAmount', label: 'Net Amount', width: 110, align: 'right' },
+  { key: 'sgstValue', label: 'SGST Amt', width: 100, align: 'right' },
+  { key: 'cgstValue', label: 'CGST Amt', width: 100, align: 'right' },
+  { key: 'igstValue', label: 'IGST Amt', width: 100, align: 'right' },
+  { key: 'totalAmount', label: 'Total Amount', width: 120, align: 'right' },
 ];
 
 // ── Child columns (RM details per receipt) ────────────────────────────────────
 
 const CHILD_COLUMNS: ChildColumnDef[] = [
-  { key: 'receiptId',    label: 'Det ID',       width: 90  },
-  { key: 'noOfReceived', label: 'Qty Received', width: 110, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(3) : '—' },
-  { key: 'perUnitRate',  label: 'Rate',         width: 100, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—' },
-  { key: 'netAmount',    label: 'Net Amount',   width: 110, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—' },
-  { key: 'sgstValue',    label: 'SGST Amt',     width: 100, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—' },
-  { key: 'cgstValue',    label: 'CGST Amt',     width: 100, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—' },
-  { key: 'igstValue',    label: 'IGST Amt',     width: 100, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—' },
-  { key: 'totalAmount',  label: 'Total',        width: 110, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—' },
+  { key: 'receiptId', label: 'Det ID', width: 90 },
+  {
+    key: 'noOfReceived', label: 'Qty Received', width: 110, align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(3) : '—'
+  },
+  {
+    key: 'perUnitRate', label: 'Rate', width: 100, align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(2) : '—'
+  },
+  {
+    key: 'netAmount', label: 'Net Amount', width: 110, align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(2) : '—'
+  },
+  {
+    key: 'sgstValue', label: 'SGST Amt', width: 100, align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(2) : '—'
+  },
+  {
+    key: 'cgstValue', label: 'CGST Amt', width: 100, align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(2) : '—'
+  },
+  {
+    key: 'igstValue', label: 'IGST Amt', width: 100, align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(2) : '—'
+  },
+  {
+    key: 'totalAmount', label: 'Total', width: 110, align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(2) : '—'
+  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -86,15 +100,17 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
   onSaveReceipt,
 }) => {
 
-  const [data, setData]               = useState<MaterialReceiptSummary[]>([]);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState<string | null>(null);
-  const [selected, setSelected]       = useState<number[]>([]);
-  const [page, setPage]               = useState(1);
-  const [totalPages, setTotalPages]   = useState(1);
+  const [data, setData] = useState<MaterialReceiptSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [searchInput, setSearchInput] = useState('');
   const [inwardOpen, setInwardOpen] = useState(false);
+  // Add this state near the other useState declarations
+  const [editReceiptDetId, setEditReceiptDetId] = useState<number | null>(null);
 
   // ── Fetch parent receipts ─────────────────────────────────────────────────
 
@@ -115,7 +131,7 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
         : `/api/inventory/material-receipt/summary/porefno/${poRefNo}`;
 
       const res = await api.get(url, { params });
-      const d   = res.data.data;
+      const d = res.data.data;
 
       if (Array.isArray(d)) {
         setData(d.map(mapMaterialReceiptSummary));
@@ -174,8 +190,8 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
 
   // ── Selection ─────────────────────────────────────────────────────────────
 
-  const allIds       = data.map(r => r.receiptDetId);
-  const allSelected  = allIds.length > 0 && allIds.every(id => selected.includes(id));
+  const allIds = data.map(r => r.receiptDetId);
+  const allSelected = allIds.length > 0 && allIds.every(id => selected.includes(id));
   const someSelected = allIds.some(id => selected.includes(id)) && !allSelected;
 
   const toggleAll = () =>
@@ -298,9 +314,16 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
               someSelected={someSelected}
               onToggleSelectAll={toggleAll}
               selectedCount={selected.length}
-              
+
               onAdd={() => setInwardOpen(true)}
-              onEdit={undefined}
+              // Replace the onEdit={undefined} in MasterTable with:
+              onEdit={selected.length === 1
+                ? () => {
+                  setEditReceiptDetId(selected[0]);
+                  setInwardOpen(true);
+                }
+                : undefined
+              }
               onDelete={undefined}
               onRefresh={() => fetchData(page, searchInput)}
               onExport={() => console.log('Export receipts', selected)}
@@ -308,19 +331,23 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
           )}
 
         </Box>
+       // Replace the RawMaterialInwardReceipt block with:
         <RawMaterialInwardReceipt
-  opened={inwardOpen}
-  onClose={() => setInwardOpen(false)}
-  onSave={(data: InwardReceiptFormData) => {
-    if (onSaveReceipt) {
-      onSaveReceipt(data);
-    }
-    setInwardOpen(false);
-    fetchData(page, searchInput);  // ← refresh receipt list
-  }}
-  poRefNo={poRefNo}
-  poNo={poNo}
-/>
+          opened={inwardOpen}
+          onClose={() => {
+            setInwardOpen(false);
+            setEditReceiptDetId(null);   // ← clear edit target on close
+          }}
+          onSave={(data: InwardReceiptFormData) => {
+            if (onSaveReceipt) onSaveReceipt(data);
+            setInwardOpen(false);
+            setEditReceiptDetId(null);
+            fetchData(page, searchInput);
+          }}
+          poRefNo={poRefNo}
+          poNo={poNo}
+          receiptDetId={editReceiptDetId}   // ← null = Add, number = Edit
+        />
 
       </Paper>
     </Modal>

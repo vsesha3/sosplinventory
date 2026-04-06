@@ -1,7 +1,7 @@
 package com.sospl.inventory.controller;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
-import com.sospl.inventory.dto.inventory.SosMaterialReceiptRequest;
+import com.sospl.inventory.dto.inventory.SosMaterialReceiptDetRequest;
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptSummaryResponse;
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptWithRMDetailsResponse;
 import com.sospl.inventory.model.SosMaterialReceipt;
@@ -44,7 +44,7 @@ public class SosMaterialReceiptController {
     
     @PostMapping("/save")
     public ResponseEntity<ApiResponse<Long>> saveReceipt(
-            @RequestBody SosMaterialReceiptRequest request) {
+            @RequestBody SosMaterialReceiptDetRequest request) {
         Long receiptDetId = service.saveReceipt(request);
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -172,17 +172,7 @@ public class SosMaterialReceiptController {
                                 poRefNo)));
     }
     
- // Get RM details by receipt main id
-    @GetMapping("/rmlist/{rmMainId}")
-    public ResponseEntity<ApiResponse<List<SosMaterialReceiptWithRMDetailsResponse>>> getRMListByReceiptMainId(
-            @PathVariable Long rmMainId) {
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        "RM list fetched successfully",
-                        service.findAllReceiptWithRMDetailsByReceiptMainId(
-                                rmMainId)));
-    }
-
+ 
     // Get by id — ALWAYS LAST
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<SosMaterialReceipt>> getById(

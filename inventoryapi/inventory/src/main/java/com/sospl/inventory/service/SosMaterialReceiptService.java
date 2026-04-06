@@ -1,6 +1,6 @@
 package com.sospl.inventory.service;
 
-import com.sospl.inventory.dto.inventory.SosMaterialReceiptRequest;
+import com.sospl.inventory.dto.inventory.SosMaterialReceiptDetRequest;
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptSummaryResponse;
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptWithRMDetailsResponse;
 import com.sospl.inventory.model.SosMaterialReceipt;
@@ -30,7 +30,7 @@ public interface SosMaterialReceiptService
     void softDelete(Long receiptId, String deletedBy);
     
     
-    Long saveReceipt(SosMaterialReceiptRequest request);
+    Long saveReceipt(SosMaterialReceiptDetRequest request);
     
     
     
@@ -45,5 +45,7 @@ public interface SosMaterialReceiptService
     List<SosMaterialReceiptSummaryResponse> findAllReceiptSummaryByPoRefNo(
            Long  poRefNo);
     
-    List<SosMaterialReceiptWithRMDetailsResponse> findAllReceiptWithRMDetailsByReceiptMainId(Long receiptMainId);
+    List<SosMaterialReceiptDetRequest> findFullReceiptByPoRefNo(Long poRefNo);
+   
+    SosMaterialReceiptDetRequest findFullReceiptByReceiptDetId(Long receiptDetId);
 }

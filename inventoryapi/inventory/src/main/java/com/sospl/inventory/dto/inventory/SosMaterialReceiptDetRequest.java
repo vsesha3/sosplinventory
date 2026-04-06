@@ -2,7 +2,7 @@ package com.sospl.inventory.dto.inventory;
 
 import java.util.List;
 
-public class SosMaterialReceiptRequest {
+public class SosMaterialReceiptDetRequest {
 
     // ── Header fields → sos_material_receipt_det_t ───────────────────────
     private String actualDateTimeOfReceipt;

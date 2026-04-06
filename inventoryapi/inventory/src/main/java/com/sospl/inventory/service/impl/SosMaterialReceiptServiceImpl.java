@@ -1,7 +1,7 @@
 package com.sospl.inventory.service.impl;
 
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptLineRequest;
-import com.sospl.inventory.dto.inventory.SosMaterialReceiptRequest;
+import com.sospl.inventory.dto.inventory.SosMaterialReceiptDetRequest;
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptSummaryResponse;
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptWithRMDetailsResponse;
 import com.sospl.inventory.mapper.inventory.SosMaterialReceiptWithRMDetailsMapper;
@@ -105,7 +105,7 @@ public class SosMaterialReceiptServiceImpl
     
     @Override
     @Transactional
-    public Long saveReceipt(SosMaterialReceiptRequest request) {
+    public Long saveReceipt(SosMaterialReceiptDetRequest request) {
 
         Long poRefNo = ParseUtil.parseLong(request.getPoRefNo());
 
@@ -181,7 +181,7 @@ public class SosMaterialReceiptServiceImpl
                 receipt.setPerUnitRate(ParseUtil.parseBigDecimal(
                         line.getReceivedRate()));
                 receipt.setNoOfReceived(ParseUtil.parseInteger(
-                        line.getRmOrderQty()));
+                        line.getRmReceivedQty()));
                 receipt.setDom(ParseUtil.parseDate(
                         line.getExpectedDeliveryDate()));
                 receipt.setIsActive(true);
@@ -324,14 +324,132 @@ public class SosMaterialReceiptServiceImpl
                 .collect(Collectors.toList());
     }
 
+  
+    
     @Override
-    public List<SosMaterialReceiptWithRMDetailsResponse> findAllReceiptWithRMDetailsByReceiptMainId(
-            Long receiptMainId) {
-        return receiptWithRMMapper.mapRows(
-                detRepository.findAllReceiptWithRMDetailsByReceiptMainId(receiptMainId)                               // ← receiptRepository not repository
-                        );
+    public SosMaterialReceiptDetRequest findFullReceiptByReceiptDetId(
+            Long receiptDetId) {
+        SosMaterialReceiptDet det = detRepository
+                .findById(receiptDetId)
+                .orElse(null);
+        if (det == null) return null;
+        return mapToDetRequest(det);
     }
-	    
+
+
    
     
+    private SosMaterialReceiptDetRequest mapToDetRequest(
+            SosMaterialReceiptDet det) {
+
+        SosMaterialReceiptDetRequest request =
+                new SosMaterialReceiptDetRequest();
+
+        // ── Header fields ─────────────────────────────────────────────────────
+        request.setPoRefNo(String.valueOf(det.getPoRefNo()) != null
+                ? String.valueOf(det.getPoRefNo()) : null);
+        request.setPoType(det.getMaterialType());
+        request.setGrnNo(det.getGrnNo());
+        request.setIrcNo(det.getIrcNo());
+        request.setStnCommercialInvoiceNo(det.getInvoiceNo());
+        request.setInvoiceDate(det.getInvoiceDate() != null
+                ? det.getInvoiceDate().toString() : null);
+        request.setSupplierId(det.getSupplierId() != null
+                ? String.valueOf(det.getSupplierId()) : null);
+        request.setTransporterId(det.getTransporterId() != null
+                ? String.valueOf(det.getTransporterId()) : null);
+        request.setSapPo(det.getSapPo());
+        request.setLrNumber(det.getLrNumber());
+        request.setModvatCopyNo(det.getModvatCopyNo());
+        request.setFreight(det.getFreightRs() != null
+                ? det.getFreightRs().toPlainString() : null);
+        request.setFreightGst(det.getFreightGst());
+        request.setDateTimeOfReceipt(det.getReceiptDateTime() != null
+                ? det.getReceiptDateTime().toString() : null);
+        request.setActualDateTimeOfReceipt(
+                det.getActualReceiptDateTime() != null
+                ? det.getActualReceiptDateTime().toString() : null);
+
+        // ── Lines — from sos_material_receipt_t ──────────────────────────────
+        List<SosMaterialReceipt> receiptLines = receiptRepository
+                .findAllByReceiptMainIdAndIsDeletedFalse(
+                        det.getReceiptDetId());
+
+        List<SosMaterialReceiptLineRequest> lines = receiptLines.stream()
+                .map(line -> {
+                    SosMaterialReceiptLineRequest lineReq =
+                            new SosMaterialReceiptLineRequest();
+                    lineReq.setPoDetId(line.getPoDetId() != null
+                            ? String.valueOf(line.getPoDetId()) : null);
+                    lineReq.setRmReceivedQty(line.getQty() != null
+                            ? line.getQty().toPlainString() : null);
+                    lineReq.setReceivedRate(line.getPerUnitRate() != null
+                            ? line.getPerUnitRate().toPlainString() : null);
+                    lineReq.setLotNumber(line.getLotNo());
+                    lineReq.setExpectedDeliveryDate(line.getDom() != null
+                            ? line.getDom().toString() : null);
+                    lineReq.setRmOrderQty(line.getNoOfReceived() != null
+                            ? String.valueOf(line.getNoOfReceived()) : null);
+
+                    // ── Get receipt info from sos_po_receipt_t ────────────────
+                    if (line.getPoDetId() != null
+                            && det.getReceiptDetId() != null) {
+                        poReceiptRepository
+                                .findByPoDetIdAndReceiptDetIdAndIsDeletedFalse(
+                                        line.getPoDetId(),
+                                        det.getReceiptDetId())
+                                .ifPresent(pr -> {
+                                    lineReq.setInspectedBy(
+                                            pr.getInspectedBy());
+                                    lineReq.setApprovedBy(
+                                            pr.getApprovedBy());
+                                    lineReq.setActualDeliveryDate(
+                                            pr.getActDateDel() != null
+                                            ? pr.getActDateDel().toString()
+                                            : null);
+                                    lineReq.setRmReceivedQty(
+                                            pr.getRmReceivedQty() != null
+                                            ? pr.getRmReceivedQty()
+                                                    .toPlainString()
+                                            : null);
+                                });
+
+                        // ── Get po details for rm code, name, uom ────────────
+                        poDetailsRepository.findById(line.getPoDetId())
+                                .ifPresent(pd -> {
+                                    lineReq.setPoRmCode(pd.getPoRmCode());
+                                    lineReq.setPoRmName(pd.getPoRmName());
+                                    lineReq.setPoUom(pd.getPoUom());
+                                    lineReq.setSgst(pd.getSgst() != null
+                                            ? pd.getSgst().toPlainString()
+                                            : null);
+                                    lineReq.setCgst(pd.getCgst() != null
+                                            ? pd.getCgst().toPlainString()
+                                            : null);
+                                    lineReq.setIgst(pd.getIgst() != null
+                                            ? pd.getIgst().toPlainString()
+                                            : null);
+                                });
+                    }
+                    return lineReq;
+                })
+                .collect(Collectors.toList());
+
+        request.setLines(lines);
+        return request;
+    }
+
+
+	@Override
+	public List<SosMaterialReceiptDetRequest> findFullReceiptByPoRefNo(Long poRefNo) {
+		// TODO Auto-generated method stub
+		 return detRepository
+		            .findAllByPoRefNoAndIsDeletedFalse(poRefNo)
+		            .stream()
+		            .map(this::mapToDetRequest)
+		            .collect(Collectors.toList());
+	
+	}
+    
+   
 }

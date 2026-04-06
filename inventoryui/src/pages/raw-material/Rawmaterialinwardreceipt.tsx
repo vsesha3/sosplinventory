@@ -223,67 +223,65 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
 
   // ── EDIT MODE: load existing receipt header + its RM lines ────────────────
 
-  const loadForEdit = async (receiptDetId: number) => {
-    const [rmRes, headerRes] = await Promise.all([
-      api.get(`/api/inventory/material-receipt/rmlist/${receiptDetId}`),
-      api.get(`/api/inventory/material-receipt/${receiptDetId}`),
-    ]);
+const loadForEdit = async (receiptDetId: number) => {
+  const res = await api.get(
+    `/api/inventory/material-receipt-det/${receiptDetId}`
+  );
 
-    const rmItems = Array.isArray(rmRes.data?.data)
-      ? rmRes.data.data
-      : Array.isArray(rmRes.data) ? rmRes.data : [];
+  // ── Single object response (not array) ───────────────────────────
+  const receipt = res.data?.data;
 
-    const header = headerRes.data?.data ?? headerRes.data ?? {};
+  if (!receipt) {
+    setFetchError('No receipt found for this ID.');
+    return;
+  }
 
-    // Populate all receipt header fields from existing receipt
-    setForm(prev => ({
-      ...defaultForm,
-      poRefNo:                 header.poRefNo
-        ? String(header.poRefNo) : (initialPoRefNo ? String(initialPoRefNo) : null),
-      poDate:                  header.poDate             ?? null,
-      poType:                  header.poType             ?? null,
-      grnNo:                   header.grnNo              ?? '',
-      ircNo:                   header.ircNo              ?? '',
-      stnCommercialInvoiceNo:  header.invoiceNo          ?? '',
-      invoiceDate:             header.invoiceDate
-        ? new Date(header.invoiceDate) : null,
-      modvatCopyNo:            header.modvatCopyNo       ?? '',
-      sapPo:                   header.sapPo              ?? '',
-      lrNumber:                header.lrNumber           ?? '',
-      supplierId:              header.supplierId
-        ? String(header.supplierId) : null,
-      transporterId:           header.transporterId
-        ? String(header.transporterId) : null,
-      dateTimeOfReceipt:       header.receiptDateTime
-        ? new Date(header.receiptDateTime) : null,
-      actualDateTimeOfReceipt: header.actualReceiptDateTime
-        ? new Date(header.actualReceiptDateTime) : null,
-      freight:                 header.freightRs          ?? '',
-      freightTaxPct:           header.freightTaxPct      ?? '',
-      receiptDetId:            header.receiptDetId       ?? null,
-    }));
+  setForm(prev => ({
+    ...defaultForm,
+    poRefNo:                 receipt.poRefNo
+      ? String(receipt.poRefNo) : (initialPoRefNo ? String(initialPoRefNo) : null),
+    poDate:                  receipt.poDate                  ?? null,
+    poType:                  receipt.poType                  ?? null,
+    grnNo:                   receipt.grnNo                   ?? '',
+    ircNo:                   receipt.ircNo                   ?? '',
+    stnCommercialInvoiceNo:  receipt.stnCommercialInvoiceNo  ?? '',
+    invoiceDate:             receipt.invoiceDate
+      ? new Date(receipt.invoiceDate) : null,
+    modvatCopyNo:            receipt.modvatCopyNo            ?? '',
+    sapPo:                   receipt.sapPo                   ?? '',
+    lrNumber:                receipt.lrNumber                ?? '',
+    supplierId:              receipt.supplierId              ?? null,
+    transporterId:           receipt.transporterId           ?? null,
+    dateTimeOfReceipt:       receipt.dateTimeOfReceipt
+      ? new Date(receipt.dateTimeOfReceipt) : null,
+    actualDateTimeOfReceipt: receipt.actualDateTimeOfReceipt
+      ? new Date(receipt.actualDateTimeOfReceipt) : null,
+    freight:                 receipt.freight                 ?? '',
+    freightTaxPct:           receipt.freightGst              ?? '',  // ← freightGst → freightTaxPct
+  }));
 
-    // Populate RM lines from existing receipt
-    setLines(rmItems.map((item: any) => ({
-      poDetId:              item.receiptId    ?? item.poDetId      ?? 0,
-      poRmCode:             item.poRmCode     ?? '',
-      poRmName:             item.poRmName     ?? '',
-      poUom:                item.poUom        ?? '',
-      rmOrderQty:           Number(item.rmOrderQty ?? item.noOfReceived ?? 0),
-      rmReceivedQty:        item.noOfReceived != null ? String(item.noOfReceived)  : '',
-      receivedRate:         item.perUnitRate  != null ? String(item.perUnitRate)   : '',
-      sgst:                 item.sgst         != null ? String(item.sgst)          : '',
-      cgst:                 item.cgst         != null ? String(item.cgst)          : '',
-      igst:                 item.igst         != null ? String(item.igst)          : '',
-      expectedDeliveryDate: item.expectedDeliveryDate
-        ? new Date(item.expectedDeliveryDate) : null,
-      actualDeliveryDate:   item.actualDeliveryDate
-        ? new Date(item.actualDeliveryDate) : null,
-      inspectedBy:          item.inspectedBy  ?? '',
-      approvedBy:           item.approvedBy   ?? '',
-      lotNumber:            item.lotNumber    ?? '',
-    })));
-  };
+  const lineItems = Array.isArray(receipt.lines) ? receipt.lines : [];
+
+  setLines(lineItems.map((item: any) => ({
+    poDetId:              Number(item.poDetId)    || 0,
+    poRmCode:             item.poRmCode           ?? '',
+    poRmName:             item.poRmName           ?? '',
+    poUom:                item.poUom              ?? '',
+    rmOrderQty:           Number(item.rmOrderQty) || 0,
+    rmReceivedQty:        item.rmReceivedQty      ?? '',
+    receivedRate:         item.receivedRate        ?? '',
+    sgst:                 item.sgst               ?? '',
+    cgst:                 item.cgst               ?? '',
+    igst:                 item.igst               ?? '',
+    expectedDeliveryDate: item.expectedDeliveryDate
+      ? new Date(item.expectedDeliveryDate) : null,
+    actualDeliveryDate:   item.actualDeliveryDate
+      ? new Date(item.actualDeliveryDate) : null,
+    inspectedBy:          item.inspectedBy        ?? '',
+    approvedBy:           item.approvedBy         ?? '',
+    lotNumber:            item.lotNumber          ?? '',
+  })));
+};
 
   // ── Main useEffect ────────────────────────────────────────────────────────
 
@@ -700,3 +698,4 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
 };
 
 export default RawMaterialInwardReceipt;
+
