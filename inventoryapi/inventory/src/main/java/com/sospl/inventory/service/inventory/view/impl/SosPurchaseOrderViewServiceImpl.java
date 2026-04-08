@@ -156,6 +156,8 @@ public class SosPurchaseOrderViewServiceImpl
         response.setRequestedBy(entity.getRequestedBy());
         response.setAddCharges(entity.getAddCharges());
         response.setPoClosedFlag(entity.getPoClosedFlag());
+        response.setFreight(entity.getFreight());
+        response.setFreightGst(entity.getFreightGst());
         response.setIsActive(entity.getIsActive());
         response.setCreatedBy(entity.getCreatedBy());
         response.setCreatedAt(entity.getCreatedAt());
@@ -240,8 +242,9 @@ public class SosPurchaseOrderViewServiceImpl
         header.setPoDeliveryTerms(request.getPoDeliveryTerms());
         header.setPoReference(request.getPoReference());
         header.setPoRemarks(request.getPoRemarks());
+        header.setFreight(request.getFreight());
+        header.setFreightGst(request.getFreightGst());
         
-      
         header.setAddCharges(request.getAddCharges());
       
         if (request.getRequestedBy() != null

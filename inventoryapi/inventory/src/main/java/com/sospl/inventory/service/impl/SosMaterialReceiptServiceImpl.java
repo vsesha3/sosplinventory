@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.sospl.inventory.util.ParseUtil;
-import com.sospl.inventory.util.ParseUtil;
+
 @Service
 public class SosMaterialReceiptServiceImpl
         extends BaseMasterServiceImpl<SosMaterialReceipt, Long>
@@ -137,9 +137,13 @@ public class SosMaterialReceiptServiceImpl
         
         det.setFreightRs(ParseUtil.parseBigDecimal(request.getFreight()));
         det.setFreightGst(request.getFreightGst());
+        
 
         if (isNew) {
             det.setCreatedAt(LocalDateTime.now());
+            Long grnNo = detRepository.getNextGrnNo();
+            det.setGrnNo(ParseUtil.toString(grnNo));
+            
             log.info("Creating new header for poRefNo: {}", poRefNo);
         } else {
             det.setUpdatedAt(LocalDateTime.now());

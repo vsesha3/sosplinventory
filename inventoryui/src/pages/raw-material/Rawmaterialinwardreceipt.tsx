@@ -23,21 +23,7 @@ interface DropDownOption {
   label: string;
 }
 
-interface PoListItem {
-  poRefNo: number;
-  poNo:    string;
-  poDate:  string;
-}
 
-interface PoListApiResponse {
-  success: boolean;
-  message: string;
-  data: {
-    content:       PoListItem[];
-    totalElements: number;
-    totalPages:    number;
-  };
-}
 
 interface PoLineItemDetail {
   poDetId:       number;
@@ -93,9 +79,10 @@ export interface RawMaterialInwardReceiptProps {
   opened:        boolean;
   onClose:       () => void;
   onSave?:       (data: InwardReceiptFormData) => void;
-  poRefNo?:      number | null;   // always passed — used in both modes
+  poRefNo?:      number | null;
   poNo?:         string | null;
-  receiptDetId?: number | null;   // null = Add mode, set = Edit mode
+  receiptDetId?: number | null;
+  poDate?:       string | null;
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
@@ -144,6 +131,7 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
   onSave,
   poRefNo:      initialPoRefNo      = null,
   poNo:         initialPoNo         = null,
+  poDate:       initialPoDate       = null,
   receiptDetId: initialReceiptDetId = null,
 }) => {
 
@@ -159,6 +147,13 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
   const [supplierOptions, setSupplierOptions]   = useState<DropDownOption[]>([]);
   const [transporterOptions, setTransporterOptions] = useState<DropDownOption[]>([]);
 
+  const [noLinesOpen, setNoLinesOpen] = useState(false);
+const [noLinesMessage, setNoLinesMessage] = useState('');
+
+  // ── Ref to always capture the latest poDate prop (bypasses stale closure) ──
+  const poDateRef = React.useRef<string | null>(initialPoDate);
+  poDateRef.current = initialPoDate; // ← updated on every render, before effects run
+
   // ── Load shared dropdowns ─────────────────────────────────────────────────
 
   const loadDropdowns = async () => {
@@ -172,7 +167,8 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
 
   // ── ADD MODE: load PO header + fresh PO lines (empty received fields) ─────
 
-  const loadForAdd = async (poRefNo: number) => {
+  const loadForAdd = async (poRefNo: number, poDate: string | null) => {
+    console.log('[loadForAdd] PO Ref No:', poRefNo, 'PO Date:', poDate);
     const [linesRes, headerRes] = await Promise.all([
       api.get<PoLineItemsApiResponse>(`/api/inventory/po-details/with-receipt/${poRefNo}`),
       api.get(`/api/inventory/purchase-order/${poRefNo}`),
@@ -182,26 +178,34 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
     const header             = headerRes.data.data;
     const poDeliverySchedule = header?.poDeliverySchedule ?? null;
 
-    // Populate only PO-level header fields — leave receipt fields empty
-    setForm(prev => ({
-      ...defaultForm,                          // ← always start fresh for Add
-      poRefNo:    String(poRefNo),
-      poDate:     header?.poDate     ?? null,
-      poType:     header?.poType     ?? null,
-      supplierId: header?.supplierId ? String(header.supplierId) : null,
-      dateTimeOfReceipt: poDeliverySchedule
-        ? new Date(poDeliverySchedule)
-        : null,
-    }));
+    if (items.length === 0) {
+    setNoLinesMessage(
+      `No line items found for PO: ${header?.poNo ?? `Ref #${poRefNo}`}. ` +
+      `Please add line items to this PO before creating an inward receipt.`
+    );
+    setNoLinesOpen(true);
+    return;   // ← stop here, do not set form or lines
+  }
 
-    // Load PO lines with empty received fields
+   setForm({
+  ...defaultForm,
+  poRefNo:       String(poRefNo),
+  poDate:        initialPoDate ?? null,
+  poType:        header?.poType     ?? null,
+  supplierId:    header?.supplierId ? String(header.supplierId) : null,
+  freight:       header?.freight    != null ? String(header.freight) : '',
+  freightTaxPct: header?.freightGst != null ? String(header.freightGst) : '',
+  dateTimeOfReceipt: poDeliverySchedule
+    ? new Date(poDeliverySchedule)
+    : null,
+});
+
     setLines(items.map(item => ({
       poDetId:      item.poDetId,
       poRmCode:     item.poRmCode  ?? '',
       poRmName:     item.poRmName  ?? '',
       poUom:        item.poUom     ?? '',
       rmOrderQty:   Number(item.poQty) || 0,
-      // ── Receipt fields all empty for new receipt ──
       rmReceivedQty:        item.rmRcvdQty != null ? String(item.rmRcvdQty) : '',
       receivedRate:         item.poRate != null
         ? (typeof item.poRate === 'object'
@@ -214,7 +218,7 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
       expectedDeliveryDate: item.expDateDel
         ? new Date(item.expDateDel)
         : poDeliverySchedule ? new Date(poDeliverySchedule) : null,
-      actualDeliveryDate:   null,   // ← empty for new receipt
+      actualDeliveryDate:   null,
       inspectedBy:          '',
       approvedBy:           '',
       lotNumber:            '',
@@ -223,65 +227,65 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
 
   // ── EDIT MODE: load existing receipt header + its RM lines ────────────────
 
-const loadForEdit = async (receiptDetId: number) => {
-  const res = await api.get(
-    `/api/inventory/material-receipt-det/${receiptDetId}`
-  );
+  const loadForEdit = async (receiptDetId: number, poDate: string | null) => {
+    console.log('[loadForEdit] Receipt Det ID:', receiptDetId, 'PO Date:', poDate);
+    const res = await api.get(
+      `/api/inventory/material-receipt-det/${receiptDetId}`
+    );
 
-  // ── Single object response (not array) ───────────────────────────
-  const receipt = res.data?.data;
+    const receipt = res.data?.data;
 
-  if (!receipt) {
-    setFetchError('No receipt found for this ID.');
-    return;
-  }
+    if (!receipt) {
+      setFetchError('No receipt found for this ID.');
+      return;
+    }
 
-  setForm(prev => ({
-    ...defaultForm,
-    poRefNo:                 receipt.poRefNo
-      ? String(receipt.poRefNo) : (initialPoRefNo ? String(initialPoRefNo) : null),
-    poDate:                  receipt.poDate                  ?? null,
-    poType:                  receipt.poType                  ?? null,
-    grnNo:                   receipt.grnNo                   ?? '',
-    ircNo:                   receipt.ircNo                   ?? '',
-    stnCommercialInvoiceNo:  receipt.stnCommercialInvoiceNo  ?? '',
-    invoiceDate:             receipt.invoiceDate
-      ? new Date(receipt.invoiceDate) : null,
-    modvatCopyNo:            receipt.modvatCopyNo            ?? '',
-    sapPo:                   receipt.sapPo                   ?? '',
-    lrNumber:                receipt.lrNumber                ?? '',
-    supplierId:              receipt.supplierId              ?? null,
-    transporterId:           receipt.transporterId           ?? null,
-    dateTimeOfReceipt:       receipt.dateTimeOfReceipt
-      ? new Date(receipt.dateTimeOfReceipt) : null,
-    actualDateTimeOfReceipt: receipt.actualDateTimeOfReceipt
-      ? new Date(receipt.actualDateTimeOfReceipt) : null,
-    freight:                 receipt.freight                 ?? '',
-    freightTaxPct:           receipt.freightGst              ?? '',  // ← freightGst → freightTaxPct
-  }));
+   setForm({
+  ...defaultForm,
+  poRefNo:                 receipt.poRefNo
+    ? String(receipt.poRefNo) : (initialPoRefNo ? String(initialPoRefNo) : null),
+  poDate:                  initialPoDate ?? null,
+  poType:                  receipt.poType                  ?? null,
+  grnNo:                   receipt.grnNo                   ?? '',
+  ircNo:                   receipt.ircNo                   ?? '',
+  stnCommercialInvoiceNo:  receipt.stnCommercialInvoiceNo  ?? '',
+  invoiceDate:             receipt.invoiceDate
+    ? new Date(receipt.invoiceDate) : null,
+  modvatCopyNo:            receipt.modvatCopyNo            ?? '',
+  sapPo:                   receipt.sapPo                   ?? '',
+  lrNumber:                receipt.lrNumber                ?? '',
+  supplierId:              receipt.supplierId              ?? null,
+  transporterId:           receipt.transporterId           ?? null,
+  dateTimeOfReceipt:       receipt.dateTimeOfReceipt
+    ? new Date(receipt.dateTimeOfReceipt) : null,
+  actualDateTimeOfReceipt: receipt.actualDateTimeOfReceipt
+    ? new Date(receipt.actualDateTimeOfReceipt) : null,
+  freight:                 receipt.freight                 ?? '',
+  freightTaxPct:           receipt.freightGst              ?? '',
+});
 
-  const lineItems = Array.isArray(receipt.lines) ? receipt.lines : [];
+    const lineItems = Array.isArray(receipt.lines) ? receipt.lines : [];
 
-  setLines(lineItems.map((item: any) => ({
-    poDetId:              Number(item.poDetId)    || 0,
-    poRmCode:             item.poRmCode           ?? '',
-    poRmName:             item.poRmName           ?? '',
-    poUom:                item.poUom              ?? '',
-    rmOrderQty:           Number(item.rmOrderQty) || 0,
-    rmReceivedQty:        item.rmReceivedQty      ?? '',
-    receivedRate:         item.receivedRate        ?? '',
-    sgst:                 item.sgst               ?? '',
-    cgst:                 item.cgst               ?? '',
-    igst:                 item.igst               ?? '',
-    expectedDeliveryDate: item.expectedDeliveryDate
-      ? new Date(item.expectedDeliveryDate) : null,
-    actualDeliveryDate:   item.actualDeliveryDate
-      ? new Date(item.actualDeliveryDate) : null,
-    inspectedBy:          item.inspectedBy        ?? '',
-    approvedBy:           item.approvedBy         ?? '',
-    lotNumber:            item.lotNumber          ?? '',
-  })));
-};
+    setLines(lineItems.map((item: any) => ({
+      poDetId:              Number(item.poDetId)    || 0,
+      poRmCode:             item.poRmCode           ?? '',
+      poRmName:             item.poRmName           ?? '',
+      poUom:                item.poUom              ?? '',
+      rmOrderQty:           Number(item.rmOrderQty) || 0,
+      rmReceivedQty:        item.rmReceivedQty      ?? '',
+      receivedRate:         item.receivedRate        ?? '',
+      sgst:                 item.sgst               ?? '',
+      cgst:                 item.cgst               ?? '',
+      igst:                 item.igst               ?? '',
+      expectedDeliveryDate: item.expectedDeliveryDate
+        ? new Date(item.expectedDeliveryDate) : null,
+      actualDeliveryDate:   item.actualDeliveryDate
+        ? new Date(item.actualDeliveryDate) : null,
+      inspectedBy:          item.inspectedBy        ?? '',
+      approvedBy:           item.approvedBy         ?? '',
+      lotNumber:            item.lotNumber          ?? '',
+    })));
+  };
 
   // ── Main useEffect ────────────────────────────────────────────────────────
 
@@ -293,6 +297,7 @@ const loadForEdit = async (receiptDetId: number) => {
       setValidationErrors([]);
       return;
     }
+   
 
     const load = async () => {
       setLoading(true);
@@ -300,12 +305,15 @@ const loadForEdit = async (receiptDetId: number) => {
       try {
         await loadDropdowns();
 
+        // ── Read from ref, not from closure — always has the latest prop value ──
+        const currentPoDate = poDateRef.current;
+        console.log('[useEffect] currentPoDate from ref:', currentPoDate);
+
         if (isEditMode && initialReceiptDetId) {
-          // ── Edit: fetch existing receipt header + RM lines ────────────
-          await loadForEdit(initialReceiptDetId);
+      // Debug log to check ref vs prop
+          await loadForEdit(initialReceiptDetId, currentPoDate); // ← pass ref value
         } else if (initialPoRefNo) {
-          // ── Add: fetch PO header + fresh PO lines (empty receipt fields)
-          await loadForAdd(initialPoRefNo);
+          await loadForAdd(initialPoRefNo, currentPoDate);       // ← pass ref value
         }
       } catch {
         setFetchError('Failed to load data. Please close and try again.');
@@ -459,7 +467,7 @@ const loadForEdit = async (receiptDetId: number) => {
                 style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
                 <Grid columns={12} gutter="sm">
 
-                  {/* ── Row 1: Actual Date | STN Invoice No | Invoice Date | Date & Time of Receipt ── */}
+                  {/* ── Row 1 ── */}
                   <Grid.Col span={3}>
                     <FormDatePicker
                       label="* Actual Date & Time of Receipt"
@@ -493,14 +501,14 @@ const loadForEdit = async (receiptDetId: number) => {
                     />
                   </Grid.Col>
 
-                  {/* ── Row 2: GRN No | IRC No | Modvat Copy No | SAP PO ── */}
+                  {/* ── Row 2 ── */}
                   <Grid.Col span={3}>
                     <FormTextInput
                       label="GRN No."
                       value={form.grnNo}
                       onChange={setStr('grnNo')}
                       placeholder="Auto / manual"
-                    />
+                    readOnly />
                   </Grid.Col>
                   <Grid.Col span={3}>
                     <FormTextInput
@@ -524,7 +532,7 @@ const loadForEdit = async (receiptDetId: number) => {
                     />
                   </Grid.Col>
 
-                  {/* ── Row 3: Supplier Name | Transporter | L.R's Number | empty ── */}
+                  {/* ── Row 3 ── */}
                   <Grid.Col span={3}>
                     <FormSelect
                       label="* Supplier Name"
@@ -553,9 +561,17 @@ const loadForEdit = async (receiptDetId: number) => {
                       onChange={setStr('lrNumber')}
                     />
                   </Grid.Col>
-                  <Grid.Col span={3} />
+                  <Grid.Col span={3}>
+                    {/* ── PO Date: read from ref so it always reflects latest prop ── */}
+                    <FormTextInput
+                      label="PO Date"
+                      value={initialPoDate ? fmtDate(initialPoDate) : ''}
+                      onChange={() => {}}
+                      readOnly
+                    />
+                  </Grid.Col>
 
-                  {/* ── Row 4: Freight | Tax on Freight | Freight Tax Amt | Freight Total ── */}
+                  {/* ── Row 4 ── */}
                   <Grid.Col span={3}>
                     <FormTextInput
                       label="Other Charges / Freight"
@@ -693,9 +709,25 @@ const loadForEdit = async (receiptDetId: number) => {
         errors={validationErrors}
         zIndex={350}
       />
+
+      {/* ── No Line Items Error Dialog ── */}
+<ConfirmDialog
+  opened={noLinesOpen}
+  onClose={() => {
+    setNoLinesOpen(false);
+    onClose();   // ← close the whole inward receipt modal too
+  }}
+  onConfirm={() => {
+    setNoLinesOpen(false);
+    onClose();   // ← close on confirm as well
+  }}
+  message={noLinesMessage}
+  confirmLabel="Close"
+  errors={[]}   // ← empty errors so it shows confirm mode not error mode
+  zIndex={400}
+/>
     </>
   );
 };
 
 export default RawMaterialInwardReceipt;
-

@@ -66,8 +66,15 @@ public class SosPoHeader extends BaseAuditEntity {
 
     @Column(name = "po_closed_flag")
     private String poClosedFlag;
+    
+    @Column(name="freight")
+    private String freight;
+    
+    @Column(name="freight_gst")
+    private String freightGst;
 
-    public Long getPoRefNo() { return poRefNo; }
+   
+	public Long getPoRefNo() { return poRefNo; }
     public void setPoRefNo(Long poRefNo) { this.poRefNo = poRefNo; }
 
     public String getPoNo() { return poNo; }
@@ -117,4 +124,17 @@ public class SosPoHeader extends BaseAuditEntity {
 
     public String getPoClosedFlag() { return poClosedFlag; }
     public void setPoClosedFlag(String poClosedFlag) { this.poClosedFlag = poClosedFlag; }
+    
+    public String getFreight() {
+		return freight;
+	}
+	public void setFreight(String freight) {
+		this.freight = freight;
+	}
+	public String getFreightGst() {
+		return freightGst;
+	}
+	public void setFreightGst(String freightGst) {
+		this.freightGst = freightGst;
+	}
 }

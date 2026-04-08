@@ -30,6 +30,8 @@ import java.time.LocalDateTime;
             pht.po_ref_gen_no,
             pht.requested_by,
             pht.add_charges,
+            pht.freight,
+            pht.freight_gst,
             COALESCE(pht.po_closed_flag, 'N')       AS po_closed_flag,
             pht.is_active,
             pht.created_by,
@@ -115,6 +117,11 @@ public class SosPurchaseOrderView {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+    @Column(name="freight")
+    private String freight;
+    
+    @Column(name="freight_gst")
+    private String freightGst;
 
     public Long getPoRefNo() { return poRefNo; }
     public String getPoNo() { return poNo; }
@@ -140,4 +147,17 @@ public class SosPurchaseOrderView {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public String getUpdatedBy() { return updatedBy; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+	public String getFreight() {
+		return freight;
+	}
+	public void setFreight(String freight) {
+		this.freight = freight;
+	}
+	public String getFreightGst() {
+		return freightGst;
+	}
+	public void setFreightGst(String freightGst) {
+		this.freightGst = freightGst;
+	}
+    
 }

@@ -85,6 +85,8 @@ const validate = (line: InwardReceiptLine): string[] => {
     errors.push('Expected Delivery Date is required');
   if (!line.actualDeliveryDate)
     errors.push('Actual Delivery Date is required');
+  if(Number(line.rmReceivedQty) > line.rmOrderQty)
+    errors.push('Received Quantity cannot exceed Ordered Quantity');
   return errors;
 };
 
@@ -236,11 +238,8 @@ const InwardReceiptLineEditor: React.FC<InwardReceiptLineEditorProps> = ({
                    <Stack gap={2}>
                   <Text size="xs" c="dimmed">PO Order Qty</Text>
                   
-<Text size="sm" fw={600}>
- 
-   <Text size="sm" fw={600}>{form.rmReceivedQty || '—'}</Text>
-</Text>
-                </Stack>
+<Text size="sm" fw={600}>{form.rmOrderQty || '—'}</Text>
+   </Stack>            
                 <Stack gap={2}>
                   <Text size="xs" c="dimmed">Remaining Qty</Text>
                   
@@ -253,7 +252,7 @@ const InwardReceiptLineEditor: React.FC<InwardReceiptLineEditorProps> = ({
 
             {/* ── Row 1: Received Qty | Rate ── */}
             <Grid gutter="md" mb="md">
-              <Grid.Col span={6}>
+              <Grid.Col span={4}>
                 <FormTextInput
                   label="Received Quantity"
                   value={form.rmReceivedQty}
@@ -262,7 +261,16 @@ const InwardReceiptLineEditor: React.FC<InwardReceiptLineEditorProps> = ({
                   required
                 />
               </Grid.Col>
-              <Grid.Col span={6}>
+               <Grid.Col span={4}>
+                <FormTextInput
+                  label="Lot Number"
+                  value={form.lotNumber}
+                  onChange={setStr('lotNumber')}
+                  placeholder="__"
+                  required
+                />
+              </Grid.Col>
+              <Grid.Col span={4}>
                 <FormTextInput
                   label="Rate / Amount"
                   value={form.receivedRate}

@@ -18,9 +18,12 @@ public class SosPoHeaderRequest {
     private String poReference;
     private String poRemarks;
     private BigDecimal addCharges;
-    private String requestedBy;     // employee id string
+    private String requestedBy;   
+    private String freight;
+    private String freightGst;// employee id string
     
-    private List<SosPoDetailsRequestDto> lineItems;
+   
+	private List<SosPoDetailsRequestDto> lineItems;
 
     public Long getPoRefNo() { return poRefNo; }
     public void setPoRefNo(Long poRefNo) { this.poRefNo = poRefNo; }
@@ -66,6 +69,19 @@ public class SosPoHeaderRequest {
 	public void setLineItems(List<SosPoDetailsRequestDto> lineItems) {
 		this.lineItems = lineItems;
 	}
+	
+	 public String getFreight() {
+			return freight;
+		}
+		public void setFreight(String freight) {
+			this.freight = freight;
+		}
+		public String getFreightGst() {
+			return freightGst;
+		}
+		public void setFreightGst(String freightGst) {
+			this.freightGst = freightGst;
+		}
     
     
     

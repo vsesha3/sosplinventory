@@ -35,6 +35,9 @@ export interface PurchaseOrderFormData {
   poRemarks: string;
   addCharges: string;
   requestedBy: string | null;
+  freight: string;
+  freightGst: string;
+ 
 }
 
 

@@ -29,9 +29,23 @@ public class SosPurchaseOrderViewResponse {
     private LocalDateTime createdAt;
     private String updatedBy;
     private LocalDateTime updatedAt;
+    private String freight;
+    private String freightGst;
    
 
-    public Long getPoRefNo() { return poRefNo; }
+    public String getFreight() {
+		return freight;
+	}
+	public void setFreight(String freight) {
+		this.freight = freight;
+	}
+	public String getFreightGst() {
+		return freightGst;
+	}
+	public void setFreightGst(String freightGst) {
+		this.freightGst = freightGst;
+	}
+	public Long getPoRefNo() { return poRefNo; }
     public void setPoRefNo(Long poRefNo) { this.poRefNo = poRefNo; }
 
     public String getPoNo() { return poNo; }

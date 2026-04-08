@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box, Paper, Text, Group, Button,
   Grid, Badge, Divider, Stack, Loader, Center, Table,
@@ -19,7 +19,7 @@ import MasterTable from '../../components/common/MasterTable';
 import type { ColumnDef } from '../../components/common/MasterTable';
 import POLineItem from './Polineitem';
 import type { POLineItemData } from './Polineitem';
-import type { PurchaseOrderFormData,PoLineItem } from '../../types/api.types';
+import type { PurchaseOrderFormData, PoLineItem } from '../../types/api.types';
 
 // ── API Types ─────────────────────────────────────────────────────────────────
 
@@ -56,6 +56,8 @@ interface PurchaseOrderApiData {
   poRemarks: string | null;
   requestedBy: number | null;
   addCharges: number | null;
+  freight: number | null;
+  freightGst: string | null;
   poClosedFlag: string | null;
   isActive: boolean;
   createdBy: string | null;
@@ -70,8 +72,6 @@ interface PoDetailApiResponse {
   data: PurchaseOrderApiData;
 }
 
-
-
 interface PoLineItemsApiResponse {
   success: boolean;
   message: string;
@@ -84,13 +84,10 @@ interface ReferenceNumberResponse {
 
 // ── Form Types ────────────────────────────────────────────────────────────────
 
-
-
 export interface PurchaseOrderFormProps {
   initialData?: Partial<PurchaseOrderFormData>;
   poTypeOptions?: DropDownOption[];
   supplierOptions?: DropDownOption[];
- 
   onSave?: (data: PurchaseOrderFormData, lineItems: PoLineItem[]) => void;
   onPrint?: () => void;
   readOnly?: boolean;
@@ -116,10 +113,9 @@ const defaultForm: PurchaseOrderFormData = {
   poRemarks: '',
   addCharges: '',
   requestedBy: null,
+  freight: '',
+  freightGst: '',
 };
-
-// ── Base line item columns (tax cols added dynamically) ───────────────────────
-
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -132,6 +128,11 @@ const pv = (field: DecimalField | number | null | undefined, decimals = 2): stri
 
 const dash = (val: string | null | undefined): string =>
   val && val.trim() ? val : '—';
+
+const safe = (val: string | null | undefined): number => {
+  const n = parseFloat(val ?? '');
+  return isNaN(n) ? 0 : n;
+};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -214,6 +215,8 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       poRemarks:          apiData.poRemarks ?? '',
       requestedBy:        apiData.requestedBy != null ? String(apiData.requestedBy) : null,
       addCharges:         apiData.addCharges != null ? String(apiData.addCharges) : '',
+      freight:            apiData.freight != null ? String(apiData.freight) : '',
+      freightGst:         apiData.freightGst ?? '',
     };
   };
 
@@ -255,15 +258,14 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   };
 
   useEffect(() => {
-   
     if (!opened) {
-    setForm({ ...defaultForm });   // ← reset form on close
-    setLineItems([]);
-    setSelectedLines([]);
-    setValidationErrors([]);
-    setFetchError(null);
-    return;
-  }
+      setForm({ ...defaultForm });
+      setLineItems([]);
+      setSelectedLines([]);
+      setValidationErrors([]);
+      setFetchError(null);
+      return;
+    }
     const cancelled = { value: false };
     loadFormData(cancelled);
     return () => { cancelled.value = true; };
@@ -319,32 +321,57 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
 
   // ── Per-item computation ──────────────────────────────────────────────────
 
-  // Safely extract numeric value from DecimalField — tries parsedValue first, then source string
-const numVal = (field: DecimalField | null | undefined | number): number => {
-  if (field == null) return 0;
-  if (typeof field === 'number') return isNaN(field) ? 0 : field;
-  if (field.parsedValue != null && !isNaN(field.parsedValue)) return field.parsedValue;
-  const parsed = parseFloat(field.source);
-  return isNaN(parsed) ? 0 : parsed;
-};
+  const numVal = (field: DecimalField | null | undefined | number): number => {
+    if (field == null) return 0;
+    if (typeof field === 'number') return isNaN(field) ? 0 : field;
+    if (field.parsedValue != null && !isNaN(field.parsedValue)) return field.parsedValue;
+    const parsed = parseFloat(field.source);
+    return isNaN(parsed) ? 0 : parsed;
+  };
 
   const computeLine = (item: PoLineItem) => {
-   
-    const qty     = numVal(item.poQty);
-    const rate    = numVal(item.poRate);
-    const sgst    = numVal(item.sgst);
-    const cgst    = numVal(item.cgst);
-    const igst    = numVal(item.igst);
-    const amount  = qty * rate;
-    const taxPct  = igst > 0 ? igst : (sgst + cgst);
+    const qty       = numVal(item.poQty);
+    const rate      = numVal(item.poRate);
+    const sgst      = numVal(item.sgst);
+    const cgst      = numVal(item.cgst);
+    const igst      = numVal(item.igst);
+    const amount    = qty * rate;
+    const taxPct    = igst > 0 ? igst : (sgst + cgst);
     const taxAmount = amount * taxPct / 100;
     const lineTotal = amount + taxAmount;
-    
     return { qty, rate, amount, sgst, cgst, igst, taxAmount, lineTotal };
   };
 
-  // ── Totals ────────────────────────────────────────────────────────────────
+  // ── Freight GST dropdown — built from line item tax rates ─────────────────
+  // Same pattern as RawMaterialInwardReceipt freightTaxOptions
+  const freightTaxOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: DropDownOption[] = [
+      { value: '', label: 'Inclusive of GST (no calc)' },
+    ];
+    lineItems.forEach(item => {
+      const igst = numVal(item.igst);
+      const sgst = numVal(item.sgst);
+      const cgst = numVal(item.cgst);
+      if (igst > 0 && !seen.has(String(igst))) {
+        seen.add(String(igst));
+        opts.push({ value: String(igst), label: `IGST ${igst}%` });
+      }
+      if ((sgst > 0 || cgst > 0) && !seen.has(`${sgst}+${cgst}`)) {
+        seen.add(`${sgst}+${cgst}`);
+        opts.push({ value: String(sgst + cgst), label: `SGST ${sgst}% + CGST ${cgst}%` });
+      }
+    });
+    return opts;
+  }, [lineItems]);
 
+  // ── Freight calculations ──────────────────────────────────────────────────
+  const freightAmt    = safe(form.freight);
+  const freightTaxPct = safe(form.freightGst);
+  const freightTaxAmt = form.freightGst ? freightAmt * freightTaxPct / 100 : 0;
+  const freightTotal  = freightAmt + freightTaxAmt;
+
+  // ── Line totals ───────────────────────────────────────────────────────────
 
   const totalAmount = lineItems.reduce((s, i) => s + computeLine(i).amount, 0);
   const totalSgst   = lineItems.reduce((s, i) => {
@@ -360,15 +387,14 @@ const numVal = (field: DecimalField | null | undefined | number): number => {
     return s + (c.igst > 0 ? c.amount * c.igst / 100 : 0);
   }, 0);
   const totalTax    = totalSgst + totalCgst + totalIgst;
-  const grandTotal  = lineItems.reduce((s, i) => s + computeLine(i).lineTotal, 0);
-
+  const grandTotal  = lineItems.reduce((s, i) => s + computeLine(i).lineTotal, 0) + freightTotal;
 
   const hasIgst     = lineItems.some(i => numVal(i.igst)  > 0);
   const hasSgstCgst = lineItems.some(i => numVal(i.sgst) > 0 || numVal(i.cgst) > 0);
   const hasTax      = hasIgst || hasSgstCgst;
 
-  // ── Active columns (inject tax cols between HSN and Tax Amt) ──────────────
-  // Base order: rmCode rmName uom qty rate amount packs packSize hsn [sgst cgst | igst] taxAmt nettAmt
+  // ── Active columns ────────────────────────────────────────────────────────
+
   const LINE_ITEM_COLUMNS_ACTIVE: ColumnDef[] = [
     { key: 'poRmCode',    label: 'RM Code',     width: 110 },
     { key: 'poRmName',    label: 'RM Name',     width: 180 },
@@ -377,7 +403,6 @@ const numVal = (field: DecimalField | null | undefined | number): number => {
     { key: 'amount',      label: 'Sub Total',   width: 110, align: 'right' },
     { key: 'poNoOfPacks', label: 'Packs',       width: 80,  align: 'right' },
     { key: 'poPackSize',  label: 'Pack Size',   width: 90,  align: 'right' },
-  
     ...(hasSgstCgst && !hasIgst ? [
       { key: 'sgst', label: 'SGST %', width: 75, align: 'right' as const },
       { key: 'cgst', label: 'CGST %', width: 75, align: 'right' as const },
@@ -385,41 +410,34 @@ const numVal = (field: DecimalField | null | undefined | number): number => {
     ...(hasIgst ? [
       { key: 'igst', label: 'IGST %', width: 75, align: 'right' as const },
     ] : []),
-    // Tax Amt column only shown when there is tax
     ...(hasTax ? [
       { key: 'taxAmount', label: 'Tax Amt', width: 100, align: 'right' as const },
     ] : []),
     { key: 'lineTotal',   label: 'Nett Amount', width: 110, align: 'right' },
   ];
 
-  // Total col count including checkbox col
-  const TOTAL_COLS = LINE_ITEM_COLUMNS_ACTIVE.length + 1;
-
-  // Fixed cols before tax section: chk(1)+rmCode+rmName+uom+qty+rate+amount+packs+packSize+hsn = 10
+  const TOTAL_COLS      = LINE_ITEM_COLUMNS_ACTIVE.length + 1;
   const COLS_BEFORE_TAX = 10;
-  // After tax: taxAmt(conditional) + nettAmt = 1 or 2
   const COLS_AFTER_TAX  = hasTax ? 2 : 1;
-  // Tax col count (sgst+cgst or igst, 0 if no tax)
-  const TAX_COLS = TOTAL_COLS - COLS_BEFORE_TAX - COLS_AFTER_TAX;
+  const TAX_COLS        = TOTAL_COLS - COLS_BEFORE_TAX - COLS_AFTER_TAX;
 
-//validation 
- 
- const validateForm = (): string[] => {
-  const errors: string[] = [];
-  if (!form.poDate)       errors.push('PO Date is required');
-  if (!form.poType)       errors.push('PO Type is required');
-  if (!form.supplierId)   errors.push('Supplier Name is required');
-  if (!form.poNo)         errors.push('PO Number is required — please select a PO Type first');
-  if (!form.requestedBy)  errors.push('Requested By is required');
-  //if (lineItems.length === 0) errors.push('At least one line item is required');
-  return errors;
-};
+  // ── Validation ────────────────────────────────────────────────────────────
 
-const getSource = (field: DecimalField | number | null | undefined): string => {
-  if (field == null) return '';
-  if (typeof field === 'number') return isNaN(field) ? '' : String(field);
-  return field.source ?? '';
-};
+  const validateForm = (): string[] => {
+    const errors: string[] = [];
+    if (!form.poDate)      errors.push('PO Date is required');
+    if (!form.poType)      errors.push('PO Type is required');
+    if (!form.supplierId)  errors.push('Supplier Name is required');
+    if (!form.poNo)        errors.push('PO Number is required — please select a PO Type first');
+    if (!form.requestedBy) errors.push('Requested By is required');
+    return errors;
+  };
+
+  const getSource = (field: DecimalField | number | null | undefined): string => {
+    if (field == null) return '';
+    if (typeof field === 'number') return isNaN(field) ? '' : String(field);
+    return field.source ?? '';
+  };
 
   // ── Build rows ────────────────────────────────────────────────────────────
 
@@ -438,7 +456,6 @@ const getSource = (field: DecimalField | number | null | undefined): string => {
         <Table.Td ta="right">{amount.toFixed(2)}</Table.Td>
         <Table.Td ta="right">{pv(item.poNoOfPacks, 0)}</Table.Td>
         <Table.Td ta="right">{pv(item.poPackSize, 3)}</Table.Td>
-      
         {hasSgstCgst && !hasIgst && <Table.Td ta="right">{pv(item.sgst, 2)}</Table.Td>}
         {hasSgstCgst && !hasIgst && <Table.Td ta="right">{pv(item.cgst, 2)}</Table.Td>}
         {hasIgst     &&             <Table.Td ta="right">{pv(item.igst, 2)}</Table.Td>}
@@ -449,15 +466,6 @@ const getSource = (field: DecimalField | number | null | undefined): string => {
   });
 
   // ── Footer ────────────────────────────────────────────────────────────────
-  // Structure of each summary row:
-  //   label cell (colSpan = COLS_BEFORE_TAX)  |  [tax cols empty/value]  |  taxAmt  |  nettAmt
-  //
-  // Footer rows:
-  //   Row 1 — Sub Total:    totalAmount in Nett Amount col, others empty
-  //   Row 2 — SGST total:   only if hasSgstCgst && !hasIgst
-  //   Row 3 — CGST total:   only if hasSgstCgst && !hasIgst
-  //   Row 2 — IGST total:   only if hasIgst (replaces SGST/CGST rows)
-  //   Last  — Grand Total:  grandTotal in Nett Amount col
 
   const ftrLabelCell = (label: string, sub?: string) => (
     <Table.Td colSpan={COLS_BEFORE_TAX} ta="right" style={{ paddingRight: 8 }}>
@@ -485,76 +493,88 @@ const getSource = (field: DecimalField | number | null | undefined): string => {
   const lineItemFooter = lineItems.length > 0 ? (
     <Table.Tfoot>
 
-      {/* ── Row 1: Sub Total (before tax) ── */}
+      {/* Sub Total */}
       <Table.Tr style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
         {ftrLabelCell('Sub Total', `${lineItems.length} item${lineItems.length !== 1 ? 's' : ''}`)}
         {ftrEmpty()}
-        {/* Tax Amt col — empty only if tax exists */}
         {hasTax && <Table.Td />}
-        {/* Nett Amount = sub total */}
         <Table.Td ta="right">
           <Text size="xs" fw={700}>{totalAmount.toFixed(2)}</Text>
         </Table.Td>
       </Table.Tr>
 
-      {/* ── Row 2: SGST total ── */}
-{hasSgstCgst && !hasIgst && (
-  <Table.Tr style={{ backgroundColor: 'var(--mantine-color-orange-0)' }}>
-    {ftrLabelCell('SGST')}
-    
-    {ftrEmpty()}
-    {/* Tax Amt — show SGST value */}
-    <Table.Td ta="right">
-      <Text size="xs" fw={600} c="orange">{totalSgst.toFixed(2)}</Text>
-    </Table.Td>
-    {/* Nett Amount — empty */}
-    <Table.Td />
-  </Table.Tr>
-)}
+      {/* SGST */}
+      {hasSgstCgst && !hasIgst && (
+        <Table.Tr style={{ backgroundColor: 'var(--mantine-color-orange-0)' }}>
+          {ftrLabelCell('SGST')}
+          {ftrEmpty()}
+          <Table.Td ta="right">
+            <Text size="xs" fw={600} c="orange">{totalSgst.toFixed(2)}</Text>
+          </Table.Td>
+          <Table.Td />
+        </Table.Tr>
+      )}
 
-{/* ── Row 3: CGST total ── */}
-{hasSgstCgst && !hasIgst && (
-  <Table.Tr style={{ backgroundColor: 'var(--mantine-color-orange-0)' }}>
-    {ftrLabelCell('CGST')}
-    {ftrEmpty()}
-    {/* Tax Amt — show CGST value */}
-    <Table.Td ta="right">
-      <Text size="xs" fw={600} c="orange">{totalCgst.toFixed(2)}</Text>
-    </Table.Td>
-    {/* Nett Amount — empty */}
-    <Table.Td />
-  </Table.Tr>
-)}
+      {/* CGST */}
+      {hasSgstCgst && !hasIgst && (
+        <Table.Tr style={{ backgroundColor: 'var(--mantine-color-orange-0)' }}>
+          {ftrLabelCell('CGST')}
+          {ftrEmpty()}
+          <Table.Td ta="right">
+            <Text size="xs" fw={600} c="orange">{totalCgst.toFixed(2)}</Text>
+          </Table.Td>
+          <Table.Td />
+        </Table.Tr>
+      )}
 
-{/* ── Row 2 (alt): IGST total ── */}
-{hasIgst && (
-  <Table.Tr style={{ backgroundColor: 'var(--mantine-color-violet-0)' }}>
-    {ftrLabelCell('IGST')}
-    {ftrTaxCells(totalIgst, 'violet')}
-    {/* Tax Amt — show IGST value */}
-    <Table.Td ta="right">
-      <Text size="xs" fw={600} c="violet">{totalIgst.toFixed(2)}</Text>
-    </Table.Td>
-    {/* Nett Amount — empty */}
-    <Table.Td />
-  </Table.Tr>
-)}
+      {/* IGST */}
+      {hasIgst && (
+        <Table.Tr style={{ backgroundColor: 'var(--mantine-color-violet-0)' }}>
+          {ftrLabelCell('IGST')}
+          {ftrTaxCells(totalIgst, 'violet')}
+          <Table.Td ta="right">
+            <Text size="xs" fw={600} c="violet">{totalIgst.toFixed(2)}</Text>
+          </Table.Td>
+          <Table.Td />
+        </Table.Tr>
+      )}
 
-{/* ── Last Row: Grand Total ── */}
-<Table.Tr style={{ backgroundColor: 'var(--mantine-color-blue-1)' }}>
-  {ftrLabelCell('Grand Total')}
-  {ftrEmpty()}
-  {/* Tax Amt — total tax */}
-  {hasTax && (
-    <Table.Td ta="right">
-      <Text size="xs" fw={700}>{totalTax.toFixed(2)}</Text>
-    </Table.Td>
-  )}
-  {/* Nett Amount — grand total only here */}
-  <Table.Td ta="right">
-    <Text size="xs" fw={700} c="blue">{grandTotal.toFixed(2)}</Text>
-  </Table.Td>
-</Table.Tr>
+      {/* ── Freight row — only shown when freight is entered ── */}
+      {freightAmt > 0 && (
+        <Table.Tr style={{ backgroundColor: 'var(--mantine-color-teal-0)' }}>
+          {ftrLabelCell(
+            'Freight / Other Charges',
+            form.freightGst
+              ? `Tax @ ${freightTaxPct}% = ₹${freightTaxAmt.toFixed(2)}`
+              : 'Inclusive of GST'
+          )}
+          {ftrEmpty()}
+          {hasTax && (
+            <Table.Td ta="right">
+              {freightTaxAmt > 0 && (
+                <Text size="xs" fw={600} c="teal">{freightTaxAmt.toFixed(2)}</Text>
+              )}
+            </Table.Td>
+          )}
+          <Table.Td ta="right">
+            <Text size="xs" fw={600} c="teal">{freightTotal.toFixed(2)}</Text>
+          </Table.Td>
+        </Table.Tr>
+      )}
+
+      {/* Grand Total — includes freight */}
+      <Table.Tr style={{ backgroundColor: 'var(--mantine-color-blue-1)' }}>
+        {ftrLabelCell('Grand Total')}
+        {ftrEmpty()}
+        {hasTax && (
+          <Table.Td ta="right">
+            <Text size="xs" fw={700}>{(totalTax + freightTaxAmt).toFixed(2)}</Text>
+          </Table.Td>
+        )}
+        <Table.Td ta="right">
+          <Text size="xs" fw={700} c="blue">{grandTotal.toFixed(2)}</Text>
+        </Table.Td>
+      </Table.Tr>
 
     </Table.Tfoot>
   ) : null;
@@ -693,7 +713,7 @@ const getSource = (field: DecimalField | number | null | undefined): string => {
               </Grid.Col>
             </Grid>
 
-            {/* ── Row 2: Kind Attention | Payment Terms | Delivery Terms | PO Reference | Other Charges ── */}
+            {/* ── Row 2: Kind Attention | Payment Terms | Delivery Terms | PO Reference | Requested By ── */}
             <Grid columns={20} gutter="md" mb="md">
               <Grid.Col span={4}>
                 <FormTextInput label="Kind Attention" value={form.poKindAttention} onChange={setStr('poKindAttention')} placeholder="Attention name" readOnly={readOnly} />
@@ -705,20 +725,55 @@ const getSource = (field: DecimalField | number | null | undefined): string => {
                 <FormTextInput label="Delivery Terms" value={form.poDeliveryTerms} onChange={setStr('poDeliveryTerms')} placeholder="e.g. Door delivery" readOnly={readOnly} />
               </Grid.Col>
               <Grid.Col span={4}>
-                <FormTextInput label="PO Reference" value={form.poReference} onChange={setStr('poReference')} placeholder="e.g. teleconversation" required readOnly={readOnly} />
+                <FormTextInput label="PO Reference" value={form.poReference} onChange={setStr('poReference')} placeholder="e.g. teleconversation" readOnly={readOnly} />
               </Grid.Col>
-              <Grid.Col span={4}>
-                <FormTextInput label="Other Charges" value={form.addCharges} onChange={setStr('addCharges')} placeholder="0.00" readOnly={readOnly} />
-              </Grid.Col>
-            </Grid>
-
-            {/* ── Row 3: Requested By | Remarks ── */}
-            <Grid columns={20} gutter="md" mb="lg">
               <Grid.Col span={4}>
                 <FormSelect label="Requested By" value={form.requestedBy} onChange={set('requestedBy')} data={dropdowns.employeeOptions} placeholder="Select employee" searchable readOnly={readOnly} />
               </Grid.Col>
-              <Grid.Col span={16}>
+            </Grid>
+
+            {/* ── Row 3: Remarks | Freight Amount | Freight GST | GST Amount | Freight Total ── */}
+            <Grid columns={20} gutter="md" mb="lg">
+              <Grid.Col span={10}>
                 <FormTextarea label="Remarks" value={form.poRemarks} onChange={setStr('poRemarks')} placeholder="Enter any remarks..." minRows={2} readOnly={readOnly} />
+              </Grid.Col>
+              <Grid.Col span={3}>
+                <FormTextInput
+                  label="Freight / Other Charges"
+                  value={form.freight ?? ''}
+                  onChange={setStr('freight')}
+                  placeholder="0.00"
+                  readOnly={readOnly}
+                />
+              </Grid.Col>
+              <Grid.Col span={3}>
+                <FormSelect
+                  label="Freight GST"
+                  value={form.freightGst ?? ''}
+                  onChange={set('freightGst')}
+                  data={freightTaxOptions}
+                  placeholder="Incl. GST"
+                  readOnly={readOnly}
+                  disabled={lineItems.length === 0}
+                />
+              </Grid.Col>
+              <Grid.Col span={2}>
+                <FormTextInput
+                  label="GST Amount"
+                  value={freightTaxAmt > 0 ? freightTaxAmt.toFixed(2) : ''}
+                  onChange={() => {}}
+                  placeholder="—"
+                  readOnly
+                />
+              </Grid.Col>
+              <Grid.Col span={2}>
+                <FormTextInput
+                  label="Freight Total"
+                  value={freightTotal > 0 ? freightTotal.toFixed(2) : ''}
+                  onChange={() => {}}
+                  placeholder="—"
+                  readOnly
+                />
               </Grid.Col>
             </Grid>
 
@@ -775,8 +830,8 @@ const getSource = (field: DecimalField | number | null | undefined): string => {
                       poPackSize:  getSource(found.poPackSize),
                       sgst:        getSource(found.sgst),
                       cgst:        getSource(found.cgst),
-                      igst:        found.igst?.source        ?? '',
-                      hsnCode:     found.hsnCode             ?? '',
+                      igst:        found.igst?.source ?? '',
+                      hsnCode:     found.hsnCode      ?? '',
                     });
                     setLineItemMode('edit');
                     setLineItemOpen(true);
@@ -807,30 +862,28 @@ const getSource = (field: DecimalField | number | null | undefined): string => {
           >
             <Group justify="flex-end">
               <Button variant="default" size="sm" onClick={onClose}>Cancel</Button>
-            
               <Button onClick={() => {
-  const errors = validateForm();
-  setValidationErrors(errors);
-  setConfirmOpen(true);   // opens in error mode if errors exist, confirm mode if not
-}}>
-  Save PO
-</Button>
+                const errors = validateForm();
+                setValidationErrors(errors);
+                setConfirmOpen(true);
+              }}>
+                Save PO
+              </Button>
             </Group>
           </Box>
         )}
 
       </Paper>
 
-    <ConfirmDialog
-  opened={confirmOpen}
-  onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
- 
-  onConfirm={() => onSave?.(form, lineItems)}
-  message={`Are you sure you want to ${confirmLabel.toLowerCase()} this Purchase Order?`}
-  confirmLabel={confirmLabel}
-  zIndex={250}
-  errors={validationErrors}
-/>
+      <ConfirmDialog
+        opened={confirmOpen}
+        onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
+        onConfirm={() => onSave?.(form, lineItems)}
+        message={`Are you sure you want to ${confirmLabel.toLowerCase()} this Purchase Order?`}
+        confirmLabel={confirmLabel}
+        zIndex={250}
+        errors={validationErrors}
+      />
 
       <POLineItem
         opened={lineItemOpen}

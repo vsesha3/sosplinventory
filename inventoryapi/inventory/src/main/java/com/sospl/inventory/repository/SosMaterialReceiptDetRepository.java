@@ -180,4 +180,8 @@ public interface SosMaterialReceiptDetRepository
            """, nativeQuery = true)
     List<Object[]> findAllReceiptSummaryByMaterialType(
             @Param("materialType") String materialType);
+    
+    @Query(value = "SELECT COALESCE(MAX(grn_no), 0) + 1 FROM sos_material_receipt_det_t", nativeQuery = true)
+    Long getNextGrnNo();
+
 }

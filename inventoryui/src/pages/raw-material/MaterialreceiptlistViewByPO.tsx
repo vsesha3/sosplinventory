@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Modal, Paper, Box, Text, Group, Badge,
+  Modal, Paper, Box, Text,  Badge,
   Loader, Center, Stack, Table, Checkbox,
 } from '@mantine/core';
 import { IconClipboardList } from '@tabler/icons-react';
@@ -29,6 +29,7 @@ export interface MaterialReceiptListModalProps {
   poNo?: string | null;
   materialType?: string;
   onSaveReceipt?: (data: InwardReceiptFormData) => void;
+  poDate?: string | null;
 }
 
 // ── Parent columns ────────────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
   poNo,
   materialType,
   onSaveReceipt,
+  poDate,
 }) => {
 
   const [data, setData] = useState<MaterialReceiptSummary[]>([]);
@@ -346,6 +348,7 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
           }}
           poRefNo={poRefNo}
           poNo={poNo}
+          poDate={poDate}
           receiptDetId={editReceiptDetId}   // ← null = Add, number = Edit
         />
 

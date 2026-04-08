@@ -142,6 +142,7 @@ const [toDate, setToDate]     = useState<string | null>(null);
 
 const [inwardPoRefNo, setInwardPoRefNo] = useState<number | null>(null);
 const [inwardPoNo, setInwardPoNo]       = useState<string | null>(null);
+const [inwardPoDate, setInwardPoDate]   = useState<string | null>(null);
 const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
 const [saveMessage, setSaveMessage] = useState<string>('');
 const [receiptListOpen, setReceiptListOpen] = useState(false);
@@ -371,23 +372,28 @@ const extraActions = (
       >
         Print PDF
       </Button>
-    </Tooltip>
+    </Tooltip>  {/* ← closes Print PDF tooltip here */}
+
     <Tooltip label="Inward Receipt — record goods received against PO">
-  <Button size="xs" variant="subtle" color="green"
-    leftSection={<IconClipboardList size={14} />}
-    disabled={selected.length !== 1}
-   onClick={() => {
-  const po = data.find(item => item.poRefNo === selected[0]);
-  if (po) {
-    setInwardPoRefNo(po.poRefNo);   // ← add
-    setInwardPoNo(po.poNo);         // ← add
-    setReceiptListOpen(true);
-  }
-}} >
-    Inward Receipt
-  </Button>
-</Tooltip>
-   
+      <Button
+        size="xs" variant="subtle" color="green"
+        leftSection={<IconClipboardList size={14} />}
+        disabled={selected.length !== 1}
+        onClick={() => {
+          const po = data.find(item => item.poRefNo === selected[0]);
+          if (po) {
+            setInwardPoRefNo(po.poRefNo);
+            setInwardPoNo(po.poNo);
+            setInwardPoDate(po.poDate);
+            setReceiptListOpen(true);
+          
+             // Pass poDate to InwardReceiptLanding
+          }
+        }}
+      >
+        Inward Receipt
+      </Button>
+    </Tooltip>
   </Group>
 );
 
@@ -581,7 +587,7 @@ if (filteredLines.length === 0) {
     setInwardPoNo(null);
   }}
   poRefNo={inwardPoRefNo}
-  poNo={inwardPoNo}
+  poNo={inwardPoNo} poDate ={inwardPoDate}
   materialType={data.find(d => d.poRefNo === inwardPoRefNo)?.poType ?? undefined}
   onSave={handleInwardReceiptSave}
 />

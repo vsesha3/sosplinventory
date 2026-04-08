@@ -9,7 +9,7 @@ import MaterialReceiptListViewByPO from './MaterialreceiptlistViewByPO';
 import RawMaterialInwardReceipt from './Rawmaterialinwardreceipt';
 import type { InwardReceiptFormData } from './Rawmaterialinwardreceipt';
 import api from '../../services/api';
-import { ConfirmDialog } from '../../components/common/ConfirmDialog'; // adjust path
+
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -18,6 +18,7 @@ export interface InwardReceiptLandingProps {
   onClose:       () => void;
   poRefNo:       number | null;
   poNo?:         string | null;
+  poDate?:       string | null;
   materialType?: string | null;
   onSave?:       (data: InwardReceiptFormData) => void;
 }
@@ -31,9 +32,12 @@ const InwardReceiptLanding: React.FC<InwardReceiptLandingProps> = ({
   poNo,
   materialType,
   onSave,
+  poDate,
 }) => {
 
   type ViewMode = 'checking' | 'new-receipt' | 'receipt-list';
+
+  const poDateRef = React.useRef<string | null | undefined>(poDate);
 
   const [viewMode, setViewMode] = useState<ViewMode>('checking');
 const prevOpenedRef = React.useRef(false);
@@ -48,7 +52,8 @@ useEffect(() => {
   prevOpenedRef.current = true;
 
   if (!poRefNo) return;
-
+ poDateRef.current = poDate; 
+ console.log(poDate, 'poDate in useEffect'); // Debug log to check poDate value
   const check = async () => {
     try {
       const res = await api.get(
@@ -68,7 +73,11 @@ useEffect(() => {
   };
 
   check();
-}, [opened, poRefNo]); // eslint-disable-line react-hooks/exhaustive-deps
+}, [opened, poRefNo]); 
+
+
+
+// eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Reset on close ────────────────────────────────────────────────────────
 
@@ -123,6 +132,7 @@ useEffect(() => {
         onClose={handleClose}
         poRefNo={poRefNo}
         poNo={poNo}
+        poDate={poDate} // Pass the PO date to the form
         receiptDetId={null}        // ← Add mode: empty header + PO lines
         onSave={(data) => {
           onSave?.(data);
@@ -136,16 +146,20 @@ useEffect(() => {
   // ── Receipts exist → show MaterialReceiptListViewByPO ────────────────────
 
   return (
+    <>
+   
     <MaterialReceiptListViewByPO
       opened={opened}
       onClose={handleClose}
       poRefNo={poRefNo}
       poNo={poNo}
+      poDate={poDate}
       materialType={materialType ?? undefined}
       onSaveReceipt={(data) => {
         onSave?.(data);
       }}
     />
+    </>
   );
 };
 
