@@ -1,5 +1,6 @@
 package com.sospl.inventory.service.inventory.master;
 
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosPmMasterResponse;
 import com.sospl.inventory.model.inventory.master.SosPmMaster;
@@ -27,4 +28,7 @@ public interface SosPmMasterService {
     PagedResponse<SosPmMasterResponse> search(
             String keyword, int page, int size,
             String sortBy, String sortDir);
+    
+    List<SosPmMaster> findAllActiveForDropdown();
+    List<DropDownResponse> findAllForDropDown();
 }

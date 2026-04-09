@@ -1,6 +1,7 @@
 package com.sospl.inventory.controller.inventory.master;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosPmMasterResponse;
 import com.sospl.inventory.model.inventory.master.SosPmMaster;
@@ -108,5 +109,14 @@ public class SosPmMasterController {
         service.delete(id);
         return ResponseEntity.ok(
                 ApiResponse.success("PM deleted successfully"));
+    }
+    
+    
+    @GetMapping("/dropdown")
+    public ResponseEntity<ApiResponse<List<DropDownResponse>>> getDropdown() {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "PM dropdown fetched successfully",
+                        service.findAllForDropDown()));
     }
 }

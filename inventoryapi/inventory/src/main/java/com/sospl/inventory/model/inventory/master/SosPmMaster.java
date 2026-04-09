@@ -15,7 +15,7 @@ public class SosPmMaster extends BaseAuditEntity {
     private Integer pmId;
 
     @Column(name = "pm_code")
-    private Integer pmCode;
+    private Long pmCode;
 
     @Column(name = "pm_name", length = 250)
     private String pmName;
@@ -35,13 +35,14 @@ public class SosPmMaster extends BaseAuditEntity {
 		this.pmId = pmId;
 	}
 
-	public Integer getPmCode() {
+	public Long getPmCode() {
 		return pmCode;
 	}
 
-	public void setPmCode(Integer pmCode) {
+	public void setPmCode(Long  pmCode) {
 		this.pmCode = pmCode;
 	}
+	
 
 	public String getPmName() {
 		return pmName;

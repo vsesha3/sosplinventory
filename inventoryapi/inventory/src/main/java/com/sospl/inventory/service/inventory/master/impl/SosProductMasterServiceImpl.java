@@ -1,5 +1,6 @@
 package com.sospl.inventory.service.inventory.master.impl;
 
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosProductMasterResponse;
 import com.sospl.inventory.model.inventory.master.SosProductMaster;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class SosProductMasterServiceImpl implements SosProductMasterService {
@@ -104,4 +106,16 @@ public class SosProductMasterServiceImpl implements SosProductMasterService {
                 page.isLast()
         );
     }
+    
+    @Override
+    public List<DropDownResponse> findAllForDropDown() {
+        return repository.findAllByIsActiveTrueAndIsDeletedFalse()
+                .stream()
+                .filter(p -> p.getProductId() != null)
+                .map(p -> new DropDownResponse(
+                        p.getProductId(),
+                        p.getProductName() != null ? p.getProductName() : "-"))
+                .collect(Collectors.toList());
+    }
+    
 }

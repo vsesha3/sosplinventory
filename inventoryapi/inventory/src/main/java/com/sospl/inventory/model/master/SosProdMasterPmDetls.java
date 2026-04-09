@@ -1,4 +1,4 @@
-package com.sospl.inventory.model.inventory.master;
+package com.sospl.inventory.model.master;
 
 import com.sospl.inventory.model.common.BaseAuditEntity;
 import jakarta.persistence.Column;

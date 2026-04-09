@@ -12,7 +12,7 @@ import {
   IconBuildingStore, IconCategory, IconScale,
   IconUser, IconBuildingWarehouse, IconTag,
   IconAtom, IconReceipt, IconStack2,
-  IconShoppingCart, IconClipboardList,
+  IconShoppingCart, IconClipboardList,IconBriefcase,IconFileInvoice
 } from '@tabler/icons-react';
 
 // ── Nav Structure ─────────────────────────────────────────────────────────────
@@ -33,6 +33,7 @@ const navGroups = [
       { label: 'Permissions', path: '/permissions', icon: <IconKey size={17} /> },
     ],
   },
+  
   {
     group: 'Procurement',
     icon: <IconShoppingCart size={17} />,
@@ -45,6 +46,17 @@ const navGroups = [
       // { label: 'Consumption',   path: '/procurement/consumption',   icon: <IconChartBar size={17} /> },
     ],
   },
+  {
+  group: 'Commercial',
+  icon: <IconBriefcase size={17} />,
+  items: [
+    { label: 'Sales /Work Orders', path: '/commercial/sales-orders', icon: <IconFileInvoice size={17} /> },
+    // { label: 'Quotations',      path: '/commercial/quotations',       icon: <IconFileText size={17} /> },
+    // { label: 'Dispatch Orders', path: '/commercial/dispatch-orders',  icon: <IconTruck size={17} /> },
+    // { label: 'Delivery Notes',  path: '/commercial/delivery-notes',   icon: <IconPackageExport size={17} /> },
+    // { label: 'Invoices',        path: '/commercial/invoices',         icon: <IconReceipt size={17} /> },
+  ],
+},
   {
     group: 'Masters',
     icon: <IconDatabase size={17} />,
@@ -67,6 +79,8 @@ const navGroups = [
       { label: 'Brand Master',            path: '/masters/brand',            icon: <IconTag size={17} /> },
     ],
   },
+
+  
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

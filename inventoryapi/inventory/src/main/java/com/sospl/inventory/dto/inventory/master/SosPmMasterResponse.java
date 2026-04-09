@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 public class SosPmMasterResponse {
 
     private Integer pmId;
-    private Integer pmCode;
+    private Long pmCode;
     private String pmName;
     private Integer pmSize;
     private String fgLotCode;
@@ -16,7 +16,7 @@ public class SosPmMasterResponse {
 
     public SosPmMasterResponse(
             Integer pmId,
-            Integer pmCode,
+            Long  pmCode,
             String pmName,
             Integer pmSize,
             String fgLotCode,
@@ -39,8 +39,8 @@ public class SosPmMasterResponse {
     public Integer getPmId() { return pmId; }
     public void setPmId(Integer pmId) { this.pmId = pmId; }
 
-    public Integer getPmCode() { return pmCode; }
-    public void setPmCode(Integer pmCode) { this.pmCode = pmCode; }
+    public Long  getPmCode() { return pmCode; }
+    public void setPmCode(Long  pmCode) { this.pmCode = pmCode; }
 
     public String getPmName() { return pmName != null ? pmName : "-"; }
     public void setPmName(String pmName) { this.pmName = pmName; }
@@ -62,4 +62,5 @@ public class SosPmMasterResponse {
 
     public String getUomName() { return uomName; }
     public void setUomName(String uomName) { this.uomName = uomName; }
+    
 }
