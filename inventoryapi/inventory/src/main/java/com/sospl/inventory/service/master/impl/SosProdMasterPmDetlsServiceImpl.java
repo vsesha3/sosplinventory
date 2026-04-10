@@ -71,10 +71,10 @@ public class SosProdMasterPmDetlsServiceImpl
                 .stream()
                 .filter(row -> row != null && row[1] != null)
                 .map(row -> new DropDownResponse(
-                        ParseUtil.toLong(row[1]),        // pmId
-                        ParseUtil.toString(row[2]) != null
-                                ? ParseUtil.toString(row[2])
-                                : "-"))                  // pmName
+                        ParseUtil.toString(row[0]),   // pmProductKey → "3_101"  (value)
+                        ParseUtil.toString(row[1]) != null
+                                ? ParseUtil.toString(row[1])
+                                : "-"))                                                 // pmName
                 .collect(Collectors.toList());
     }
 }

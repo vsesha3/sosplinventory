@@ -7,7 +7,7 @@ import type { DateValue } from '@mantine/dates';
 export interface SalesOrderApiData {
   poId:           number;
   poNumber:       string | null;
-  companyId:      number | null;
+  companyId:      string | null;
   companyName?:   string | null;   // joined from company table if available
   ordDate:        string | null;
   ordDeliveryDate: string | null;
@@ -68,6 +68,7 @@ export const mapSalesOrderFormToPayload = (form: SalesOrderFormData) => ({
   ordDeliveryDate: form.ordDeliveryDate ? new Date(form.ordDeliveryDate as Date).toISOString() : null,
   partialPoFlag:   form.partialPoFlag  === 'true',
   createdBy:       form.createdBy      || null,
+  poId:form.poId || null,
 });
 
 // ── Partial PO options ────────────────────────────────────────────────────────

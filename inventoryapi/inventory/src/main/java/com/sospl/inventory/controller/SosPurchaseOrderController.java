@@ -2,6 +2,7 @@ package com.sospl.inventory.controller;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.model.SosPurchaseOrder;
+import com.sospl.inventory.repository.SosPurchaseOrderRepository;
 import com.sospl.inventory.service.SosPurchaseOrderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,10 +19,12 @@ import java.util.List;
 public class SosPurchaseOrderController {
 
     private final SosPurchaseOrderService service;
+    private final SosPurchaseOrderRepository poRepository;
 
     public SosPurchaseOrderController(
-            SosPurchaseOrderService service) {
+            SosPurchaseOrderService service,SosPurchaseOrderRepository _poRepositor) {
         this.service = service;
+        this.poRepository = _poRepositor;
     }
 
     // ── Static paths FIRST — /{id} LAST ──────────────────────────────────
@@ -108,6 +111,7 @@ public class SosPurchaseOrderController {
     @PostMapping
     public ResponseEntity<ApiResponse<SosPurchaseOrder>> create(
             @RequestBody SosPurchaseOrder request) {
+    	request.setCompanyId((long) 1);
         request.setIsActive(true);
         request.setIsDeleted(false);
         request.setCreatedAt(LocalDateTime.now());
@@ -122,6 +126,7 @@ public class SosPurchaseOrderController {
     public ResponseEntity<ApiResponse<SosPurchaseOrder>> update(
             @PathVariable Long id,
             @RequestBody SosPurchaseOrder request) {
+    	request.setCompanyId((long) 1);
         SosPurchaseOrder updated = service.update(id, request);
         return ResponseEntity.ok(
                 ApiResponse.success(

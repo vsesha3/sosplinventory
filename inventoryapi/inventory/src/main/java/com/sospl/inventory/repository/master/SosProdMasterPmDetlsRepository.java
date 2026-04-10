@@ -29,29 +29,27 @@ public interface SosProdMasterPmDetlsRepository
     
     
     @Query(value = """
-    	       SELECT
-    	           spmpt.product_id    AS productId,
-    	           spmt.pm_id          AS pmId,
-    	           spmt.pm_name        AS pmName
-    	       FROM sos_prod_master_pm_detls_t spmpt
-    	       LEFT JOIN sos_pm_master_t spmt
-    	           ON spmpt.pm_id = spmt.pm_id
-    	       WHERE spmpt.is_deleted = 0
-    	       """, nativeQuery = true)
-    	List<Object[]> findAllWithPmDetails();
+            SELECT
+                DISTINCT CONCAT(spmt.pm_id, '_', spmpt.product_id)  AS pmProductKey,
+                spmt.pm_name        AS pmName
+            FROM sos_prod_master_pm_detls_t spmpt
+            LEFT JOIN sos_pm_master_t spmt
+                ON spmpt.pm_id = spmt.pm_id
+            WHERE spmpt.is_deleted = 0 AND spmpt.product_id is not null 
+            """, nativeQuery = true)
+    List<Object[]> findAllWithPmDetails();;
 
     	// ── Filter by product_id ──────────────────────────────────────────────────
-    	@Query(value = """
-    	       SELECT
-    	           spmpt.product_id    AS productId,
-    	           spmt.pm_id          AS pmId,
-    	           spmt.pm_name        AS pmName
-    	       FROM sos_prod_master_pm_detls_t spmpt
-    	       LEFT JOIN sos_pm_master_t spmt
-    	           ON spmpt.pm_id = spmt.pm_id
-    	       WHERE spmpt.is_deleted = 0
-    	       AND spmpt.product_id = :productId
-    	       """, nativeQuery = true)
-    	List<Object[]> findAllWithPmDetailsByProductId(
-    	        @Param("productId") Long productId);
+    @Query(value = """
+            SELECT DISTINCT
+                CONCAT(spmt.pm_id, '_', spmpt.product_id)  AS pmProductKey,
+                spmt.pm_name                                AS pmName
+            FROM sos_prod_master_pm_detls_t spmpt
+            LEFT JOIN sos_pm_master_t spmt
+                ON spmpt.pm_id = spmt.pm_id
+            WHERE spmpt.is_deleted = 0
+            AND spmpt.product_id = :productId
+            """, nativeQuery = true)
+ List<Object[]> findAllWithPmDetailsByProductId(
+         @Param("productId") Long productId);
 }

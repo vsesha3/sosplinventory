@@ -5,12 +5,12 @@ import {
   Grid, Badge, Stack, Loader, Center, Divider, Table,
 } from '@mantine/core';
 import { IconFileInvoice } from '@tabler/icons-react';
-import { FormTextInput }  from '../../components/common/FormTextInput';
-import { FormSelect }     from '../../components/common/FormSelect';
+import { FormTextInput } from '../../components/common/FormTextInput';
+import { FormSelect } from '../../components/common/FormSelect';
 import { FormDatePicker } from '../../components/common/FormDatePicker';
-import { ConfirmDialog }  from '../../components/common/ConfirmDialog';
-import FormHeader         from '../common/Formheader';
-import MasterTable        from '../../components/common/MasterTable';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import FormHeader from '../common/Formheader';
+import MasterTable from '../../components/common/MasterTable';
 import type { ColumnDef } from '../../components/common/MasterTable';
 import api from '../../services/api';
 import {
@@ -32,26 +32,32 @@ interface DropDownOption {
 }
 
 export interface SalesOrderFormProps {
-  opened:  boolean;
+  opened: boolean;
   onClose: () => void;
   onSave?: (data: SalesOrderFormData) => void;
-  poId?:   number | null;
-  mode?:   'create' | 'update';
+  poId?: number | null;
+  mode?: 'create' | 'update';
 }
 
 // ── Work Order columns ────────────────────────────────────────────────────────
 
 const WO_COLUMNS: ColumnDef[] = [
-  { key: 'woId',        label: 'WO Id',        width: 80  },
-  { key: 'plant',       label: 'Plant',        width: 110 },
+  { key: 'woId', label: 'WO Id', width: 80 },
+  { key: 'plant', label: 'Plant', width: 110 },
   { key: 'productCode', label: 'Product Code', width: 120 },
   { key: 'productName', label: 'Product Name', width: 200 },
-  { key: 'pmName',      label: 'PM',           width: 150 },
-  { key: 'qty',         label: 'Qty',          width: 90,  align: 'right' },
-  { key: 'perUnitRate', label: 'Rate',         width: 90,  align: 'right' },
-  { key: 'totalAmount', label: 'Total',        width: 110, align: 'right' },
+  { key: 'pmName', label: 'PM', width: 150 },
+  { key: 'qty', label: 'Qty', width: 90, align: 'right' },
+  { key: 'perUnitRate', label: 'Rate', width: 90, align: 'right' },
+  { key: 'totalAmount', label: 'Total', width: 110, align: 'right' },
 ];
 
+
+const COMPANY_OPTIONS: DropDownOption[] = [
+  { value: '1',  label: 'AMN AMARO'  },
+  { value: '2',     label: 'SWATHI'      },
+  { value: '3',   label: 'HUNTSMAN'    },
+];
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const fmt = (v: number | null, d = 2) =>
@@ -66,21 +72,21 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
   opened,
   onClose,
   onSave,
-  poId  = null,
-  mode  = 'create',
+  poId = null,
+  mode = 'create',
 }) => {
 
-  const [form, setForm]             = useState<SalesOrderFormData>({ ...defaultSalesOrderForm });
-  const [loading, setLoading]       = useState(false);
+  const [form, setForm] = useState<SalesOrderFormData>({ ...defaultSalesOrderForm });
+  const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [confirmOpen, setConfirmOpen]           = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [companyOptions, setCompanyOptions]     = useState<DropDownOption[]>([]);
-  const [woLines, setWoLines]     = useState<WorkOrderDetailData[]>([]);
+ const [companyOptions] = useState<DropDownOption[]>(COMPANY_OPTIONS);
+  const [woLines, setWoLines] = useState<WorkOrderDetailData[]>([]);
   const [woLoading, setWoLoading] = useState(false);
-  const [woFormOpen, setWoFormOpen]   = useState(false);
-  const [editWoId, setEditWoId]       = useState<number | null>(null);
-  const [woFormMode, setWoFormMode]   = useState<'create' | 'update'>('create');
+  const [woFormOpen, setWoFormOpen] = useState(false);
+  const [editWoId, setEditWoId] = useState<number | null>(null);
+  const [woFormMode, setWoFormMode] = useState<'create' | 'update'>('create');
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -98,10 +104,10 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
     const load = async () => {
       setLoading(true);
       try {
-        const companyRes = await api.get('/api/company/dropdown')
+       /*  const companyRes = await api.get('/api/company/dropdown')
           .catch(() => ({ data: { data: [] } }));
         setCompanyOptions(companyRes.data.data ?? []);
-
+ */
         if (mode === 'update' && poId) {
           const [soRes] = await Promise.all([
             api.get(`/api/inventory/sales-orders/${poId}`),
@@ -148,10 +154,10 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
 
   const validateForm = (): string[] => {
     const errors: string[] = [];
-    if (!form.companyId)       errors.push('Company is required');
-    if (!form.ordDate)         errors.push('Order Date is required');
+    if (!form.companyId) errors.push('Company is required');
+    if (!form.ordDate) errors.push('Order Date is required');
     if (!form.ordDeliveryDate) errors.push('Delivery Date is required');
-    if (!form.partialPoFlag)   errors.push('Partial PO is required');
+    if (!form.partialPoFlag) errors.push('Partial PO is required');
     return errors;
   };
 
@@ -167,7 +173,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
 
   // ── Work Order selection ─────────────────────────────────────────────────
   const [selectedWo, setSelectedWo] = useState<number[]>([]);
-  const woIds    = woLines.map(l => l.woId);
+  const woIds = woLines.map(l => l.woId);
   const allWoSel = woIds.length > 0 && woIds.every(id => selectedWo.includes(id));
   const someWoSel = woIds.some(id => selectedWo.includes(id)) && !allWoSel;
   const toggleAllWo = () => allWoSel ? setSelectedWo([]) : setSelectedWo(woIds);
@@ -276,7 +282,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                     <FormTextInput
                       label="PO Id"
                       value={form.poId ? String(form.poId) : '—'}
-                      onChange={() => {}}
+                      onChange={() => { }}
                       readOnly
                     />
                   </Grid.Col>
@@ -291,15 +297,15 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
 
                   {/* Company */}
                   <Grid.Col span={12}>
-                    <FormSelect
-                      label="* Company"
-                      value={form.companyId}
-                      onChange={setSelect('companyId')}
-                      data={companyOptions}
-                      placeholder="--------Select----------"
-                      required
-                      searchable
-                    />
+                  <FormSelect
+  label="* Company"
+  value={form.companyId}
+  onChange={setSelect('companyId')}   // ← same pattern as other selects
+  data={companyOptions}
+  placeholder="--------Select----------"
+  required
+  searchable
+/>
                   </Grid.Col>
 
                   {/* Order Date | Delivery Date */}
@@ -353,39 +359,39 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                     labelPosition="left"
                     mb="md"
                   />
-                 <MasterTable
-  columns={WO_COLUMNS}
-  rows={woRows}
-  colSpan={WO_COLUMNS.length + 1}
-  totalElements={woLines.length}
-  loading={woLoading}
-  page={1}
-  totalPages={1}
-  pageSize={woLines.length || 1}
-  onPageChange={() => {}}
-  searchValue=""
-  onSearchChange={() => {}}
-  allSelected={allWoSel}
-  someSelected={someWoSel}
-  onToggleSelectAll={toggleAllWo}
-  selectedCount={selectedWo.length}
-  onAdd={() => {
-    setEditWoId(null);
-    setWoFormMode('create');
-    setWoFormOpen(true);
-  }}
-  onEdit={() => {
-    if (selectedWo.length === 1) {
-      setEditWoId(selectedWo[0]);
-      setWoFormMode('update');
-      setWoFormOpen(true);
-    }
-  }}
-  onDelete={undefined}
-  onRefresh={() => {
-    if (poId) fetchWorkOrdersByPo(api, poId).then(setWoLines);
-  }}
-/>
+                  <MasterTable
+                    columns={WO_COLUMNS}
+                    rows={woRows}
+                    colSpan={WO_COLUMNS.length + 1}
+                    totalElements={woLines.length}
+                    loading={woLoading}
+                    page={1}
+                    totalPages={1}
+                    pageSize={woLines.length || 1}
+                    onPageChange={() => { }}
+                    searchValue=""
+                    onSearchChange={() => { }}
+                    allSelected={allWoSel}
+                    someSelected={someWoSel}
+                    onToggleSelectAll={toggleAllWo}
+                    selectedCount={selectedWo.length}
+                    onAdd={() => {
+                      setEditWoId(null);
+                      setWoFormMode('create');
+                      setWoFormOpen(true);
+                    }}
+                    onEdit={() => {
+                      if (selectedWo.length === 1) {
+                        setEditWoId(selectedWo[0]);
+                        setWoFormMode('update');
+                        setWoFormOpen(true);
+                      }
+                    }}
+                    onDelete={undefined}
+                    onRefresh={() => {
+                      if (poId) fetchWorkOrdersByPo(api, poId).then(setWoLines);
+                    }}
+                  />
                   {woLines.length === 0 && !woLoading && (
                     <Text size="sm" c="dimmed" ta="center" py="md">
                       No work orders found for this sales order.
@@ -432,12 +438,25 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
           setWoFormMode('create');
         }}
         onSave={async (data: WorkOrderFormData) => {
+          
           try {
+            // Extract pmId from "421_983" → 421
+            const pmIdRaw = data.pmId?.includes('_')
+              ? data.pmId.split('_')[0]
+              : data.pmId;
+
+            const payload = {
+              ...data,
+              pmId: pmIdRaw ? Number(pmIdRaw) : null,
+              productId: data.productId ? Number(data.productId) : null,
+            };
+
             if (woFormMode === 'update' && data.woId) {
-              await api.put(`/api/inventory/work-order/${data.woId}`, data);
+              await api.put(`/api/inventory/work-order/${data.woId}`, payload);
             } else {
-              await api.post('/api/inventory/work-order', { ...data, poId });
+              await api.post('/api/inventory/work-order', { ...payload, poId });
             }
+
             setWoFormOpen(false);
             setEditWoId(null);
             setSelectedWo([]);

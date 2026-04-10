@@ -18,6 +18,7 @@ public class DropDownResponse {
         this.value = value;
         this.label = label;
         
+        
     }
 
     // For Long value (supplier_id, customer_id etc)

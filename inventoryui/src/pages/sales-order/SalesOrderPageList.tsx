@@ -2,17 +2,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Title, Text, Box, Alert, Loader, Paper, Badge,
-  Group, Button, Tooltip,
+ 
 } from '@mantine/core';
 import { Table, Checkbox } from '@mantine/core';
 import {
-  IconAlertCircle, IconFileInvoice,
+  IconAlertCircle,
 } from '@tabler/icons-react';
 import api from '../../services/api';
 import MasterTable from '../../components/common/MasterTable';
 import type { ColumnDef } from '../../components/common/MasterTable';
 import type { PagedApiResponse } from '../../types/api.types';
-import SalesOrderForm from './Salesorderform';
+import SalesOrderForm from './SalesOrderForm';
 
 import type { SalesOrderFormData, SalesOrderApiData } from '../../types/sales.types';
 import { mapSalesOrderFormToPayload } from '../../types/sales.types';
@@ -22,8 +22,7 @@ import SaveStatusBanner from '../common/Savestatusbanner';
 
 import type { ChildColumnDef } from '../../components/common/ExpandableRow';
 import ExpandableRow from '../../components/common/ExpandableRow';
-import { mapWorkOrder } from '../../types/sales.types';
-import type { WorkOrderApiData } from '../../types/sales.types';
+
 
 
 import { fetchWorkOrdersByPo } from '../../types/workorder.types';
@@ -168,12 +167,15 @@ const fetchWorkOrders = useCallback(
 
   const handleSave = async (formData: SalesOrderFormData) => {
     setSaveStatus('saving');
+    
     try {
+      
       const payload = mapSalesOrderFormToPayload(formData);
+      
       if (formMode === 'update' && formData.poId) {
-        await api.put(`/api/commercial/sales-orders/${formData.poId}`, payload);
+        await api.put(`/api/inventory/sales-orders/${formData.poId}`, payload);
       } else {
-        await api.post('/api/commercial/sales-orders', payload);
+        await api.post('/api/inventory/sales-orders', payload);
       }
       setSaveStatus('success');
       setSaveMessage(

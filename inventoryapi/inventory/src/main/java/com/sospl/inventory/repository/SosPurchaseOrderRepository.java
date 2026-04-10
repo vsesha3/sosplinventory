@@ -54,4 +54,11 @@ public interface SosPurchaseOrderRepository
            ORDER BY p.poNumber ASC
            """)
     List<SosPurchaseOrder> findAllForDropdown();
+    
+    
+
+        @Query(value = "SELECT COALESCE(MAX(po_id), 0) + 1 FROM sos_purchase_order_t", 
+               nativeQuery = true)
+        Long getNextPoId();
+    
 }

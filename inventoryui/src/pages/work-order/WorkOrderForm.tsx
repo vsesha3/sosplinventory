@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
-  Grid, Badge, Stack, Loader, Center, Divider,
+  Grid,  Stack, Loader, Center
 } from '@mantine/core';
 import { IconClipboardList } from '@tabler/icons-react';
 import { FormTextInput }  from '../../components/common/FormTextInput';
@@ -62,17 +62,30 @@ const defaultForm: WorkOrderFormData = {
 
 // ── Mapper: API → Form ────────────────────────────────────────────────────────
 
-const mapApiToForm = (raw: WorkOrderApiData): WorkOrderFormData => ({
-  woId:        raw.woId,
-  poId:        raw.poId,
-  plant:       raw.plant       ?? null,
-  productId:   raw.productId   != null ? String(raw.productId)   : null,
-  qty:         raw.qty         != null ? String(raw.qty)         : '',
-  perUnitRate: raw.perUnitRate != null ? String(raw.perUnitRate) : '',
-  woCode:      raw.woCode      ?? '',
-  pmId:        raw.pmId        != null ? String(raw.pmId)        : null,
-  lineItem:    raw.lineItem    ?? '',
-});
+// ── Mapper: API → Form ────────────────────────────────────────────────────────
+
+const mapApiToForm = (raw: WorkOrderApiData, pmOptions: DropDownOption[]): WorkOrderFormData => {
+  // Find the matching pmOption value using both pmId and productId
+  const matchedPm = pmOptions.find(option => {
+    const [pmPart, productPart] = option.value.split('_');
+    return (
+      pmPart      === String(raw.pmId)      &&
+      productPart === String(raw.productId)
+    );
+  });
+
+  return {
+    woId:        raw.woId,
+    poId:        raw.poId,
+    plant:       raw.plant       ?? null,
+    productId:   raw.productId   != null ? String(raw.productId)   : null,
+    qty:         raw.qty         != null ? String(raw.qty)         : '',
+    perUnitRate: raw.perUnitRate != null ? String(raw.perUnitRate) : '',
+    woCode:      raw.woCode      ?? '',
+    pmId:        matchedPm?.value ?? null,   // "421_983" instead of just "421"
+    lineItem:    raw.lineItem    ?? '',
+  };
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -139,7 +152,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
         if (mode === 'update' && woId) {
           const res = await api.get(`/api/inventory/work-order/${woId}`);
           const data: WorkOrderApiData = res.data.data;
-          setForm(mapApiToForm(data));
+          const fetchedPmOptions = pmRes.data.data ?? [];
+          setForm(mapApiToForm(data, fetchedPmOptions));
         } else if (poId) {
           // Pre-fill poId for create mode
           setForm(prev => ({ ...prev, poId }));
@@ -182,6 +196,23 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
   const headerTitle = mode === 'update' && form.woId
     ? `Edit Work Order — WO ID: ${form.woId}`
     : `New Work Order${poId ? ` — PO: ${poId}` : ''}`;
+
+    // When productId changes, find matching pmOption and set pmId
+const handleProductChange = (value:any) => {
+    setForm(prev => ({ ...prev, productId: value }));
+
+    // Find the pmOption where product_id part (after '_') matches selected productId
+    const matchedPm = pmOptions.find(option => {
+        const productPart = option.value.split('_')[1]; // extract 983 from "421_983"
+        return productPart === String(value);
+    });
+
+    if (matchedPm) {
+        setForm(prev => ({ ...prev, pmId: matchedPm.value })); // sets "421_983"
+    } else {
+        setForm(prev => ({ ...prev, pmId: '' })); // reset if no match
+    }
+};
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -287,7 +318,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
                     <FormSelect
                       label="* Product"
                       value={form.productId}
-                      onChange={setSelect('productId')}
+                      onChange={handleProductChange}
                       data={productOptions}
                       placeholder="--------Select----------"
                       required
