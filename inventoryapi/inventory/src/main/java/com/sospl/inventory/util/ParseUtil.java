@@ -31,12 +31,21 @@ public class ParseUtil {
         try {
             String cleaned = dateStr
                     .replace("Z", "")
-                    .replaceAll("\\.\\d+", "")
-                    .replaceAll("[+-]\\d{2}:\\d{2}$", "");
+                    .replaceAll("\\.\\d+$", "")     // remove .0 or .000
+                    .replaceAll("[+-]\\d{2}:\\d{2}$", "")
+                    .trim();
+
+            // Handle space separator
+            if (cleaned.contains(" ")) {
+                cleaned = cleaned.substring(0, 10); // take date part only
+            }
+
             if (cleaned.contains("T")) {
                 return LocalDate.parse(cleaned.substring(0, 10));
             }
+
             return LocalDate.parse(cleaned);
+
         } catch (Exception e) {
             log.warn("Invalid date format: {}", dateStr);
             return null;
@@ -53,14 +62,26 @@ public class ParseUtil {
     public static LocalDateTime parseDateTime(String dateStr) {
         if (dateStr == null || dateStr.isBlank()) return null;
         try {
+            // Normalize — remove trailing milliseconds and timezone
             String cleaned = dateStr
                     .replace("Z", "")
-                    .replaceAll("\\.\\d+", "")
-                    .replaceAll("[+-]\\d{2}:\\d{2}$", "");
+                    .replaceAll("\\.\\d+$", "")     // remove .0 or .000
+                    .replaceAll("[+-]\\d{2}:\\d{2}$", "")
+                    .trim();
+
+            // Handle space separator e.g. "2020-09-01 00:00:00"
+            if (cleaned.contains(" ") && !cleaned.contains("T")) {
+                cleaned = cleaned.replace(" ", "T");
+            }
+
+            // Now parse
             if (cleaned.contains("T")) {
                 return LocalDateTime.parse(cleaned);
             }
+
+            // Date only — append time
             return LocalDateTime.parse(cleaned + "T00:00:00");
+
         } catch (Exception e) {
             log.warn("Invalid datetime format: {}", dateStr);
             return null;

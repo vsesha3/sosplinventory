@@ -71,13 +71,13 @@ public class SosWorkOrderController {
                         service.search(keyword, pageable)));
     }
 
-    // Dropdown
+ // REPLACE WITH THIS
     @GetMapping("/dropdown")
-    public ResponseEntity<ApiResponse<List<SosWorkOrder>>> getDropdown() {
+    public ResponseEntity<ApiResponse<List<DropDownResponse>>> getDropdown() {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "Work order dropdown fetched successfully",
-                        service.findAllForDropdown()));
+                        service.findAllForDropDown()));
     }
 
     // Get by po_id

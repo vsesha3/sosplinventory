@@ -29,6 +29,7 @@ import BrandPage             from '../pages/masters/BrandPage';
 // Procurement — folder stays as pages/purchase-order/
 import PurchaseOrderPage     from '../pages/purchase-order/PurchaseOrderPage';
 import SalesOrderPage from '../pages/sales-order/SalesOrderPageList';
+import ProductionPlanPage from '../pages/Operations/ProductionPlanPage';
 
 const AppRouter: React.FC = () => (
   <BrowserRouter>
@@ -49,6 +50,8 @@ const AppRouter: React.FC = () => (
           {/* Procurement — nav shows under "Procurement" group, files live in pages/purchase-order/ */}
             <Route path="/procurement/purchase-orders" element={<PurchaseOrderPage />} />
             <Route path="/commercial/sales-orders" element={<SalesOrderPage />} />
+
+            <Route path="/operations/production-plan" element={<ProductionPlanPage />} />
 
           {/* Masters */}
           <Route path="/masters/country"           element={<CountryPage />} />

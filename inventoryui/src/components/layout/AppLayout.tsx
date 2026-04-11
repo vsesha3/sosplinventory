@@ -12,7 +12,10 @@ import {
   IconBuildingStore, IconCategory, IconScale,
   IconUser, IconBuildingWarehouse, IconTag,
   IconAtom, IconReceipt, IconStack2,
-  IconShoppingCart, IconClipboardList,IconBriefcase,IconFileInvoice
+  IconShoppingCart, IconClipboardList,IconBriefcase,IconFileInvoice,
+  IconCalendarStats,
+  IconClipboardData,
+  
 } from '@tabler/icons-react';
 
 // ── Nav Structure ─────────────────────────────────────────────────────────────
@@ -55,6 +58,17 @@ const navGroups = [
     // { label: 'Dispatch Orders', path: '/commercial/dispatch-orders',  icon: <IconTruck size={17} /> },
     // { label: 'Delivery Notes',  path: '/commercial/delivery-notes',   icon: <IconPackageExport size={17} /> },
     // { label: 'Invoices',        path: '/commercial/invoices',         icon: <IconReceipt size={17} /> },
+  ],
+},
+{
+  group: 'Operations',
+  icon: <IconSettings size={17} />,
+  items: [
+    { label: 'Production Plan',       path: '/operations/production-plan',   icon: <IconCalendarStats size={17} /> },
+    { label: 'Production Entry',      path: '/operations/production-entry',  icon: <IconClipboardData size={17} /> },
+    { label: 'Lab Testing',           path: '/operations/lab-testing',       icon: <IconFlask size={17} /> },
+    // { label: 'Quality Control',    path: '/operations/quality-control',   icon: <IconShieldCheck size={17} /> },
+    // { label: 'Batch Records',      path: '/operations/batch-records',     icon: <IconNotes size={17} /> },
   ],
 },
   {

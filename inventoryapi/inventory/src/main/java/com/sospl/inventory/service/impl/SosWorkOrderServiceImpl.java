@@ -1,6 +1,7 @@
 package com.sospl.inventory.service.impl;
 
 import com.sospl.inventory.dto.SosWorkOrderWithDetailsResponse;
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.mapper.SosWorkOrderWithDetailsMapper;
 import com.sospl.inventory.model.SosWorkOrder;
 import com.sospl.inventory.repository.SosWorkOrderRepository;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class SosWorkOrderServiceImpl
@@ -105,5 +107,17 @@ public class SosWorkOrderServiceImpl
         return workOrderMapper.mapRows(
                 workOrderRepository
                         .findAllWorkOrdersWithDetailsByPoId(poId));
+    }
+    
+    @Override
+    public List<DropDownResponse> findAllForDropDown() {
+        return workOrderRepository
+                .findAllForDropdown()
+                .stream()
+                .filter(w -> w.getWoId() != null)
+                .map(w -> new DropDownResponse(
+                        w.getWoId(),
+                        w.getWoCode() != null ? w.getWoCode() : "-"))
+                .collect(Collectors.toList());
     }
 }

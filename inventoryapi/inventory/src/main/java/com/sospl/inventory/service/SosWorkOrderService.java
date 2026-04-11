@@ -1,6 +1,7 @@
 package com.sospl.inventory.service;
 
 import com.sospl.inventory.dto.SosWorkOrderWithDetailsResponse;
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.model.SosWorkOrder;
 import com.sospl.inventory.service.common.BaseMasterService;
 import org.springframework.data.domain.Page;
@@ -33,4 +34,6 @@ public interface SosWorkOrderService
     
     List<SosWorkOrderWithDetailsResponse> findAllWorkOrdersWithDetailsByPoId(
             Long poId);
+    
+    List<DropDownResponse> findAllForDropDown();
 }
