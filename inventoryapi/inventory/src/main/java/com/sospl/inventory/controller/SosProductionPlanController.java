@@ -3,6 +3,7 @@ package com.sospl.inventory.controller;
 import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.SosProductionPlanResponse;
+import com.sospl.inventory.dto.SosProductionPlanSummaryResponse;
 import com.sospl.inventory.model.SosProductionPlan;
 import com.sospl.inventory.service.SosProductionPlanService;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,16 @@ public class SosProductionPlanController {
                 ApiResponse.success(
                         "Production plans fetched successfully",
                         service.findAllWithDetails(page, size)));
+    }
+    
+    @GetMapping("/summary")
+    public ResponseEntity<ApiResponse<PagedResponse<SosProductionPlanSummaryResponse>>> getAllSummary(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Production plans fetched successfully",
+                        service.findAllProductionPlanSummary(page, size)));
     }
 
  // Get with details by wo_id — no pagination needed — wo specific
@@ -145,16 +156,13 @@ public class SosProductionPlanController {
                         "Production plan deleted successfully", null));
     }
 
-    // Get by id — ALWAYS LAST
+ // REPLACE WITH THIS
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<SosProductionPlan>> getById(
             @PathVariable Long id) {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "Production plan fetched successfully",
-                        service.findById(id).orElseThrow(
-                                () -> new RuntimeException(
-                                        "Production plan not found: "
-                                                + id))));
+                        service.findByIdWithProductDetails(id)));
     }
 }

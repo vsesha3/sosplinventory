@@ -1,6 +1,7 @@
 // ── production.types.ts ───────────────────────────────────────────────────────
 
 import type { DateValue } from '@mantine/dates';
+import type { ColumnDef } from '../components/common/MasterTable';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. LIST API DATA
@@ -10,35 +11,39 @@ import type { DateValue } from '@mantine/dates';
 
 export interface ProductionPlanApiData {
   productionPlanId: number;
-  qty:              number | null;
-  woId:             number | null;
-  woCode:           string | null;
-  fromDate:         string | null;
-  toDate:           string | null;
-  pmId:             number | null;
-  pmName:           string | null;
-  pmSize:           number | null;
-  companyId:        number | null;
-  companyName:      string | null;
-  pmReq:            number | null;
-  createdOn:        string | null;
+  productionFromDate: string | null;
+  productionToDate:   string | null;
+  qty:               number | null;
+  woId:              number | null;
+  woCode:            string | null;
+  poId:              number | null;
+  plant:             string | null;
+  woQty:             number | null;
+  perUnitRate:       number | null;
+  vesselName:        string | null;
+  productName:       string | null;
+  // keep these as aliases used by fmtDate in the table
+  fromDate:          string | null;
+  toDate:            string | null;
 }
 
 // Mapper: raw list API response → ProductionPlanApiData
-export const mapProductionPlan = (raw: any): ProductionPlanApiData => ({
-  productionPlanId: raw.productionPlanId ?? 0,
-  qty:              raw.qty       != null ? Number(raw.qty)       : null,
-  woId:             raw.woId      != null ? Number(raw.woId)      : null,
-  woCode:           raw.woCode    ?? null,
-  fromDate:         raw.fromDate  ?? null,
-  toDate:           raw.toDate    ?? null,
-  pmId:             raw.pmId      != null ? Number(raw.pmId)      : null,
-  pmName:           raw.pmName    ?? null,
-  pmSize:           raw.pmSize    != null ? Number(raw.pmSize)    : null,
-  companyId:        raw.companyId != null ? Number(raw.companyId) : null,
-  companyName:      raw.companyName ?? null,
-  pmReq:            raw.pmReq     != null ? Number(raw.pmReq)     : null,
-  createdOn:        raw.createdOn ?? null,
+export const mapProductionPlan = (d: any): ProductionPlanApiData => ({
+  productionPlanId:   d.productionPlanId,
+  woId:               d.woId              ?? null,
+  woCode:             d.woCode            ?? null,
+  poId:               d.poId              ?? null,
+  plant:              d.plant             ?? null,
+  woQty:              d.woQty             ?? null,
+  perUnitRate:        d.perUnitRate       ?? null,
+  vesselName:         d.vesselName        ?? null,
+  productName:        d.productName       ?? null,
+  qty:                d.qty               ?? null,
+  // alias date fields for fmtDate
+  fromDate:           d.productionFromDate ?? null,
+  toDate:             d.productionToDate   ?? null,
+  productionFromDate: d.productionFromDate ?? null,
+  productionToDate:   d.productionToDate   ?? null,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -162,3 +167,19 @@ export const getVesselName = (id: number | null | undefined): string => {
   if (id == null) return '—';
   return VESSEL_OPTIONS.find(v => v.value === String(id))?.label ?? String(id);
 };
+
+
+export const COLUMNS: ColumnDef[] = [
+  { key: 'productionPlanId', label: 'Plan ID',       width: 90  },
+  { key: 'woId',             label: 'WO Id',         width: 80  },
+  { key: 'woCode',           label: 'WO Code',       width: 130 },
+  { key: 'vesselName',       label: 'Vessel',        width: 150 },
+  { key: 'productName',      label: 'Product',       width: 180 },
+  { key: 'fromDate',         label: 'From Date',     width: 130 },
+  { key: 'toDate',           label: 'To Date',       width: 130 },
+  { key: 'qty',              label: 'Qty',           width: 90,  align: 'right' },
+  { key: 'woQty',            label: 'WO Qty',        width: 90,  align: 'right' },
+  { key: 'perUnitRate',      label: 'Per Unit Rate', width: 110, align: 'right' },
+  { key: 'plant',            label: 'Plant',         width: 120 },
+  { key: 'poId',             label: 'PO Id',         width: 80  },
+];

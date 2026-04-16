@@ -6,6 +6,7 @@ import com.sospl.inventory.mapper.SosWorkOrderWithDetailsMapper;
 import com.sospl.inventory.model.SosWorkOrder;
 import com.sospl.inventory.repository.SosWorkOrderRepository;
 import com.sospl.inventory.service.common.impl.BaseMasterServiceImpl;
+import com.sospl.inventory.util.ParseUtil;
 import com.sospl.inventory.service.SosWorkOrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -110,14 +112,28 @@ public class SosWorkOrderServiceImpl
     }
     
     @Override
-    public List<DropDownResponse> findAllForDropDown() {
+    public List<DropDownResponse> findWODropDownForDelivery(
+            LocalDate fromDate, LocalDate toDate) {
         return workOrderRepository
-                .findAllForDropdown()
+                .fetchWODropDownForDelivery(fromDate, toDate)
                 .stream()
-                .filter(w -> w.getWoId() != null)
-                .map(w -> new DropDownResponse(
-                        w.getWoId(),
-                        w.getWoCode() != null ? w.getWoCode() : "-"))
+                .filter(row -> row != null && row[0] != null)
+                .map(row -> new DropDownResponse(
+                        ParseUtil.toLong(row[0]),            // woId
+                        ParseUtil.toString(row[1]),           // woCode
+                        ParseUtil.toBigDecimal(row[2]) != null
+                                ? ParseUtil.toBigDecimal(row[2])
+                                        .toPlainString()
+                                : "0",                       // remainingQty
+                        ParseUtil.toString(row[3]),           // poId
+                        ParseUtil.toString(row[4]),           // productName
+                        ParseUtil.toString(row[5])))          // productCode
                 .collect(Collectors.toList());
     }
+
+	@Override
+	public List<DropDownResponse> findAllForDropDown() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

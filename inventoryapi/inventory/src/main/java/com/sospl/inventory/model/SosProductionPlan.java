@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -43,6 +44,13 @@ public class SosProductionPlan extends BaseAuditEntity {
     @Column(name = "coa_reference", length = 250)
     private String coaReference;
 
+    // ── Transient fields — not stored in DB ───────────────────────────────
+    @Transient
+    private String productName;
+
+    @Transient
+    private String productCode;
+
     // ── Getters ───────────────────────────────────────────────────────────
     public Long getProductionPlanId() { return productionPlanId; }
     public LocalDateTime getProductionFromDate() { return productionFromDate; }
@@ -53,6 +61,8 @@ public class SosProductionPlan extends BaseAuditEntity {
     public BigDecimal getQty() { return qty; }
     public Long getVesselId() { return vesselId; }
     public String getCoaReference() { return coaReference; }
+    public String getProductName() { return productName; }
+    public String getProductCode() { return productCode; }
 
     // ── Setters ───────────────────────────────────────────────────────────
     public void setProductionPlanId(Long productionPlanId) { this.productionPlanId = productionPlanId; }
@@ -64,4 +74,6 @@ public class SosProductionPlan extends BaseAuditEntity {
     public void setQty(BigDecimal qty) { this.qty = qty; }
     public void setVesselId(Long vesselId) { this.vesselId = vesselId; }
     public void setCoaReference(String coaReference) { this.coaReference = coaReference; }
+    public void setProductName(String productName) { this.productName = productName; }
+    public void setProductCode(String productCode) { this.productCode = productCode; }
 }

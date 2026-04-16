@@ -1,4 +1,4 @@
-package com.sospl.inventory.repository.inventory;
+package com.sospl.inventory.repository;
 
 import com.sospl.inventory.model.SosProductionPlan;
 import org.springframework.data.domain.Page;
@@ -124,4 +124,36 @@ public interface SosProductionPlanRepository
            """, nativeQuery = true)
     List<Object[]> findCurrentAndFuturePlansByWoId(
             @Param("woId") Long woId);
+    
+    @Query(value = """
+    	       SELECT
+    	           sppt.production_plan_id     AS productionPlanId,
+    	           sppt.production_from_date   AS productionFromDate,
+    	           sppt.production_to_date     AS productionToDate,
+    	           swot.wo_code                AS woCode,
+    	           svmt.vessel_name            AS vesselName,
+    	           sppt.qty                    AS qty,
+    	           swot.wo_id                  AS woId,
+    	           swot.po_id                  AS poId,
+    	           swot.plant                  AS plant,
+    	           spmt.product_name           AS productName,
+    	           swot.qty                    AS woQty,
+    	           swot.per_unit_rate          AS perUnitRate
+    	       FROM sos_production_plan_t sppt
+    	       LEFT JOIN sos_work_order_t swot
+    	           ON sppt.wo_id = swot.wo_id
+    	       LEFT JOIN sos_vessel_master_t svmt
+    	           ON sppt.vessel_id = svmt.vessel_id
+    	       LEFT JOIN sos_product_master_t spmt
+    	           ON swot.product_id = spmt.product_id
+    	       WHERE sppt.is_deleted = 0
+    	       ORDER BY sppt.production_plan_id DESC
+    	       """,
+    	       countQuery = """
+    	       SELECT COUNT(*)
+    	       FROM sos_production_plan_t sppt
+    	       WHERE sppt.is_deleted = 0
+    	       """,
+    	       nativeQuery = true)
+    	Page<Object[]> findAllProductionPlanSummary(Pageable pageable);
 }

@@ -221,4 +221,13 @@ public class ParseUtil {
             return null;
         }
     }
+    
+    public static LocalDateTime toLocalDateTime(Object val) {
+	    if (val == null) return null;
+	    if (val instanceof LocalDateTime) return (LocalDateTime) val;
+	    if (val instanceof java.sql.Timestamp) {
+	        return ((java.sql.Timestamp) val).toLocalDateTime();
+	    }
+	    return ParseUtil.parseDateTime(String.valueOf(val));
+	}
 }

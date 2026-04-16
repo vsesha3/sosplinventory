@@ -7,6 +7,7 @@ import com.sospl.inventory.service.common.BaseMasterService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface SosWorkOrderService
@@ -36,4 +37,7 @@ public interface SosWorkOrderService
             Long poId);
     
     List<DropDownResponse> findAllForDropDown();
+    
+    List<DropDownResponse> findWODropDownForDelivery(
+            LocalDate fromDate, LocalDate toDate);
 }

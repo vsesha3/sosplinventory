@@ -18,9 +18,14 @@ import { defaultProductionPlanForm, mapSingleApiToForm } from '../../types/produ
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface DropDownOption {
-  value: string;
-  label: string;
+  value:       string;
+  label:       string;
+  quantity?:   string | null;
+  productName?: string | null;
+  productCode?: string | null;
+  poId?:       string | null;
 }
+
 
 export interface ProductionPlanFormProps {
   opened:              boolean;
@@ -51,10 +56,7 @@ const ProductionPlanForm: React.FC<ProductionPlanFormProps> = ({
   const [woOptions, setWoOptions]         = useState<DropDownOption[]>([]);
 
   // Remaining qty options — 0 to 10
-  const remainingQtyOptions = Array.from({ length: 11 }, (_, i) => ({
-    value: String(i),
-    label: String(i),
-  }));
+
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -69,16 +71,19 @@ const ProductionPlanForm: React.FC<ProductionPlanFormProps> = ({
     const load = async () => {
       setLoading(true);
       try {
-        const [vesselRes, woRes] = await Promise.all([
-          api.get('/api/inventory/vessel/dropdown').catch(() => ({ data: { data: [] } })),
-          api.get('/api/inventory/work-order/dropdown').catch(() => ({ data: { data: [] } })),
+        const [vesselRes] = await Promise.all([
+          api.get(' /api/misc/vessels/dropdown').catch(() => ({ data: { data: [] } })),
+         
         ]);
         setVesselOptions(vesselRes.data.data ?? []);
-        setWoOptions(woRes.data.data ?? []);
-
+       
         if (mode === 'update' && productionPlanId) {
           const res = await api.get(`/api/inventory/production-plan/${productionPlanId}`);
           const d   = res.data.data;
+          console.log('🔍 Single Plan API Response:', d);           // ← full object
+  console.log('productName  :', d.productName);             // ← check field name
+  console.log('sapCode      :', d.sapCode);                 // ← check field name
+  console.log('productCode  :', d.productCode); 
           setForm(mapSingleApiToForm(d));
         }
       } catch {
@@ -93,22 +98,23 @@ const ProductionPlanForm: React.FC<ProductionPlanFormProps> = ({
 
   // ── Auto-fill product details when WO changes ─────────────────────────────
 
-  const handleWoChange = async (value: string | null) => {
-    setForm(prev => ({ ...prev, woId: value, productName: '', sapCode: '' }));
-    if (!value) return;
-    try {
-      const res = await api.get(`/api/inventory/work-order/${value}`);
-      const d   = res.data.data;
-      setForm(prev => ({
-        ...prev,
-        woId:        value,
-        productName: d.productName ?? '',
-        sapCode:     d.productCode ?? d.sapCode ?? '',
-      }));
-    } catch {
-      // non-critical — just leave blank
-    }
-  };
+const handleWoChange = (value: string | null) => {
+  if (!value) {
+    setForm(prev => ({ ...prev, woId: null, productName: '', sapCode: '' }));
+    return;
+  }
+
+  const selected = woOptions.find(o => o.value === value);
+
+  setForm(prev => ({
+    ...prev,
+    woId:        value,
+    productName: selected?.productName ?? '',
+    sapCode:     selected?.productCode ?? '',
+    remainingQty: selected?.quantity    ?? '0',
+   
+  }));
+};
 
   // ── Form helpers ──────────────────────────────────────────────────────────
 
@@ -127,7 +133,7 @@ const ProductionPlanForm: React.FC<ProductionPlanFormProps> = ({
   // ── Validation ────────────────────────────────────────────────────────────
 
   const validateForm = (): string[] => {
-    const errors: string[] = [];
+    const errors: string[] = [];    
     if (!form.productionFromDate)           errors.push('From Date is required');
     if (!form.productionToDate)             errors.push('To Date is required');
     if (!form.vesselId)                     errors.push('Vessel is required');
@@ -137,11 +143,71 @@ const ProductionPlanForm: React.FC<ProductionPlanFormProps> = ({
     return errors;
   };
 
+  
+
+
   const confirmLabel = mode === 'update' ? 'Update' : 'Save';
 
   const headerTitle = mode === 'update' && form.productionPlanId
     ? `Edit Production Plan — #${form.productionPlanId}`
     : 'New Production Plan';
+
+
+
+  // ── Keep this for use in validateForm / confirmLabel / etc. ──────────────────
+/* const dateValid =
+  form.productionFromDate && form.productionToDate
+    ? new Date(form.productionFromDate) <= new Date(form.productionToDate)
+    : true; */
+
+// ── Replace the old useEffect + populateDropDownForWorkOrder with this ────────
+useEffect(() => {
+  if (!form.productionFromDate || !form.productionToDate) return;
+
+  const isValid =
+    new Date(form.productionFromDate) <= new Date(form.productionToDate);
+
+  if (!isValid) {
+    setValidationErrors(prev => [
+      ...prev.filter(e => e !== 'From Date must be before To Date'),
+      'From Date must be before To Date',
+    ]);
+    setWoOptions([]);
+    return;
+  }
+
+  // Clear the date-order error
+  setValidationErrors(prev =>
+    prev.filter(e => e !== 'From Date must be before To Date'),
+  );
+
+  // Populate WO dropdown
+  const fromDate = new Date(form.productionFromDate).toISOString().split('T')[0];
+  const toDate   = new Date(form.productionToDate).toISOString().split('T')[0];
+
+  let cancelled = false; // prevent stale setState if dates change rapidly
+
+  const fetchWorkOrders = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(
+        `/api/inventory/work-order/dropdown?fromDate=${fromDate}&toDate=${toDate}`,
+      );
+      if (!cancelled) setWoOptions(res.data.data ?? []);
+    } catch {
+      if (!cancelled) setWoOptions([]);
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
+
+  fetchWorkOrders();
+
+  return () => { cancelled = true; }; // cleanup on rapid date changes
+
+}, [form.productionFromDate, form.productionToDate]);
+
+
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -259,22 +325,34 @@ const ProductionPlanForm: React.FC<ProductionPlanFormProps> = ({
                   </Grid.Col>
 
                   {/* ── Row 4: Quantity | Remaining Qty ── */}
+                    <Grid.Col span={6}>
+                      <FormTextInput
+                        label="* Quantity"
+                        value={form.qty}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const qty = e.target.value;
+                          const selected = woOptions.find(o => o.value === form.woId);
+                          const available = parseFloat(selected?.quantity ?? '0');
+                          const remaining = available - parseFloat(qty || '0');
+
+                          setForm(prev => ({
+                            ...prev,
+                            qty: qty,
+                            remainingQty: isNaN(remaining) ? '0' : String(Math.max(0, remaining)),
+                          }));
+                        }}
+                        placeholder="0"
+                        required
+                      />
+                    </Grid.Col>
                   <Grid.Col span={6}>
+                   
                     <FormTextInput
-                      label="* Quantity"
-                      value={form.qty}
-                      onChange={setStr('qty')}
-                      placeholder="0"
-                      required
-                    />
-                  </Grid.Col>
-                  <Grid.Col span={6}>
-                    <FormSelect
-                      label="Remaining Qty"
-                      value={form.remainingQty}
-                      onChange={setSelect('remainingQty')}
-                      data={remainingQtyOptions}
-                      placeholder="0"
+                      label="Remaining Qty (text)"
+                      value={form.remainingQty} 
+                      onChange={() => {}}
+                      placeholder="Auto-filled from Work Order"
+                      readOnly
                     />
                   </Grid.Col>
 

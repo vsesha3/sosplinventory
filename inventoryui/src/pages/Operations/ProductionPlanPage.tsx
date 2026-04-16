@@ -6,7 +6,6 @@ import {
 import { IconAlertCircle } from '@tabler/icons-react';
 import api from '../../services/api';
 import MasterTable from '../../components/common/MasterTable';
-import type { ColumnDef } from '../../components/common/MasterTable';
 import type { ProductionPlanApiData } from '../../types/production.types';
 import { mapProductionPlan } from '../../types/production.types';
 import ProductionPlanForm from './ProductionPlanForm';
@@ -14,25 +13,11 @@ import type { ProductionPlanFormData } from '../../types/production.types';
 import type { SaveStatus } from '../common/Savestatusbanner';
 import SaveStatusBanner from '../common/Savestatusbanner';
 import { mapFormToPayload } from '../../types/production.types';
+import { COLUMNS } from '../../types/production.types';
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 10;
 
-// ── Columns ───────────────────────────────────────────────────────────────────
-
-const COLUMNS: ColumnDef[] = [
-  { key: 'productionPlanId', label: 'Plan ID',     width: 90  },
-  { key: 'woId',             label: 'WO Id',       width: 80  },
-  { key: 'woCode',           label: 'WO Code',     width: 130 },
-  { key: 'companyName',      label: 'Company',     width: 160 },
-  { key: 'fromDate',         label: 'From Date',   width: 130 },
-  { key: 'toDate',           label: 'To Date',     width: 130 },
-  { key: 'qty',              label: 'Qty',         width: 90,  align: 'right' },
-  { key: 'pmName',           label: 'PM',          width: 150 },
-  { key: 'pmSize',           label: 'PM Size',     width: 90,  align: 'right' },
-  { key: 'pmReq',            label: 'PM Required', width: 100, align: 'right' },
-  { key: 'createdOn',        label: 'Created On',  width: 130 },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -85,7 +70,7 @@ const ProductionPlanPage: React.FC = () => {
         ...(currentKeyword.trim() ? { keyword: currentKeyword.trim() } : {}),
       };
 
-      const res = await api.get('/api/inventory/production-plan/details', { params });
+      const res = await api.get('/api/inventory/production-plan/summary', { params });
       const d   = res.data.data;
 
       if (Array.isArray(d)) {
@@ -159,87 +144,74 @@ const ProductionPlanPage: React.FC = () => {
 
   // ── Build rows ────────────────────────────────────────────────────────────
 
-  const rows = data.map(item => {
-    const isSel = selected.includes(item.productionPlanId);
-    return (
-      <Table.Tr
-        key={item.productionPlanId}
-        bg={isSel ? 'var(--mantine-color-blue-0)' : undefined}
-      >
-        {/* Checkbox */}
-        <Table.Td>
-          <Checkbox
-            checked={isSel}
-            onChange={() => toggleRow(item.productionPlanId)}
-            size="sm"
-          />
-        </Table.Td>
+ const rows = data.map(item => {
+  const isSel = selected.includes(item.productionPlanId);
+  return (
+    <Table.Tr
+      key={item.productionPlanId}
+      bg={isSel ? 'var(--mantine-color-blue-0)' : undefined}
+    >
+      <Table.Td>
+        <Checkbox checked={isSel} onChange={() => toggleRow(item.productionPlanId)} size="sm" />
+      </Table.Td>
 
-        {/* Plan ID */}
-        <Table.Td>
-          <Text size="xs" fw={500} c="blue">{item.productionPlanId}</Text>
-        </Table.Td>
+      <Table.Td>
+        <Text size="xs" fw={500} c="blue">{item.productionPlanId}</Text>
+      </Table.Td>
 
-        {/* WO Id */}
-        <Table.Td>
-          <Text size="xs">{dash(item.woId)}</Text>
-        </Table.Td>
+      <Table.Td>
+        <Text size="xs">{dash(item.woId)}</Text>
+      </Table.Td>
 
-        {/* WO Code */}
-        <Table.Td>
-          <Text size="xs" fw={500}>{dash(item.woCode)}</Text>
-        </Table.Td>
+      <Table.Td>
+        <Text size="xs" fw={500}>{dash(item.woCode)}</Text>
+      </Table.Td>
 
-        {/* Company */}
-        <Table.Td>
-          <Text size="xs">{dash(item.companyName)}</Text>
-        </Table.Td>
+      <Table.Td>
+        <Text size="xs">{dash(item.vesselName)}</Text>
+      </Table.Td>
 
-        {/* From Date */}
-        <Table.Td>
-          <Text size="xs">{fmtDate(item.fromDate)}</Text>
-        </Table.Td>
+      <Table.Td>
+        <Text size="xs">{dash(item.productName)}</Text>
+      </Table.Td>
 
-        {/* To Date */}
-        <Table.Td>
-          <Text size="xs">{fmtDate(item.toDate)}</Text>
-        </Table.Td>
+      <Table.Td>
+        <Text size="xs">{fmtDate(item.fromDate)}</Text>
+      </Table.Td>
 
-        {/* Qty */}
-        <Table.Td ta="right">
-          <Text size="xs" fw={500}>
-            {item.qty != null ? Number(item.qty).toFixed(2) : '—'}
-          </Text>
-        </Table.Td>
+      <Table.Td>
+        <Text size="xs">{fmtDate(item.toDate)}</Text>
+      </Table.Td>
 
-        {/* PM Name */}
-        <Table.Td>
-          <Text size="xs">{dash(item.pmName)}</Text>
-        </Table.Td>
+      <Table.Td ta="right">
+        <Text size="xs" fw={500}>
+          {item.qty != null ? Number(item.qty).toFixed(2) : '—'}
+        </Text>
+      </Table.Td>
 
-        {/* PM Size */}
-        <Table.Td ta="right">
-          <Text size="xs">
-            {item.pmSize != null ? Number(item.pmSize).toFixed(3) : '—'}
-          </Text>
-        </Table.Td>
+      <Table.Td ta="right">
+        <Text size="xs">
+          {item.woQty != null ? Number(item.woQty).toFixed(2) : '—'}
+        </Text>
+      </Table.Td>
 
-        {/* PM Required */}
-        <Table.Td ta="right">
-          <Text size="xs" fw={500} c={item.pmReq != null ? 'orange' : undefined}>
-            {item.pmReq != null ? Number(item.pmReq).toFixed(3) : '—'}
-          </Text>
-        </Table.Td>
+      <Table.Td ta="right">
+        <Text size="xs" fw={500} c="teal">
+          {item.perUnitRate != null ? Number(item.perUnitRate).toFixed(2) : '—'}
+        </Text>
+      </Table.Td>
 
-        {/* Created On */}
-        <Table.Td>
-          <Text size="xs">{fmtDate(item.createdOn)}</Text>
-        </Table.Td>
+      <Table.Td>
+        <Text size="xs">{dash(item.plant)}</Text>
+      </Table.Td>
 
-      </Table.Tr>
-    );
-  });
+      <Table.Td>
+        <Text size="xs">{dash(item.poId)}</Text>
+      </Table.Td>
 
+    </Table.Tr>
+  );
+});
   const colSpan = COLUMNS.length + 1;
 
   // ── Render ────────────────────────────────────────────────────────────────

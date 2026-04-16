@@ -1,6 +1,7 @@
 package com.sospl.inventory.service;
 
 import com.sospl.inventory.dto.SosProductionPlanResponse;
+import com.sospl.inventory.dto.SosProductionPlanSummaryResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.model.SosProductionPlan;
 import com.sospl.inventory.service.common.BaseMasterService;
@@ -33,4 +34,9 @@ public interface SosProductionPlanService
 
     // ── Soft Delete ───────────────────────────────────────────────────────
     void softDelete(Long id, String deletedBy);
+    
+    PagedResponse<SosProductionPlanSummaryResponse> findAllProductionPlanSummary(
+            int page, int size);
+    
+    SosProductionPlan findByIdWithProductDetails(Long id);
 }
