@@ -23,6 +23,7 @@ public interface SosWorkOrderService
     List<SosWorkOrder> findByProductId(Long productId);
 
     List<SosWorkOrder> findByPmId(Long pmId);
+    
 
     List<SosWorkOrder> findByPlant(String plant);
 

@@ -1,0 +1,31 @@
+CREATE TABLE IF NOT EXISTS sos_employee_profile_t
+(
+    emp_id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    emp_name                VARCHAR(250)         NULL,
+    emp_image               LONGBLOB             NULL,
+    mimetype                VARCHAR(100)         NULL,
+    filename                VARCHAR(250)         NULL,
+    image_last_update       DATETIME             NULL,
+    emp_barcode             VARCHAR(100)         NULL,
+    basic_salary            DECIMAL(11, 2)       NULL,
+    ot                      DECIMAL(11, 2)       NULL,
+    salary_type             VARCHAR(50)          NULL,
+    hra                     DECIMAL(11, 2)       NULL,
+    ta                      DECIMAL(11, 2)       NULL,
+    pf                      DECIMAL(11, 2)       NULL,
+    esi                     DECIMAL(11, 2)       NULL,
+    bank_ac_details         VARCHAR(250)         NULL,
+    payment_type_id         BIGINT               NULL,
+    created_by              VARCHAR(100)         NULL,
+    created_at              DATETIME             NULL,
+    updated_by              VARCHAR(100)         NULL,
+    updated_at              DATETIME             NULL,
+    is_active               TINYINT(1) DEFAULT 1 NULL,
+    is_active_modified_on   DATETIME             NULL,
+    is_active_modified_by   VARCHAR(100)         NULL,
+    is_deleted              TINYINT(1) DEFAULT 0 NULL,
+    deleted_by              VARCHAR(100)         NULL,
+    deleted_at              DATETIME             NULL,
+    modified_on             DATETIME             NULL
+);
+

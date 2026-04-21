@@ -25,6 +25,7 @@ import java.util.List;
 public class SosProductMasterController {
 
     private final SosProductMasterService service;
+    
 
     public SosProductMasterController(SosProductMasterService service) {
         this.service = service;

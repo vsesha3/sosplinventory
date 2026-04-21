@@ -30,6 +30,7 @@ import BrandPage             from '../pages/masters/BrandPage';
 import PurchaseOrderPage     from '../pages/purchase-order/PurchaseOrderPage';
 import SalesOrderPage from '../pages/sales-order/SalesOrderPageList';
 import ProductionPlanPage from '../pages/Operations/ProductionPlanPage';
+import MaterialRequestView from '../pages/raw-material/Materialrequestview';
 
 const AppRouter: React.FC = () => (
   <BrowserRouter>
@@ -70,6 +71,7 @@ const AppRouter: React.FC = () => (
           <Route path="/masters/subitem"           element={<SubitemPage />} />
           <Route path="/masters/miscellaneous"     element={<MiscellaneousPage />} />
           <Route path="/masters/brand"             element={<BrandPage />} />
+          <Route path="/procurement/rm-request"     element={<MaterialRequestView />} />
 
         </Route>
       </Route>

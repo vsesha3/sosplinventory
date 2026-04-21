@@ -4,8 +4,12 @@ import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosPmMasterResponse;
+import com.sospl.inventory.model.SosWorkOrder;
 import com.sospl.inventory.model.inventory.master.SosPmMaster;
+import com.sospl.inventory.service.SosWorkOrderService;
 import com.sospl.inventory.service.inventory.master.SosPmMasterService;
+import com.sospl.inventory.util.ParseUtil;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,15 +22,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/pm")
 public class SosPmMasterController {
 
     private final SosPmMasterService service;
+    private final SosWorkOrderService workOrderService;
 
-    public SosPmMasterController(SosPmMasterService service) {
+    public SosPmMasterController(SosPmMasterService service,SosWorkOrderService _workOrderService) {
         this.service = service;
+        this.workOrderService = _workOrderService;
     }
 
     // Create
@@ -65,6 +72,39 @@ public class SosPmMasterController {
         return ResponseEntity.ok(
                 ApiResponse.success("PMs fetched successfully",
                         service.findAll()));
+    }
+    
+    @GetMapping("/wo/{id}")
+    public ResponseEntity<ApiResponse<SosPmMaster>> getPmDetilsByWoID(
+            @PathVariable Long id) {
+
+        // Step 1 — Get work orders by pm_id
+       
+        
+        SosWorkOrder workOrder = workOrderService
+                .findById(id)
+                .orElseThrow(() -> new RuntimeException(
+                        "Work order not found: " + id));
+
+        
+        // Step 2 — Get pmId from first work order
+        Long pmId = workOrder.getPmId();
+
+        if (pmId == null) {
+            throw new RuntimeException(
+                    "PM not mapped for work order: " + id);
+        }
+
+        // Step 3 — Cast Long to Integer for findById
+        Integer pmIdInt = pmId.intValue();
+
+        // Step 4 — Get PM by pmId
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "PM fetched successfully",
+                        service.findById(pmIdInt)
+                                .orElseThrow(() -> new RuntimeException(
+                                        "PM not found: " + pmIdInt))));
     }
 
     // Get all with details without pagination

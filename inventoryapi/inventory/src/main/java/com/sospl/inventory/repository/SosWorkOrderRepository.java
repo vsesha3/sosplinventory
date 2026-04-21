@@ -101,20 +101,8 @@ public interface SosWorkOrderRepository
     		       LEFT JOIN sos_product_master_t spmt
     		           ON wo.product_id = spmt.product_id
     		       WHERE
-    		           :toDate < po.ord_delivery_date
+    		           DATE(po.ord_delivery_date) >= :fromDate
     		           AND wo.is_deleted = 0
-    		           AND wo.wo_id NOT IN (
-    		               SELECT wo2.wo_id
-    		               FROM sos_work_order_t wo2
-    		               LEFT JOIN sos_production_plan_t pp2
-    		                   ON wo2.wo_id = pp2.wo_id
-    		               WHERE
-    		                   pp2.production_from_date >= :fromDate
-    		                   AND pp2.production_to_date <= :toDate
-    		                   AND pp2.is_deleted = 0
-    		               GROUP BY wo2.wo_id, wo2.qty
-    		               HAVING wo2.qty - COALESCE(SUM(pp2.qty), 0) > 0
-    		           )
     		       GROUP BY
     		           wo.wo_id,
     		           wo.wo_code,
@@ -130,7 +118,17 @@ public interface SosWorkOrderRepository
     		       """, nativeQuery = true)
     		List<Object[]> fetchWODropDownForDelivery(
     		        @Param("fromDate") LocalDate fromDate,
-    		        @Param("toDate") LocalDate toDate);
+    		        @Param("toDate") LocalDate toDate);   	
     		
+    		@Query(value = """
+    			       SELECT
+    			           pm.fg_lot_code     AS productFgLotCode,
+    			       FROM sos_work_order_t wo
+    			        INNER JOIN sos_product_master_t pm
+    			           ON wo.product_id = pm.product_id
+    			       
+    			       WHERE wo.wo_id = :woId
+    			       """, nativeQuery = true)
+    			Object[] findFgLotCodeByWoId(@Param("woId") Long woId);
     		
 }

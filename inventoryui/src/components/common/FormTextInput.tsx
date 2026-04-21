@@ -4,6 +4,7 @@ interface FormTextInputProps {
   label: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?:      (e: React.FocusEvent<HTMLInputElement>) => void;
   required?: boolean;
   disabled?: boolean;
   readOnly?: boolean;
@@ -16,6 +17,7 @@ export function FormTextInput({
   label,
   value,
   onChange,
+  onBlur,
   required = false,
   disabled = false,
   readOnly = false,
@@ -35,6 +37,7 @@ export function FormTextInput({
       }
       value={value}
       onChange={onChange}
+      onBlur={onBlur}
       placeholder={placeholder}
       disabled={disabled}
       readOnly={readOnly}

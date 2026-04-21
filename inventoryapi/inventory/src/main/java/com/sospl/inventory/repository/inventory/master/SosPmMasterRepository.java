@@ -88,4 +88,12 @@ public interface SosPmMasterRepository extends JpaRepository<SosPmMaster, Long> 
            """)
     Page<SosPmMasterResponse> searchWithDetailsPaginated(
             @Param("keyword") String keyword, Pageable pageable);
+    
+    
+    @Query(value = """
+    	       SELECT fg_lot_code
+    	       FROM sos_pm_master_t
+    	       WHERE pm_id = :pmId
+    	       """, nativeQuery = true)
+    	String findFgLotCodeByPmId(@Param("pmId") Long pmId);
 }

@@ -7,6 +7,7 @@ import com.sospl.inventory.model.SosWorkOrder;
 import com.sospl.inventory.model.master.SosProdMasterPmDetls;
 import com.sospl.inventory.service.SosWorkOrderService;
 import com.sospl.inventory.service.master.SosProdMasterPmDetlsService;
+import com.sospl.inventory.util.GetCurrentFinancialYear;
 import com.sospl.inventory.util.ParseUtil;
 
 import org.springframework.data.domain.Page;
@@ -76,23 +77,32 @@ public class SosWorkOrderController {
  // REPLACE WITH THIS
     @GetMapping("/dropdown")
     public ResponseEntity<ApiResponse<List<DropDownResponse>>> getDropdown(
-        @RequestParam("fromDate") String fromDate,
-        @RequestParam("toDate")   String toDate
-    ) {
-        LocalDate from = ParseUtil.parseDate(fromDate);
-        LocalDate to   = ParseUtil.parseDate(toDate);
+            @RequestParam(value = "fromDate", required = false) String fromDate,
+            @RequestParam(value = "toDate", required = false) String toDate) {
 
-        if (from == null || to == null) {
-            return ResponseEntity.badRequest()
-                .body(ApiResponse.error("Invalid or missing date parameters"));
+        LocalDate from;
+        LocalDate to;
+
+        if (fromDate != null && toDate != null) {
+            // Use provided dates
+            from = ParseUtil.parseDate(fromDate);
+            to   = ParseUtil.parseDate(toDate);
+
+            if (from == null || to == null) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(
+                                "Invalid date parameters"));
+            }
+        } else {
+            // Default to current financial year
+            from = GetCurrentFinancialYear.getFyStartDate();
+            to   = GetCurrentFinancialYear.getFyEndDate();
         }
 
         return ResponseEntity.ok(
-            ApiResponse.success(
-                "Work order dropdown fetched successfully",
-                service.findWODropDownForDelivery(from, to)
-            )
-        );
+                ApiResponse.success(
+                        "Work order dropdown fetched successfully",
+                        service.findWODropDownForDelivery(from, to)));
     }
 
     // Get by po_id

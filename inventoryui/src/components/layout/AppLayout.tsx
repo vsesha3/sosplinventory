@@ -14,7 +14,7 @@ import {
   IconAtom, IconReceipt, IconStack2,
   IconShoppingCart, IconClipboardList,IconBriefcase,IconFileInvoice,
   IconCalendarStats,
-  IconClipboardData,
+  IconClipboardData,IconFileText 
   
 } from '@tabler/icons-react';
 
@@ -42,6 +42,7 @@ const navGroups = [
     icon: <IconShoppingCart size={17} />,
     items: [
       { label: 'Purchase Orders', path: '/procurement/purchase-orders', icon: <IconClipboardList size={17} /> },
+      { label: 'RM Request', path: '/procurement/rm-request', icon: <IconFileText size={17} /> },
       // Uncomment as you build each:
       // { label: 'RM Request',    path: '/procurement/rm-request',    icon: <IconFileText size={17} /> },
       // { label: 'RM Inward',     path: '/procurement/rm-inward',     icon: <IconPackageImport size={17} /> },
