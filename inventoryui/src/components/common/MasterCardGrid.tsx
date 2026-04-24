@@ -28,6 +28,7 @@ export interface MasterCardGridProps {
   page: number;
   totalPages: number;
   pageSize: number;
+  showToolbar?: boolean;
   onPageChange: (page: number) => void;
 
   // Search
@@ -62,6 +63,7 @@ const MasterCardGrid: React.FC<MasterCardGridProps> = ({
   page,
   totalPages,
   pageSize,
+  showToolbar = true,
   onPageChange,
   searchValue,
   onSearchChange,
@@ -78,13 +80,14 @@ const MasterCardGrid: React.FC<MasterCardGridProps> = ({
   onExport,
 }) => {
   const selectedCount = selected.length;
-  const startRecord   = totalElements === 0 ? 0 : (page - 1) * pageSize + 1;
-  const endRecord     = Math.min(page * pageSize, totalElements);
+  const startRecord = totalElements === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endRecord = Math.min(page * pageSize, totalElements);
 
   return (
     <Paper withBorder>
 
       {/* ── Toolbar ── */}
+      {showToolbar && (
       <Box px="md" py="sm" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
         <Group justify="space-between" wrap="wrap" gap="sm">
           <Group gap="xs">
@@ -148,9 +151,10 @@ const MasterCardGrid: React.FC<MasterCardGridProps> = ({
           </Group>
         </Group>
       </Box>
-
+    )}
       {/* ── Select All bar ── */}
-      {items.length > 0 && (
+      {showToolbar && items.length > 0 && (
+     
         <Box
           px="md" py="xs"
           style={{ borderBottom: '1px solid var(--mantine-color-gray-2)', backgroundColor: 'var(--mantine-color-gray-0)' }}
@@ -190,12 +194,12 @@ const MasterCardGrid: React.FC<MasterCardGridProps> = ({
                   radius="sm"
                   style={{
                     cursor: 'pointer',
-                    border: isSelected
-                      ? '1.5px solid var(--mantine-color-blue-5)'
-                      : '1px solid var(--mantine-color-gray-3)',
+                    borderLeft: isSelected
+                      ? '4px solid var(--mantine-color-blue-5)'
+                      : '4px solid var(--mantine-color-teal-4)',   // ← teal accent always
                     backgroundColor: isSelected
                       ? 'var(--mantine-color-blue-0)'
-                      : undefined,
+                      : 'white',
                     transition: 'border-color 0.15s, background-color 0.15s',
                   }}
                   onClick={() => onToggleSelect(id)}
@@ -209,7 +213,7 @@ const MasterCardGrid: React.FC<MasterCardGridProps> = ({
                         size="sm"
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <Text fw={600} size="sm" lineClamp={1}>
+                      <Text fw={600} size="sm" lineClamp={1} c="teal.7">
                         {item[fields[0]?.key] ?? '—'}
                       </Text>
                     </Group>
@@ -218,7 +222,18 @@ const MasterCardGrid: React.FC<MasterCardGridProps> = ({
                   <Divider mb="xs" />
 
                   {/* Field rows — skip first field (used as header) */}
-                  <Box style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
+
+                  <Box
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '8px 12px',
+                      backgroundColor: 'var(--mantine-color-gray-0)',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      marginTop: 4,
+                    }}
+                  >
                     {fields.slice(1).map((field) => (
                       <Box key={field.key}>
                         <Text size="xs" c="dimmed" style={{ lineHeight: 1.3 }}>{field.label}</Text>

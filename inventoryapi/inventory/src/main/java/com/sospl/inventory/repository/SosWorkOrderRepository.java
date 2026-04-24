@@ -123,12 +123,17 @@ public interface SosWorkOrderRepository
     		@Query(value = """
     			       SELECT
     			           pm.fg_lot_code     AS productFgLotCode,
+    			           cm.company_code    AS companyCode,
+    			           wo.product_id      AS productId
     			       FROM sos_work_order_t wo
-    			        INNER JOIN sos_product_master_t pm
+    			       INNER JOIN sos_purchase_order_t po
+    			           ON po.po_id = wo.po_id
+    			       INNER JOIN sos_product_master_t pm
     			           ON wo.product_id = pm.product_id
-    			       
+    			       INNER JOIN sos_company_master_t cm
+    			           ON po.company_id = cm.company_id
     			       WHERE wo.wo_id = :woId
     			       """, nativeQuery = true)
-    			Object[] findFgLotCodeByWoId(@Param("woId") Long woId);
+    			List<Object[]> findFgLotCodeByWoId(@Param("woId") Long woId);
     		
 }

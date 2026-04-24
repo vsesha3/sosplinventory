@@ -13,28 +13,20 @@ import { FormSelect }     from '../../components/common/FormSelect';
 import { ConfirmDialog }  from '../../components/common/ConfirmDialog';
 import MasterTable        from '../../components/common/MasterTable';
 import type { ColumnDef } from '../../components/common/MasterTable';
+import MasterCardGrid     from '../../components/common/MasterCardGrid';
+import type { CardFieldDef } from '../../components/common/MasterCardGrid';
 
 import { createFormSetters } from '../../components/common/formSetters.ts';
 import type {
   MaterialRequestApiData,
   MaterialRequestDetailApiResponse,
-  MaterialRequestFormData,
+  MaterialRequestFormData,RmMappingLine
 } from '../../types/MaterialRequest.types.ts';
 import type { DropDownOption, DropDownApiResponse } from '../../types/common.types';
 
 // ── RM Mapping types ──────────────────────────────────────────────────────────
 
-interface RmMappingLine {
-  woId:          number;
-  woCode:        string | null;
-  productId:     number | null;
-  rmId:          number;
-  rmCode:        string | null;
-  rmName:        string | null;
-  mixPercentage: number | null;
-  planQty:       number | null;
-  requiredQty:   number | null;
-}
+
 
 const extractDecimal = (v: any): number | null => {
   if (v == null) return null;
@@ -72,12 +64,14 @@ export interface PmPackingDetail {
 const mapPmDetail = (raw: any): PmPackingDetail => ({
   woId:        raw.woId        != null ? Number(raw.woId)   : null,
   pmId:        raw.pmId        != null ? Number(raw.pmId)   : null,
-  pmCode:      raw.pmCode      ?? null,
+  pmCode:      raw.pmCode      != null ? String(raw.pmCode) : null,
   pmName:      raw.pmName      ?? null,
-  pmSize:      extractDecimal(raw.pmSize),
+  pmSize:      raw.pmSize      != null ? Number(raw.pmSize) : null,
   pmQty:       extractDecimal(raw.pmQty),
   pmUom:       raw.pmUom       ?? null,
   description: raw.description ?? null,
+  avgRate:     raw.avgRate     != null ? Number(raw.avgRate) : null,
+  fgLotCode:   raw.fgLotCode   ?? null,
   ...raw,
 });
 
@@ -149,7 +143,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
   // ── PM Packing state ──────────────────────────────────────────────────────
   const [pmLines, setPmLines]     = useState<PmPackingDetail[]>([]);
   const [pmLoading, setPmLoading] = useState(false);
-  const [pmRawResponse, setPmRawResponse] = useState<any>(null);
+ const [pmRawResponse, setPmRawResponse] = useState<any>(null);
 
   const { set, setDate, setStr } = createFormSetters(setForm);
 
@@ -231,7 +225,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
         setPmRawResponse(pmData);              // keep raw for inspection
         const pmArr  = Array.isArray(pmData) ? pmData : pmData ? [pmData] : [];
         setPmLines(pmArr.map(mapPmDetail));
-        console.log(pmData);
+        console.log(pmRawResponse);
       } else {
         console.warn('PM details fetch failed:', pmRes.reason);
         setPmLines([]);
@@ -353,7 +347,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
     if (!form.woId)         errors.push('Work Order is required');
     if (!form.planToProdQty || parseFloat(form.planToProdQty) <= 0)
       errors.push('Request Quantity must be greater than 0');
-    if (remainingPlanQty !== '' && parseFloat(form.planToProdQty) > parseFloat(remainingPlanQty))
+    if (remainingPlanQty !== '' && parseFloat(form.planToProdQty) > parseFloat(form.planToProdQty))
       errors.push(`Request Quantity cannot exceed Remaining Plan Qty (${remainingPlanQty})`);
     if (!form.requestBy)    errors.push('Request By is required');
     return errors;
@@ -584,19 +578,78 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
                 )}
               </Grid.Col>
 
-              {/* ── Right: placeholder for next table ── */}
+              {/* ── Right: PM Packing Details ── */}
               <Grid.Col span={1}>
                 <Group gap="xs" mb="xs">
-                  <Text size="sm" fw={600} c="dimmed">—</Text>
+                  <Text size="sm" fw={600}>PM Packing Details</Text>
+                  {pmLines.length > 0 && (
+                    <Badge size="xs" variant="light" color="teal">
+                      {pmLines.length} item{pmLines.length !== 1 ? 's' : ''}
+                    </Badge>
+                  )}
                 </Group>
-                <Paper withBorder p="xl" radius="sm"
-                  style={{
-                    minHeight: 200,
-                    backgroundColor: 'var(--mantine-color-gray-0)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                  <Text size="xs" c="dimmed">Second table — coming next step</Text>
-                </Paper>
+
+                {pmLoading ? (
+                  <Center py={40}>
+                    <Stack align="center" gap="xs">
+                      <Loader size="sm" />
+                      <Text size="xs" c="dimmed">Loading PM details...</Text>
+                    </Stack>
+                  </Center>
+                ) : pmLines.length > 0 ? (
+                  <MasterCardGrid
+                    fields={[
+                      { key: 'pmName',   label: 'PM Name' },
+                      { key: 'pmCode',   label: 'PM Code' },
+                      { key: 'pmSize',   label: 'PM Size',
+                        render: (v) => v != null ? `${v}` : '—' },
+                      { key: 'noOfPacks', label: 'No. of Packs',
+                        render: (v) => v != null
+                          ? <Text size="sm" fw={700} c="blue">{v}</Text>
+                          : '—' },
+                      { key: 'avgRate',  label: 'Avg Rate',
+                        render: (v) => v != null ? `₹${Number(v).toFixed(2)}` : '—' },
+                    ] as CardFieldDef[]}
+                    items={pmLines.map(pm => ({
+                      ...pm,
+                      noOfPacks: pm.pmSize && pm.pmSize > 0 && form.planToProdQty
+                        ? Math.ceil(Number(form.planToProdQty) / pm.pmSize)
+                        : null,
+                    }))}
+                    idKey="pmId"
+                    showToolbar={false}
+                    totalElements={pmLines.length}
+                    loading={pmLoading}
+                    columns={1}
+                    page={1}
+                    totalPages={1}
+                    pageSize={pmLines.length || 1}
+                    onPageChange={() => {}}
+                    searchValue=""
+                    onSearchChange={() => {}}
+                    selected={[]}
+                    onToggleSelect={() => {}}
+                    onToggleSelectAll={() => {}}
+                    allSelected={false}
+                    someSelected={false}
+                    onRefresh={() => {
+                      if (form.woId) loadRmMapping(form.woId, form.planToProdQty);
+                    }}
+                  />
+                ) : (
+                  <Paper withBorder p="xl" radius="sm"
+                    style={{
+                      minHeight: 200,
+                      backgroundColor: 'var(--mantine-color-gray-0)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                    <Text size="xs" c="dimmed">
+                      {form.woId && form.planToProdQty
+                        ? 'No PM details found.'
+                        : 'Select Work Order and enter Quantity to load PM details.'}
+                    </Text>
+                  </Paper>
+                )}
               </Grid.Col>
 
             </Grid>
@@ -631,7 +684,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
       <ConfirmDialog
         opened={confirmOpen}
         onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
-        onConfirm={() => onSave?.(form)}
+        onConfirm={() => onSave?.({ ...form, rmLines:rmLines })}
         message={`Are you sure you want to ${confirmLabel.toLowerCase()} this Material Request?`}
         confirmLabel={confirmLabel}
         zIndex={250}

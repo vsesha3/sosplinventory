@@ -78,4 +78,11 @@ public interface SosRmRequestRepository
     	       """,
     	       nativeQuery = true)
     	Page<Object[]> findAllRmRequestView(Pageable pageable);
+    	
+    	@Query(value = """
+    		       SELECT COALESCE(MAX(CAST(gin_no AS UNSIGNED)), 0) + 1
+    		       FROM sos_rm_request_t
+    		       WHERE is_deleted = 0
+    		       """, nativeQuery = true)
+    		Long getNextGinNo();
 }

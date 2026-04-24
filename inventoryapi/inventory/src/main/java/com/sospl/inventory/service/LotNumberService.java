@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 public class LotNumberService {
@@ -31,18 +32,20 @@ public class LotNumberService {
     public String generateLotNumber(Long woId, Long pmId) {
 
         // ── Step 1 — Get product fg lot code and company code ─────────────
-        Object[] woData = workOrderRepository
+        List<Object[]> woData = workOrderRepository
                 .findFgLotCodeByWoId(woId);
 
         if (woData == null) {
             throw new RuntimeException(
                     "Work order not found: " + woId);
         }
-        System.out.println("here test"+woData.length);
-
-        String productFgLotCode = ParseUtil.toString(woData[0]);
-        //String companyCode      = ParseUtil.toString(woData[1]);
-        String companyCode = "SWATHI";
+        
+        System.out.println("here test"+woData.get(0)[0]);
+        String productFgLotCode = (String) woData.get(0)[0];
+       
+        String companyCode = (String) woData.get(0)[1];        ;
+       
+     
 
         // ── Step 2 — Get PM fg lot code ───────────────────────────────────
         String pmFgLotCode = pmMasterRepository
@@ -79,7 +82,8 @@ public class LotNumberService {
 
         // ── Step 5 — Format lot number — remove spaces ────────────────────
         // Format: PRODUCTFGLOT-001-COMPANYCODE-YY-PMFGLOT
-        String lotNumber = String.format("%s-%03d-%s-%s-%s",
+      
+        String lotNumber = String.format("%s%03d%s%s%s",
                 productFgLotCode,
                 nextLot,
                 companyCode,

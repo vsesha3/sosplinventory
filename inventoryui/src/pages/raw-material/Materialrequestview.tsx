@@ -155,11 +155,12 @@ const MaterialRequestView: React.FC = () => {
   };
 
   const handleSave = async (formData: MaterialRequestFormData) => {
+   
     try {
       const payload = {
         rmReqId:             formData.rmReqId,
-        rmReqDate:           formData.rmReqDate?.toISOString() ?? null,
-        scheduleDate:        formData.scheduleDate?.toISOString() ?? null,
+        rmReqDate:           formData.rmReqDate ?? new Date().toISOString(),
+        scheduleDate:        formData.scheduleDate ?? null,
         woId:                formData.woId ? Number(formData.woId) : null,
         planToProdQty:       formData.planToProdQty ? Number(formData.planToProdQty) : null,
         productionLotNumber: formData.productionLotNumber || null,
@@ -167,6 +168,16 @@ const MaterialRequestView: React.FC = () => {
         requestBy:           formData.requestBy,
         productionPlanId:    formData.productionPlanId,
         isRmIssueCompleted:  formData.isRmIssueCompleted,
+        lines:                formData.rmLines?.map(line => ({
+          woId:          line.woId,
+          rmId:          line.rmId,
+          rmCode:        line.rmCode,
+          rmName:        line.rmName,
+          mixPercentage: line.mixPercentage,
+          planQty:       line.planQty,
+          requiredQty:   line.requiredQty,
+        })),
+
       };
 
       if (formMode === 'update' && formData.rmReqId) {
@@ -177,7 +188,8 @@ const MaterialRequestView: React.FC = () => {
           message: 'Material Request updated successfully',
         });
       } else {
-        await api.post('/api/inventory/rm-request', payload);
+        
+        await api.post('/api/inventory/rm-request/save', payload);
         notifications.show({
           color:   'green',
           title:   'Created',
@@ -189,6 +201,7 @@ const MaterialRequestView: React.FC = () => {
       setSelected([]);
       await fetchData(page, keyword);
     } catch (err: unknown) {
+      
       notifications.show({
         color: 'red',
         title: 'Save failed',

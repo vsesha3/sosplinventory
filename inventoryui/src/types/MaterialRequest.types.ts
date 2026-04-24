@@ -52,6 +52,20 @@ export interface MaterialRequestFormData {
   requestBy: string | null;
   productionPlanId: number | null;
   isRmIssueCompleted: boolean;
+  rmLines?: RmMappingLine[];
+}
+
+
+export interface RmMappingLine {
+  woId:          number;
+  woCode:        string | null;
+  productId:     number | null;
+  rmId:          number;
+  rmCode:        string | null;
+  rmName:        string | null;
+  mixPercentage: number | null;
+  planQty:       number | null;
+  requiredQty:   number | null;
 }
 
 
@@ -77,4 +91,6 @@ export interface MaterialRequestDetailApiResponse {
   message: string;
   data: MaterialRequestApiData;
 }
+
+
 

@@ -55,6 +55,12 @@ public class SosRmRequestServiceImpl
                 : new SosRmRequest();
 
         boolean isNew = header.getRmReqId() == null;
+        if(isNew) {
+        	 Long nextGinNo = rmRequestRepository.getNextGinNo();
+             request.setGinNo(String.valueOf(nextGinNo));
+             log.info("Generated gin_no: {}", nextGinNo);
+        }
+       
 
         header.setWoId(ParseUtil.parseLong(request.getWoId()));
         header.setProductionPlanId(ParseUtil.parseLong(
