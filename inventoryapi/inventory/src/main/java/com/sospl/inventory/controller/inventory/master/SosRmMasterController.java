@@ -6,6 +6,7 @@ import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterNativeResponse;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterRequest;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterResponse;
+import com.sospl.inventory.model.inventory.master.SosRmMaster;
 import com.sospl.inventory.service.inventory.master.SosRmMasterService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -133,9 +134,21 @@ public class SosRmMasterController {
 
     // ── Always last ───────────────────────────────────────────────────────
 
+    @GetMapping("/code/{id}")
+    public ResponseEntity<ApiResponse<SosRmMaster>> getByCode(
+            @PathVariable Integer id) {
+    	
+        
+        		 return ResponseEntity.ok(
+        	                ApiResponse.success("RM fetched successfully",
+        	                        service.findByRmCode(id)));
+    }  
+    
+    
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<SosRmMasterResponse>> getById(
             @PathVariable Integer id) {
+    	
         return ResponseEntity.ok(
                 ApiResponse.success("RM fetched successfully",
                         service.findById(id)));

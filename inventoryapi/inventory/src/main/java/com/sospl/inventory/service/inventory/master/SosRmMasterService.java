@@ -5,8 +5,10 @@ import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterNativeResponse;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterRequest;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterResponse;
+import com.sospl.inventory.model.inventory.master.SosRmMaster;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface SosRmMasterService {
 
@@ -40,6 +42,10 @@ public interface SosRmMasterService {
     List<DropDownResponse> findAllForDropDown();
     
     List<SosRmMasterResponse> findAllActiveWithDetailsLong();
+
+	
+	SosRmMaster findByRmCode(Integer code);
+	
     
     
 }

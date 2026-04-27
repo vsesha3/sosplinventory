@@ -22,6 +22,7 @@ public interface SosRmMasterRepository
     List<SosRmMaster> findAllByIsActiveTrueAndIsDeletedFalse();
 
     Optional<SosRmMaster> findByRmIdAndIsDeletedFalse(Integer rmId);
+    Optional<SosRmMaster> findByRmCodeAndIsDeletedFalse(Integer rmCode);
 
     Boolean existsByRmId(Integer rmId);
 
@@ -166,5 +167,7 @@ public interface SosRmMasterRepository
            """, nativeQuery = true)
     Page<SosRmMasterNativeResponse> searchActiveWithDetailsPaginated(
             @Param("keyword") String keyword, Pageable pageable);
+
+	
 }
 

@@ -227,21 +227,39 @@ const fetchRmList = async (): Promise<DropDownOption[]> => {
   };
 
   // RM selected from dropdown — map code/name from option label
-  const handleRmChange = (value: string | null) => {
-    const selected = dropdowns.rmOptions.find(opt => opt.value === value);
-    // label format is "CODE - NAME", extract name part
-    const namePart = selected?.label
-      ? selected.label.includes(' - ')
-        ? selected.label.substring(selected.label.indexOf(' - ') + 3)
-        : selected.label
-      : null;
+const handleRmChange = async (value: string | null) => {
+  const selected = dropdowns.rmOptions.find(opt => opt.value === value);
+  // label format is "CODE - NAME", extract name part
+  const namePart = selected?.label
+    ? selected.label.includes(' - ')
+      ? selected.label.substring(selected.label.indexOf(' - ') + 3)
+      : selected.label
+    : null;
+
+  setItem(prev => ({
+    ...prev,
+    poRmId:   value,
+    poRmCode: value ?? '',
+    poRmName: namePart,
+  }));
+
+  // ── Fetch RM details by ID ─────────────────────────────────────────────
+  if (!value) return;
+  try {
+    const res = await api.get(`/api/rm/code/${value}`);
+    const rmDetail = res.data?.data ?? res.data;
+    console.log('[handleRmChange] RM detail:', rmDetail);
     setItem(prev => ({
-      ...prev,
-      poRmId:   value,
-      poRmCode: value ?? '',
-      poRmName: namePart,
-    }));
-  };
+  ...prev,
+  poUom:   rmDetail?.uomId   != null ? String(rmDetail.uomId)   : prev.poUom,
+  hsnCode: rmDetail?.hsnCode ?? prev.hsnCode,
+}));
+
+    // TODO: use rmDetail in next step
+  } catch (err: any) {
+    console.error('[handleRmChange] Failed to fetch RM detail:', err?.response?.data ?? err);
+  }
+};
 
   const toggleNewMaterial = () => {
     setItem(prev => ({

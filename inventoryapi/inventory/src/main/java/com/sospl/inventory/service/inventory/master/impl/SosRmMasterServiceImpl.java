@@ -15,7 +15,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,13 +60,28 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
 
     @Override
     public SosRmMasterResponse findById(Integer id) {
+    	
         return repository.findAllWithDetails()
                 .stream()
                 .filter(r -> r.getRmId().equals(id))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("RM not found"));
     }
+    
+   
+    @Override
+    public SosRmMaster findByRmCode(Integer code) {
+        SosRmMaster entity = repository
+                .findByRmCodeAndIsDeletedFalse(code)
+                .orElseThrow(() -> new RuntimeException(
+                        "RM not found for code: " + code));
 
+        return entity;
+    }
+    
+
+    
+    
     @Override
     public void delete(Integer id) {
         repository.deleteById(id);
