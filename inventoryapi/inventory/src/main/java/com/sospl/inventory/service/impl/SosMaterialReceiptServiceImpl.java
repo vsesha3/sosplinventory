@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -173,13 +174,28 @@ public class SosMaterialReceiptServiceImpl
                         : new SosMaterialReceipt();
 
                 boolean isNewReceipt = receipt.getReceiptId() == null;
+                
+                String lotNo = line.getLotNumber();
+
+                if (lotNo == null || lotNo.isBlank()) {
+                    // Generate lot number — materialId + timestamp
+                    String materialId = line.getPoRmCode() != null
+                            ? line.getPoRmCode()
+                            : "RM";
+                    String timestamp = LocalDateTime.now()
+                            .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+                    lotNo = materialId + "-" + timestamp;
+                    log.info("Generated lot number: {}", lotNo);
+                }
+
+                receipt.setLotNo(lotNo);
 
                 receipt.setMaterialType(request.getPoType());
                 receipt.setReceiptDetId(receiptDetId);
                 receipt.setReceiptMainId(receiptDetId);
+                receipt.setMaterialId(ParseUtil.toLong(line.getPoRmCode()));
                 receipt.setPoRefNo(poRefNo);
                 receipt.setPoDetId(poDetId);
-                receipt.setLotNo(line.getLotNumber());
                 receipt.setQty(ParseUtil.parseBigDecimal(
                         line.getRmReceivedQty()));
                 receipt.setPerUnitRate(ParseUtil.parseBigDecimal(
@@ -392,9 +408,7 @@ public class SosMaterialReceiptServiceImpl
                     lineReq.setLotNumber(line.getLotNo());
                     lineReq.setExpectedDeliveryDate(line.getDom() != null
                             ? line.getDom().toString() : null);
-                    lineReq.setRmOrderQty(line.getNoOfReceived() != null
-                            ? String.valueOf(line.getNoOfReceived()) : null);
-
+                   
                     // ── Get receipt info from sos_po_receipt_t ────────────────
                     if (line.getPoDetId() != null
                             && det.getReceiptDetId() != null) {
@@ -416,6 +430,9 @@ public class SosMaterialReceiptServiceImpl
                                             ? pr.getRmReceivedQty()
                                                     .toPlainString()
                                             : null);
+                                    lineReq.setRmOrderQty(pr.getRmOrdQty() != null
+                                            ? String.valueOf(pr.getRmOrdQty()) : null);
+
                                 });
 
                         // ── Get po details for rm code, name, uom ────────────

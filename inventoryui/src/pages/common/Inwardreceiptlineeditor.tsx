@@ -85,7 +85,7 @@ const validate = (line: InwardReceiptLine): string[] => {
     errors.push('Expected Delivery Date is required');
   if (!line.actualDeliveryDate)
     errors.push('Actual Delivery Date is required');
-  if(Number(line.rmReceivedQty) > line.rmOrderQty)
+  if( Number(line.rmReceivedQty) > line.rmOrderQty) 
     errors.push('Received Quantity cannot exceed Ordered Quantity');
   return errors;
 };
@@ -244,7 +244,8 @@ const InwardReceiptLineEditor: React.FC<InwardReceiptLineEditorProps> = ({
                   <Text size="xs" c="dimmed">Remaining Qty</Text>
                   
 <Text size="sm" fw={600}>
-  {(( form.rmOrderQty ?? 0) - parseFloat(form.rmReceivedQty || '0')).toFixed(3)}
+  {form.rmOrderQty-form.rmOrderQty ? (form.rmOrderQty - safe(form.rmReceivedQty)).toFixed(3) : '—'}
+  
 </Text>
                 </Stack>
               </Group>

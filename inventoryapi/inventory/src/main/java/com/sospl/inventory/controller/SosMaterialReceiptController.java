@@ -2,6 +2,7 @@ package com.sospl.inventory.controller;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptDetRequest;
+import com.sospl.inventory.dto.inventory.SosMaterialReceiptLineRequest;
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptSummaryResponse;
 import com.sospl.inventory.dto.inventory.SosMaterialReceiptWithRMDetailsResponse;
 import com.sospl.inventory.model.SosMaterialReceipt;
@@ -28,6 +29,7 @@ public class SosMaterialReceiptController {
     }
     
     
+    
  // Get header by po ref no
  // REMOVE orElseThrow — return null instead
     @GetMapping("/header/po/{poRefNo}")
@@ -40,6 +42,9 @@ public class SosMaterialReceiptController {
                         service.findHeaderByPoRefNo(poRefNo)
                                 .orElse(null))); // ← return null if not found
     }
+    
+    
+    
     
     
     @PostMapping("/save")
@@ -108,6 +113,18 @@ public class SosMaterialReceiptController {
                 ApiResponse.success(
                         "Receipts fetched successfully",
                         service.findByPoRefNo(poRefNo, materialType)));
+    }
+    
+ 
+    @GetMapping("/rmlist/{rmDetId}")
+    public ResponseEntity<ApiResponse<List<SosMaterialReceiptLineRequest>>> getByRmDetId(
+            @PathVariable Long rmDetId) {
+    	
+    	System.out.println("here test");
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Receipts fetched successfully",
+                        service.findFullReceiptByReceiptDetId(rmDetId).getLines()));
     }
 
     // Create

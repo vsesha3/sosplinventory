@@ -84,18 +84,19 @@ public class SosRmRequestController {
                         service.findLinesByRmReqId(rmReqId)));
     }
 
-    // Update
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<SosRmRequest>> update(
+    public ResponseEntity<ApiResponse<Long>> update(
             @PathVariable Long id,
-            @RequestBody SosRmRequest request) {
-        request.setUpdatedAt(LocalDateTime.now());
+            @RequestBody SosRmRequestDto request) {
+        // Set rmReqId from path variable so saveRmRequest knows it is an update
+        request.setRmReqId(String.valueOf(id));
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "RM request updated successfully",
-                        service.update(id, request)));
+                        service.saveRmRequest(request)));
     }
-
+    
+    
     // Soft delete header
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(

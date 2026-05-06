@@ -50,35 +50,22 @@ const COLUMNS: ColumnDef[] = [
 // ── Child columns (RM details per receipt) ────────────────────────────────────
 
 const CHILD_COLUMNS: ChildColumnDef[] = [
-  { key: 'receiptId', label: 'Det ID', width: 90 },
-  {
-    key: 'noOfReceived', label: 'Qty Received', width: 110, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(3) : '—'
-  },
-  {
-    key: 'perUnitRate', label: 'Rate', width: 100, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—'
-  },
-  {
-    key: 'netAmount', label: 'Net Amount', width: 110, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—'
-  },
-  {
-    key: 'sgstValue', label: 'SGST Amt', width: 100, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—'
-  },
-  {
-    key: 'cgstValue', label: 'CGST Amt', width: 100, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—'
-  },
-  {
-    key: 'igstValue', label: 'IGST Amt', width: 100, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—'
-  },
-  {
-    key: 'totalAmount', label: 'Total', width: 110, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(2) : '—'
-  },
+  { key: 'poRmCode',             label: 'RM Code',      width: 100 },
+  { key: 'poRmName',             label: 'RM Name',      width: 180 },
+  { key: 'poUom',                label: 'UOM',          width: 80  },
+  { key: 'rmReceivedQty',        label: 'Qty Received', width: 110, align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(3) : '—' },
+  { key: 'receivedRate',         label: 'Rate',         width: 100, align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(2) : '—' },
+  { key: 'sgst',                 label: 'SGST %',       width: 80,  align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(2) : '—' },
+  { key: 'cgst',                 label: 'CGST %',       width: 80,  align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(2) : '—' },
+  { key: 'igst',                 label: 'IGST %',       width: 80,  align: 'right',
+    render: (v) => v != null ? Number(v).toFixed(2) : '—' },
+  { key: 'lotNumber',            label: 'Lot No',       width: 130 },
+  { key: 'expectedDeliveryDate', label: 'Exp Del',      width: 110 },
+  { key: 'actualDeliveryDate',   label: 'Act Del',      width: 110 },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -333,7 +320,7 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
           )}
 
         </Box>
-       // Replace the RawMaterialInwardReceipt block with:
+      
         <RawMaterialInwardReceipt
           opened={inwardOpen}
           onClose={() => {

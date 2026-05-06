@@ -6,9 +6,11 @@ import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.model.SosWorkOrder;
 import com.sospl.inventory.model.master.SosProdMasterPmDetls;
 import com.sospl.inventory.service.SosWorkOrderService;
+import com.sospl.inventory.service.inventory.master.SosProductMasterService;
 import com.sospl.inventory.service.master.SosProdMasterPmDetlsService;
 import com.sospl.inventory.util.GetCurrentFinancialYear;
 import com.sospl.inventory.util.ParseUtil;
+import com.sospl.inventory.util.WoCodeGenerator;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,6 +20,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @RestController
@@ -26,10 +30,12 @@ public class SosWorkOrderController {
 
     private final SosWorkOrderService service;
     private final SosProdMasterPmDetlsService pmDetlsService;
+    private final SosProductMasterService pmService;
 
-    public SosWorkOrderController(SosWorkOrderService service,SosProdMasterPmDetlsService _pmDetlsService) {
+    public SosWorkOrderController(SosWorkOrderService service,SosProdMasterPmDetlsService _pmDetlsService,SosProductMasterService _pmService) {
         this.service = service;
         this.pmDetlsService = _pmDetlsService;
+        this.pmService =_pmService;
     }
 
     // ── Static paths FIRST — /{id} LAST ──────────────────────────────────
@@ -152,6 +158,8 @@ public class SosWorkOrderController {
         request.setIsActive(true);
         request.setIsDeleted(false);
         request.setCreatedAt(java.time.LocalDateTime.now());
+        
+        resolveWoCode(request);
         SosWorkOrder saved = service.save(request);
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -164,6 +172,7 @@ public class SosWorkOrderController {
             @PathVariable Long id,
             @RequestBody SosWorkOrder request) {
         SosWorkOrder updated = service.update(id, request);
+        resolveWoCode(request);
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "Work order updated successfully", updated));
@@ -219,6 +228,26 @@ public class SosWorkOrderController {
                 ApiResponse.success(
                         "PM details dropdown fetched successfully",
                         pmDetlsService.findAllForDropDown()));
+    }
+    
+    
+    private void resolveWoCode(SosWorkOrder request) {
+        if (request.getWoCode() == null
+                || request.getWoCode().isBlank()) {
+
+            // Get product name
+            String productName = "NA";
+            if (request.getProductId() != null) {
+                productName = pmService
+                        .findById(request.getProductId())
+                        .map(p -> p.getProductName())
+                        .orElse("NA");
+            }
+
+            String woCode = WoCodeGenerator.generate(productName);
+            request.setWoCode(woCode);
+            System.out.println("Generated woCode: " + woCode);
+        }
     }
 
 }

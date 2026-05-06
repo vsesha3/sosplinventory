@@ -112,21 +112,22 @@ const handleEdit = () => {
   const found = lines.find(l => l.poDetId === selectedLines[0]);
   if (!found) return;
 
-  const ordered  = found.rmOrderQty ?? 0;
-  const received = parseFloat(found.rmReceivedQty || '0');
 
-  if (ordered > 0 && received >= ordered) {
+ 
+
+ /*  if (ordered > 0 && received >= ordered) {
     setErrorMessages([
       `${found.poRmName} (${found.poRmCode}) has already been fully received.`,
       `Order Qty: ${ordered.toFixed(3)}, Received Qty: ${received.toFixed(3)}`,
     ]);
     setErrorDialogOpen(true);
     return; // ← block editor from opening
-  }
+  } */
 
   setEditingLine({ ...found });
   setEditorMode('edit');
   setEditorOpen(true);
+  setErrorMessages([]);
 };
 
   const handleDelete = () => {
@@ -140,7 +141,7 @@ const handleEdit = () => {
     setSelectedLines([]);
   };
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
-const [errorMessages, setErrorMessages]     = useState<string[]>([]);
+  const [errorMessages, setErrorMessages]     = useState<string[]>([]);
 
   // ── Build rows ────────────────────────────────────────────────────────────
 

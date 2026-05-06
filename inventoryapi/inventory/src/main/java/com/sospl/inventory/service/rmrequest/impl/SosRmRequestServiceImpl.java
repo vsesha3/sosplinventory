@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -55,13 +56,15 @@ public class SosRmRequestServiceImpl
                 : new SosRmRequest();
 
         boolean isNew = header.getRmReqId() == null;
-        if(isNew) {
-        	 Long nextGinNo = rmRequestRepository.getNextGinNo();
-             request.setGinNo(String.valueOf(nextGinNo));
-             log.info("Generated gin_no: {}", nextGinNo);
-        }
-       
 
+        // ── Generate gin_no for new records ──────────────────────────────
+        if (isNew) {
+            Long nextGinNo = rmRequestRepository.getNextGinNo();
+            request.setGinNo(String.valueOf(nextGinNo));
+            log.info("Generated gin_no: {}", nextGinNo);
+        }
+
+        // ── Map header fields ─────────────────────────────────────────────
         header.setWoId(ParseUtil.parseLong(request.getWoId()));
         header.setProductionPlanId(ParseUtil.parseLong(
                 request.getProductionPlanId()));
@@ -91,16 +94,19 @@ public class SosRmRequestServiceImpl
                     header.getRmReqId());
         }
 
+        // ── Save header ───────────────────────────────────────────────────
         SosRmRequest savedHeader = rmRequestRepository.save(header);
         Long rmReqId = savedHeader.getRmReqId();
         log.info("Header saved — rmReqId: {}", rmReqId);
 
+        // ── Save lines ────────────────────────────────────────────────────
         if (request.getLines() != null
                 && !request.getLines().isEmpty()) {
             for (SosRmRequestLineDto line : request.getLines()) {
 
                 Long rmId = ParseUtil.parseLong(line.getRmId());
 
+                // Upsert — check existing line by rmReqId + rmId
                 SosRmRequestDetls detls = rmRequestDetlsRepository
                         .findAllByRmReqIdAndIsDeletedFalse(rmReqId)
                         .stream()
@@ -113,18 +119,23 @@ public class SosRmRequestServiceImpl
 
                 detls.setRmReqId(rmReqId);
                 detls.setRmId(rmId);
-                detls.setQty(ParseUtil.parseBigDecimal(line.getQty()));
+
+                // ── Fix — requiredQty is already BigDecimal ───────────────
+                detls.setQty(line.getRequiredQty() != null
+                        ? line.getRequiredQty()
+                        : BigDecimal.ZERO);
+
                 detls.setIsActive(true);
                 detls.setIsDeleted(false);
 
                 if (isNewLine) {
                     detls.setCreatedAt(LocalDateTime.now());
-                    log.info("Creating new RM request line — rmId: {}",
-                            rmId);
+                    log.info("Creating new RM request line — rmId: {} "
+                            + "qty: {}", rmId, line.getRequiredQty());
                 } else {
                     detls.setUpdatedAt(LocalDateTime.now());
-                    log.info("Updating RM request line — rmId: {}",
-                            rmId);
+                    log.info("Updating RM request line — rmId: {} "
+                            + "qty: {}", rmId, line.getRequiredQty());
                 }
 
                 rmRequestDetlsRepository.save(detls);
@@ -133,7 +144,6 @@ public class SosRmRequestServiceImpl
 
         return rmReqId;
     }
-
     // ── Fetch ─────────────────────────────────────────────────────────────
 
     @Override
