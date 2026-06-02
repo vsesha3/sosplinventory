@@ -5,7 +5,11 @@ import { Table, Checkbox } from '@mantine/core';
 import api from '../../services/api';
 import MasterTable  from '../../components/common/MasterTable';
 import type { ColumnDef } from '../../components/common/MasterTable';
-import type { PagedApiResponse } from '../../types/api.types';
+import RawMaterialForm from './Forms/RawMaterialForm';
+import type {RawMaterialFormData} from './Forms/RawMaterialForm';
+import SaveStatusBanner from '../../pages/common/Savestatusbanner';
+import type {SaveStatus}  from '../../pages/common/Savestatusbanner';
+
 
 interface RawMaterial {
   id: number;
@@ -17,7 +21,19 @@ interface RawMaterial {
   avgRate: number | null;
 }
 
-
+interface ApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    content: RawMaterial[];
+    pageNumber: number;
+    pageSize: number;
+    totalElements: number;
+    totalPages: number;
+    first: boolean;
+    last: boolean;
+  };
+}
 
 const PAGE_SIZE = 10;
 
@@ -42,6 +58,12 @@ const RawMaterialPage: React.FC = () => {
   const [totalPages, setTotalPages]       = useState(1);
   const [totalElements, setTotalElements] = useState(0);
 
+  const [formOpen, setFormOpen]       = useState(false);
+  const [editRmId, setEditRmId]       = useState<number | null>(null);
+  const [formMode, setFormMode]       = useState<'create' | 'update'>('create');
+  const [saveStatus, setSaveStatus]   = useState<SaveStatus>('idle');
+  const [saveMessage, setSaveMessage] = useState('');
+
   // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async (currentPage: number, currentKeyword: string) => {
     try {
@@ -51,7 +73,7 @@ const RawMaterialPage: React.FC = () => {
 
       const params = { page: currentPage - 1, size: PAGE_SIZE, sortBy: 'rmId', sortDir: 'asc' };
       const url = currentKeyword.trim() ? '/api/rm/search' : '/api/rm';
-      const response = await api.get<PagedApiResponse<RawMaterial>>(url, {
+      const response = await api.get<ApiResponse>(url, {
         params: currentKeyword.trim() ? { ...params, keyword: currentKeyword.trim() } : params,
       });
 
@@ -96,6 +118,45 @@ const RawMaterialPage: React.FC = () => {
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
     );
+  };
+
+  // ── Save ─────────────────────────────────────────────────────────────────
+  const handleSave = async (data: RawMaterialFormData) => {
+    setSaveStatus('saving');
+    try {
+      const payload = {
+        rmName:             data.rmName,
+        sapCode:            data.sapCode       || null,
+        uomId:              data.uomId         ? Number(data.uomId)      : null,
+        rmGroupId:          data.rmGroupId     ? Number(data.rmGroupId)  : null,
+        hNhId:              data.hNhId         ? Number(data.hNhId)      : null,
+        exciseTariffNo:     data.exciseTariffNo || null,
+        exciseDeclaredItem: data.exciseDeclaredItem,
+        exciseRate:         data.exciseRate    ? Number(data.exciseRate)   : null,
+        eCessRate:          data.eCessRate     ? Number(data.eCessRate)    : null,
+        shECessRate:        data.shECessRate   ? Number(data.shECessRate)  : null,
+        avgRate:            data.avgRate       ? Number(data.avgRate)      : null,
+        packUomId:          data.packUomId     ? Number(data.packUomId)    : null,
+        packSize:           data.packSize      ? Number(data.packSize)     : null,
+        capacity:           data.capacity      ? Number(data.capacity)     : null,
+        testId:             data.testId        ? Number(data.testId)       : null,
+        testCode:           data.testCode      || null,
+      };
+      if (formMode === 'update' && data.id) {
+        await api.put(`/api/rm/${data.id}`, payload);
+      } else {
+        await api.post('/api/rm', payload);
+      }
+      setSaveStatus('success');
+      setSaveMessage(formMode === 'update' ? 'Raw Material updated!' : 'Raw Material created!');
+      setFormOpen(false);
+      setEditRmId(null);
+      setFormMode('create');
+      fetchData(page, keyword);
+    } catch (err: any) {
+      setSaveStatus('error');
+      setSaveMessage(err?.response?.data?.message || 'Failed to save Raw Material.');
+    }
   };
 
   // ── Rows ──────────────────────────────────────────────────────────────────
@@ -157,13 +218,42 @@ const RawMaterialPage: React.FC = () => {
           someSelected={someSelected}
           onToggleSelectAll={toggleSelectAll}
           selectedCount={selected.length}
-          onAdd={() => console.log('Add')}
-          onEdit={() => console.log('Edit', selected)}
+          onAdd={() => {
+            setEditRmId(null);
+            setFormMode('create');
+            setFormOpen(true);
+          }}
+          onEdit={() => {
+            if (selected.length === 1) {
+              setEditRmId(selected[0]);
+              setFormMode('update');
+              setFormOpen(true);
+            }
+          }}
           onDelete={() => console.log('Delete', selected)}
           onRefresh={() => fetchData(page, keyword)}
           onExport={() => console.log('Export')}
         />
       )}
+      <RawMaterialForm
+        opened={formOpen}
+        onClose={() => {
+          setFormOpen(false);
+          setEditRmId(null);
+          setFormMode('create');
+        }}
+        onSave={handleSave}
+        rmId={editRmId}
+        mode={formMode}
+      />
+
+      <SaveStatusBanner
+        status={saveStatus}
+        successMessage={saveMessage}
+        errorMessage={saveMessage}
+        onDismiss={() => setSaveStatus('idle')}
+      />
+
     </Box>
   );
 };
