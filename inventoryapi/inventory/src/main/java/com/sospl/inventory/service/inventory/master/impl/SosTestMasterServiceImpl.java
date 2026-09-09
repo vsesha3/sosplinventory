@@ -1,5 +1,6 @@
 package com.sospl.inventory.service.inventory.master.impl;
 
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.model.inventory.master.SosTestMaster;
 import com.sospl.inventory.repository.inventory.master.SosTestMasterRepository;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class SosTestMasterServiceImpl
@@ -46,6 +48,17 @@ public class SosTestMasterServiceImpl
         return buildPagedResponse(
                 testRepository.searchPaginated(keyword, pageable));
     }
+    
+    @Override
+    public List<DropDownResponse> findAllForDropDown() {
+        return repository.findAll()
+                .stream()
+                .filter(r -> r.getTestCode() != null)           // ← skip null id records
+                .map(r -> new DropDownResponse(
+                        r.getTestCode(),
+                        r.getTestName() != null ? r.getTestName() : "-"))  // ← null safe name
+                .collect(Collectors.toList());
+    }
 
     private Pageable buildPageable(int page, int size,
                                     String sortBy, String sortDir) {
@@ -67,4 +80,6 @@ public class SosTestMasterServiceImpl
                 pageData.isLast()
         );
     }
+    
+    
 }

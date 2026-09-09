@@ -4,13 +4,22 @@ import java.math.BigDecimal;
 
 public class SosRmMasterResponse {
 
-    private Integer rmId;
+    public int getRmGroupId() {
+		return rmGroupId;
+	}
+
+	public void setRmGroupId(int rmGroupId) {
+		this.rmGroupId = rmGroupId;
+	}
+	
+	private Integer rmId;
     private Long rmCode;
     private String rmName;
     private String uomName;
     private String rmGroupName;
     private String testName;
     private BigDecimal avgRate;
+    private int rmGroupId;
 
     // New fields for active with pack details
     private Long uomId;
@@ -26,7 +35,7 @@ public class SosRmMasterResponse {
             String uomName,
             String rmGroupName,
             String testName,
-            BigDecimal avgRate
+            BigDecimal avgRate,Integer rmGroupId
     ) {
         this.rmId        = rmId;
         this.rmCode      = rmCode;
@@ -35,8 +44,11 @@ public class SosRmMasterResponse {
         this.rmGroupName = rmGroupName != null ? rmGroupName : "-";
         this.testName    = testName != null ? testName : "-";
         this.avgRate     = avgRate;
+        this.rmGroupId = rmGroupId;
     }
+    
 
+    
     // ── Constructor 1b — Long rmId, Long rmCode (7 fields) ───────────────
     public SosRmMasterResponse(
             Long rmId,

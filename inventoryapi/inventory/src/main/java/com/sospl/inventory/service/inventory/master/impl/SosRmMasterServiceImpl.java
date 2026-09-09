@@ -7,6 +7,7 @@ import com.sospl.inventory.dto.inventory.master.SosRmMasterRequest;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterResponse;
 import com.sospl.inventory.mapper.inventory.master.SosRmMasterMapper;
 import com.sospl.inventory.model.inventory.master.SosRmMaster;
+import com.sospl.inventory.repository.inventory.master.SosRmGroupMasterRepository;
 import com.sospl.inventory.repository.inventory.master.SosRmMasterRepository;
 import com.sospl.inventory.service.inventory.master.SosRmMasterService;
 import org.springframework.data.domain.Page;
@@ -24,9 +25,11 @@ import java.util.stream.Collectors;
 public class SosRmMasterServiceImpl implements SosRmMasterService {
 
     private final SosRmMasterRepository repository;
+    private final SosRmGroupMasterRepository rmGroupRepository;
 
-    public SosRmMasterServiceImpl(SosRmMasterRepository repository) {
+    public SosRmMasterServiceImpl(SosRmMasterRepository repository,SosRmGroupMasterRepository rmGroupRepository) {
         this.repository = repository;
+        this.rmGroupRepository = rmGroupRepository;
     }
 
     @Override
@@ -180,6 +183,17 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
                 .map(r -> new DropDownResponse(
                         r.getRmId(),
                         r.getRmName() != null ? r.getRmName() : "-"))  // ← null safe name
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<DropDownResponse> findAllForDropDownRmGroup() {
+        return rmGroupRepository.findAll()
+                .stream()
+                .filter(r -> r.getRmGroupId() != null)           // ← skip null id records
+                .map(r -> new DropDownResponse(
+                        r.getRmGroupId(),
+                        r.getRmGroupName() != null ? r.getRmGroupName() : "-"))  // ← null safe name
                 .collect(Collectors.toList());
     }
     

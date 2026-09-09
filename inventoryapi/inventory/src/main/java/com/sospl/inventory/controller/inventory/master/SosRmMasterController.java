@@ -47,6 +47,13 @@ public class SosRmMasterController {
                 ApiResponse.success("RMs fetched successfully",
                         service.findAllForDropDown()));
     }
+    
+    @GetMapping("/dropdownRmGroup")
+    public ResponseEntity<ApiResponse<List<DropDownResponse>>> getDropDownRmGroup() {
+        return ResponseEntity.ok(
+                ApiResponse.success("RMs fetched successfully",
+                        service.findAllForDropDown()));
+    }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<SosRmMasterResponse>> update(

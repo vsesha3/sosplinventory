@@ -40,6 +40,7 @@ public interface SosRmMasterService {
             String sortBy, String sortDir);
     
     List<DropDownResponse> findAllForDropDown();
+    List<DropDownResponse> findAllForDropDownRmGroup();
     
     List<SosRmMasterResponse> findAllActiveWithDetailsLong();
 

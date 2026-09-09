@@ -1,6 +1,7 @@
 package com.sospl.inventory.controller.inventory.master;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.model.inventory.master.SosTestMaster;
 import com.sospl.inventory.service.inventory.master.SosTestMasterService;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/inventory/test-master")
@@ -26,6 +28,14 @@ public class SosTestMasterController {
         return ResponseEntity.ok(
                 ApiResponse.success("Test master created successfully",
                         service.save(entity)));
+    }
+    
+    
+    @GetMapping("/dropdown")
+    public ResponseEntity<ApiResponse<List<DropDownResponse>>> getDropDown() {
+        return ResponseEntity.ok(
+                ApiResponse.success("RMs fetched successfully",
+                        service.findAllForDropDown()));
     }
 
     // Update

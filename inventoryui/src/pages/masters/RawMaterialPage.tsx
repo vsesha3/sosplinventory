@@ -12,7 +12,7 @@ import type {SaveStatus}  from '../../pages/common/Savestatusbanner';
 
 
 interface RawMaterial {
-  id: number;
+  rmId: number;
   rmCode: number;
   rmName: string;
   uomName: string;
@@ -102,19 +102,20 @@ const RawMaterialPage: React.FC = () => {
   }, [searchInput]);
 
   // ── Selection ─────────────────────────────────────────────────────────────
-  const allIds       = data.map((item) => item.id);
+  const allIds       = data.map((item) => item.rmId);
   const allSelected  = allIds.length > 0 && allIds.every((id) => selected.includes(id));
   const someSelected = allIds.some((id) => selected.includes(id)) && !allSelected;
 
-  const toggleSelectAll = () => {
-    if (allSelected) {
-      setSelected((prev) => prev.filter((id) => !allIds.includes(id)));
-    } else {
-      setSelected((prev) => [...new Set([...prev, ...allIds])]);
-    }
-  };
+ const toggleSelectAll = () => {
+  if (allSelected) {
+    setSelected(prev => prev.filter(id => !allIds.includes(id)));
+  } else {
+    setSelected(prev => [...new Set([...prev, ...allIds])]);  // ← selects everything
+  }
+};
 
   const toggleRow = (id: number) => {
+    
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
     );
@@ -130,11 +131,7 @@ const RawMaterialPage: React.FC = () => {
         uomId:              data.uomId         ? Number(data.uomId)      : null,
         rmGroupId:          data.rmGroupId     ? Number(data.rmGroupId)  : null,
         hNhId:              data.hNhId         ? Number(data.hNhId)      : null,
-        exciseTariffNo:     data.exciseTariffNo || null,
-        exciseDeclaredItem: data.exciseDeclaredItem,
-        exciseRate:         data.exciseRate    ? Number(data.exciseRate)   : null,
-        eCessRate:          data.eCessRate     ? Number(data.eCessRate)    : null,
-        shECessRate:        data.shECessRate   ? Number(data.shECessRate)  : null,
+         gstRate:   data.gstRate     ? Number(data.gstRate)   : null,
         avgRate:            data.avgRate       ? Number(data.avgRate)      : null,
         packUomId:          data.packUomId     ? Number(data.packUomId)    : null,
         packSize:           data.packSize      ? Number(data.packSize)     : null,
@@ -161,28 +158,32 @@ const RawMaterialPage: React.FC = () => {
 
   // ── Rows ──────────────────────────────────────────────────────────────────
   const rows = data.map((item) => {
-    const isSelected = selected.includes(item.id);
-    return (
-      <Table.Tr key={item.id} bg={isSelected ? 'var(--mantine-color-blue-0)' : undefined}>
-        <Table.Td>
-          <Checkbox checked={isSelected} onChange={() => toggleRow(item.id)} size="sm" />
-        </Table.Td>
-        <Table.Td>{item.rmCode}</Table.Td>
-        <Table.Td fw={500}>{item.rmName}</Table.Td>
-        <Table.Td>
-          <Badge variant="light" color="blue" size="sm">{item.uomName}</Badge>
-        </Table.Td>
-        <Table.Td>{item.rmGroupName}</Table.Td>
-        <Table.Td>{item.testName ?? <Text c="dimmed" size="sm">—</Text>}</Table.Td>
-        <Table.Td ta="right">
-          {item.avgRate != null
-            ? <Text size="sm" ta="right">{Number(item.avgRate).toFixed(2)}</Text>
-            : <Text c="dimmed" size="sm" ta="right">—</Text>
-          }
-        </Table.Td>
-      </Table.Tr>
-    );
-  });
+  const isSelected = selected.includes(item.rmId);
+  
+  return (
+    <Table.Tr key={item.rmId} bg={isSelected ? 'var(--mantine-color-blue-0)' : undefined}>
+      <Table.Td>
+        <Checkbox
+          checked={isSelected}
+          onChange={() => toggleRow(item.rmId)}
+          size="sm"
+        />
+      </Table.Td>
+      <Table.Td>{item.rmCode}</Table.Td>
+      <Table.Td fw={500}>{item.rmName}</Table.Td>
+      <Table.Td>
+        <Badge variant="light" color="blue" size="sm">{item.uomName}</Badge>
+      </Table.Td>
+      <Table.Td>{item.rmGroupName}</Table.Td>
+      <Table.Td>{item.testName ?? <Text c="dimmed" size="sm">—</Text>}</Table.Td>
+      <Table.Td ta="right">
+        {item.avgRate != null
+          ? <Text size="sm" ta="right">{Number(item.avgRate).toFixed(2)}</Text>
+          : <Text c="dimmed" size="sm" ta="right">—</Text>}
+      </Table.Td>
+    </Table.Tr>
+  );
+});
 
   return (
     <Box p="md" style={{ width: '100%', overflowX: 'auto' }}>

@@ -38,10 +38,12 @@ public interface SosRmMasterRepository
                 r.rmId,
                 r.rmCode,
                 r.rmName,
+               
                 u.uomName,
                 g.rmGroupName,
                 t.testName,
-                r.avgRate
+                r.avgRate,
+                 r.rmGroupId
            )
            FROM SosRmMaster r
            LEFT JOIN SosUomMaster u ON r.uomId = u.uomId
