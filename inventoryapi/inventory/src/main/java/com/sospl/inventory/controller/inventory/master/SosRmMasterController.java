@@ -27,7 +27,7 @@ public class SosRmMasterController {
     // ── Existing endpoints — DO NOT CHANGE ────────────────────────────────
 
     @PostMapping
-    public ResponseEntity<ApiResponse<SosRmMasterResponse>> create(
+    public ResponseEntity<ApiResponse<SosRmMaster>> create(
             @Valid @RequestBody SosRmMasterRequest request) {
         return ResponseEntity.ok(
                 ApiResponse.success("RM created successfully",
@@ -56,7 +56,7 @@ public class SosRmMasterController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<SosRmMasterResponse>> update(
+    public ResponseEntity<ApiResponse<SosRmMaster>> update(
             @PathVariable Integer id,
             @Valid @RequestBody SosRmMasterRequest request) {
         return ResponseEntity.ok(
@@ -153,7 +153,7 @@ public class SosRmMasterController {
     
     
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<SosRmMasterResponse>> getById(
+    public ResponseEntity<ApiResponse<SosRmMaster>> getById(
             @PathVariable Integer id) {
     	
         return ResponseEntity.ok(

@@ -124,20 +124,21 @@ const RawMaterialPage: React.FC = () => {
   // ── Save ─────────────────────────────────────────────────────────────────
   const handleSave = async (data: RawMaterialFormData) => {
     setSaveStatus('saving');
+    
+    
     try {
       const payload = {
-        rmName:             data.rmName,
-        sapCode:            data.sapCode       || null,
-        uomId:              data.uomId         ? Number(data.uomId)      : null,
-        rmGroupId:          data.rmGroupId     ? Number(data.rmGroupId)  : null,
-        hNhId:              data.hNhId         ? Number(data.hNhId)      : null,
-         gstRate:   data.gstRate     ? Number(data.gstRate)   : null,
-        avgRate:            data.avgRate       ? Number(data.avgRate)      : null,
-        packUomId:          data.packUomId     ? Number(data.packUomId)    : null,
-        packSize:           data.packSize      ? Number(data.packSize)     : null,
-        capacity:           data.capacity      ? Number(data.capacity)     : null,
-        testId:             data.testId        ? Number(data.testId)       : null,
-        testCode:           data.testCode      || null,
+        rmId: data.rmId ? Number(data.rmId) : null,
+        rmCode: data.rmCode ? Number(data.rmCode) : null, // ← Integer
+        rmName: data.rmName,
+        uomId: data.uomId ? Number(data.uomId) : null,
+        rmGroupId: data.rmGroupId ? Number(data.rmGroupId) : null,
+        hNhId: data.hNhId ? Number(data.hNhId) : null,
+        avgRate: data.avgRate ? Number(data.avgRate) : null,
+        packUom: data.packUom ? Number(data.packUom) : null,
+        packSize: data.packSize ? Number(data.packSize) : null,
+        capacity: data.capacity ? Number(data.capacity) : null,
+        testId: data.testId ? Number(data.testId) : null,
       };
       if (formMode === 'update' && data.id) {
         await api.put(`/api/rm/${data.id}`, payload);

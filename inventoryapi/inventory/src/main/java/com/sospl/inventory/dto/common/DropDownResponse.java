@@ -1,41 +1,17 @@
 package com.sospl.inventory.dto.common;
 
-
-
 public class DropDownResponse {
 
-    private String value;  // id field — always String
-    private String label;  // name field — displayed in UI
-    private String quantity; // ← new — remaining or total qty
+    private String value;
+    private String label;
+    private String quantity;
     private String productName;
     private String productCode;
     private String poId;
+    private String testCode;
 
-    public String getProductName() {
-		return productName;
-	}
+    // ── Constructors ──────────────────────────────────────────────────────
 
-	public void setProductName(String productName) {
-		this.productName = productName;
-	}
-
-	public String getProductCode() {
-		return productCode;
-	}
-
-	public void setProductCode(String productCode) {
-		this.productCode = productCode;
-	}
-
-	public String getPoId() {
-		return poId;
-	}
-
-	public void setPoId(String poId) {
-		this.poId = poId;
-	}
-
-	// ── Existing constructors ─────────────────────────────────────────────
     public DropDownResponse(String value, String label) {
         this.value = value;
         this.label = label;
@@ -51,13 +27,15 @@ public class DropDownResponse {
         this.label = label;
     }
 
-    // ── New constructor with quantity ─────────────────────────────────────
-    public DropDownResponse(Long value, String label, String quantity) {
+    // ── With quantity ─────────────────────────────────────────────────────
+    public DropDownResponse(Long value, String label,
+            String quantity) {
         this.value    = value != null ? value.toString() : null;
         this.label    = label;
         this.quantity = quantity;
     }
-    
+
+    // ── With quantity, poId, productName, productCode ─────────────────────
     public DropDownResponse(Long value, String label,
             String quantity, String poId,
             String productName, String productCode) {
@@ -69,6 +47,16 @@ public class DropDownResponse {
         this.productCode = productCode;
     }
 
+    // ── With testCode ─────────────────────────────────────────────────────
+    public DropDownResponse(Long value, String label,
+            String quantity, String testCode,
+            boolean isTestCode) {
+        this.value    = value != null ? value.toString() : null;
+        this.label    = label;
+        this.quantity = quantity;
+        this.testCode = testCode;
+    }
+
     // ── Getters and Setters ───────────────────────────────────────────────
     public String getValue() { return value; }
     public void setValue(String value) { this.value = value; }
@@ -78,4 +66,16 @@ public class DropDownResponse {
 
     public String getQuantity() { return quantity; }
     public void setQuantity(String quantity) { this.quantity = quantity; }
+
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
+
+    public String getProductCode() { return productCode; }
+    public void setProductCode(String productCode) { this.productCode = productCode; }
+
+    public String getPoId() { return poId; }
+    public void setPoId(String poId) { this.poId = poId; }
+
+    public String getTestCode() { return testCode; }
+    public void setTestCode(String testCode) { this.testCode = testCode; }
 }

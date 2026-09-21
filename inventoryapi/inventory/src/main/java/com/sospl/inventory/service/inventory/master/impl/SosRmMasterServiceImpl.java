@@ -35,14 +35,14 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     }
 
     @Override
-    public SosRmMasterResponse create(SosRmMasterRequest request) {
+    public SosRmMaster create(SosRmMasterRequest request) {
         SosRmMaster entity = SosRmMasterMapper.toEntity(request);
         repository.save(entity);
         return findById(entity.getRmId());
     }
 
     @Override
-    public SosRmMasterResponse update(Integer id,
+    public SosRmMaster update(Integer id,
             SosRmMasterRequest request) {
         SosRmMaster existing = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException(
@@ -68,22 +68,10 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
 
     // ── Fix 2 — findById returns SosRmMasterResponse ─────────────────────
     @Override
-    public SosRmMasterResponse findById(Integer id) {
-        SosRmMaster entity = repository.findById(id)
+    public SosRmMaster findById(Integer id) {
+        return repository.findById(id)
                 .orElseThrow(() -> new RuntimeException(
                         "RM not found: " + id));
-        return new SosRmMasterResponse(
-                entity.getRmId(),
-                entity.getRmCode() != null
-                        ? entity.getRmCode().longValue() : null,
-                entity.getRmName(),
-                null,               // uomName — not available without join
-                null,               // rmGroupName
-                null,               // testName
-                entity.getAvgRate(),
-                entity.getRmGroupId() != null
-                        ? entity.getRmGroupId() : 0
-        );
     }
 
     // ── Fix 3 — findAllWithDetails uses Object[] mapping ─────────────────

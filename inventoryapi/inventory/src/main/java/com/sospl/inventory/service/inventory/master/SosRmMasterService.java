@@ -12,11 +12,11 @@ import java.util.Optional;
 
 public interface SosRmMasterService {
 
-    SosRmMasterResponse create(SosRmMasterRequest request);
-    SosRmMasterResponse update(Integer id, SosRmMasterRequest request);
+    SosRmMaster create(SosRmMasterRequest request);
+    SosRmMaster update(Integer id, SosRmMasterRequest request);
     List<SosRmMasterResponse> findAll();
     List<SosRmMasterResponse> findAllWithDetails();    // ← add this
-    SosRmMasterResponse findById(Integer id);
+    SosRmMaster findById(Integer id);
     void delete(Integer id);
     PagedResponse<SosRmMasterResponse> findAllPaginated(
             int page, int size, String sortBy, String sortDir);
