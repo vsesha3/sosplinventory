@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
   Grid, Stack, Loader, Center, Table, ActionIcon,
-  Divider, Badge,
+  Badge,
 } from '@mantine/core';
 import { IconPackage, IconPlus, IconTrash } from '@tabler/icons-react';
 import { FormTextInput } from '../../../components/common/FormTextInput';
@@ -43,7 +43,8 @@ export interface ProductMasterFormData {
   testId:           string | null;
   testCode:         string | null;
   conversionCost:   string;
-  rmMappings:       RmMappingRow[];
+  rmMappings:       RmMappingRow[];   // RM section
+  pmMappings:       RmMappingRow[];   // PM section (future)
 }
 
 export interface ProductMasterFormProps {
@@ -74,6 +75,7 @@ const defaultForm: ProductMasterFormData = {
   testCode:         null,
   conversionCost:   '',
   rmMappings:       [],
+  pmMappings:       [],
 };
 
 const newRow = (): RmMappingRow => ({
@@ -150,8 +152,17 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
 
   // ── Filter helper ─────────────────────────────────────────────────────────
 
-  const clean = (arr: any[]): DropDownOption[] =>
-    (arr ?? []).filter(o => o.label != null && o.value != null);
+  // Same clean function used across all master forms
+  // API standard response: { value, label, quantity, productName, ... }
+  const clean = (data: any[]): DropDownOption[] => {
+    if (!data || !Array.isArray(data)) return [];
+    return data
+      .filter(item => item != null && item.value != null)
+      .map(item => ({
+        value: String(item.value),
+        label: item.label ?? '-',
+      }));
+  };
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -163,14 +174,18 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
       return;
     }
 
-    const load = async () => {
-      setLoading(true);
-      try {
+  const load = async () => {
+    setLoading(true);
+    try {
         const [uomRes, groupRes, testRes, rmRes] = await Promise.all([
-          api.get('/api/uom/dropdown').catch(() => ({ data: { data: [] } })),
-          api.get('/api/product/dropdownProductGroup').catch(() => ({ data: { data: [] } })),
-          api.get('/api/inventory/test-master/dropdown').catch(() => ({ data: { data: [] } })),
-          api.get('/api/rm/dropdown').catch(() => ({ data: { data: [] } })),
+            api.get('/api/dropdown/uom')
+                .catch(() => ({ data: { data: [] } })),
+            api.get('/api/dropdown/product-group')
+                .catch(() => ({ data: { data: [] } })),
+            api.get('/api/dropdown/test-master')
+                .catch(() => ({ data: { data: [] } })),
+            api.get('/api/dropdown/rm')
+                .catch(() => ({ data: { data: [] } })),
         ]);
 
         setUomOptions(clean(uomRes.data.data));
@@ -179,52 +194,80 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
         setRmOptions(clean(rmRes.data.data));
 
         if (mode === 'update' && productId) {
-          const res = await api.get(`/api/product/${productId}`);
-          const d   = res.data.data ?? res.data;
 
-          // Load RM mappings
-          let rmMappings: RmMappingRow[] = [];
-          if (d.rmMappings?.length) {
-            rmMappings = d.rmMappings.map((m: any) => ({
-              rowId:      crypto.randomUUID(),
-              rmId:       m.rmId      != null ? String(m.rmId)   : null,
-              rmCode:     m.rmCode    != null ? String(m.rmCode) : '',
-              percentage: m.percentage != null ? String(m.percentage) : '',
-            }));
-          }
+            // ── Fetch product and RM mappings in parallel ─────────────
+            const [productRes, rmMappingRes] = await Promise.all([
+                api.get(`/api/product/${productId}`),
+                api.get(`/api/product/rm-details/${productId}`)
+                    .catch(() => ({ data: { data: [] } })),
+            ]);
 
-          setForm({
-            id:               d.productId       ?? null,
-            productCode:      d.productCode     != null ? String(d.productCode)      : '',
-            sapCode:          d.sapCode         ?? '',
-            productCodePrefix:d.productCodePrefix ?? '',
-            productName:      d.productName     ?? '',
-            brandName:        d.brandName       ?? '',
-            uomId:            d.uomId           != null ? String(d.uomId)            : null,
-            fgLotCode:        d.fgLotCode       != null ? String(d.fgLotCode)        : '',
-            productGroupId:   d.productGroupId  != null ? String(d.productGroupId)   : null,
-            capacity:         d.capacity        != null ? String(d.capacity)         : '',
-            packingType:      d.packingType     ?? '',
-            rate:             d.rate            != null
-              ? String(typeof d.rate === 'object'
-                  ? (d.rate.parsedValue ?? d.rate.source ?? '')
-                  : d.rate)
-              : '',
-            gstRate:          d.gstRate         != null ? String(d.gstRate)          : '',
-            testId:           d.testId          != null ? String(d.testId)           : null,
-            testCode:         d.testCode        != null ? String(d.testCode)         : null,
-            conversionCost:   d.conversionCost  != null ? String(d.conversionCost)  : '',
-            rmMappings,
-          });
+            const d = productRes.data.data ?? productRes.data;
+
+            // ── Map RM mappings from new endpoint ─────────────────────
+            const extractPct = (v: any): string => {
+              if (v == null) return '';
+              if (typeof v === 'object') return String(v.parsedValue ?? v.source ?? '');
+              return String(v);
+            };
+
+            const rmMappings: RmMappingRow[] = (
+                rmMappingRes.data.data ?? []
+            ).map((m: any) => {
+              const rmIdStr = m.rmId != null ? String(m.rmId) : null;
+              return {
+                rowId:      crypto.randomUUID(),
+                rmId:       rmIdStr,     // matches rmOptions value — enables auto-select
+                rmCode:     rmIdStr ?? '',
+                percentage: extractPct(m.mixPercentage),
+              };
+            });
+            setForm({
+                id:                d.productId         ?? null,
+                productCode:       d.productCode       != null
+                                        ? String(d.productCode)       : '',
+                sapCode:           d.sapCode           ?? '',
+                productCodePrefix: d.productCodePrefix ?? '',
+                productName:       d.productName       ?? '',
+                brandName:         d.brandName         ?? '',
+                uomId:             d.uomId             != null
+                                        ? String(d.uomId)             : null,
+                fgLotCode:         d.fgLotCode         != null
+                                        ? String(d.fgLotCode)         : '',
+                productGroupId:    d.productGroupId    != null
+                                        ? String(d.productGroupId)    : null,
+                capacity:          d.capacity          != null
+                                        ? String(d.capacity)          : '',
+                packingType:       d.packingType       ?? '',
+                rate:              d.rate              != null
+                                        ? String(typeof d.rate === 'object'
+                                            ? (d.rate.parsedValue
+                                                ?? d.rate.source ?? '')
+                                            : d.rate)
+                                        : '',
+                gstRate:           d.gstRate           != null
+                                        ? String(d.gstRate)           : '',
+                testId:            d.testId            != null
+                                        ? String(d.testId)            : null,
+                testCode:          d.testCode          != null
+                                        ? String(d.testCode)          : null,
+                conversionCost:    d.conversionCost    != null
+                                        ? String(d.conversionCost)    : '',
+                rmMappings,
+                pmMappings: [],         // ← PM section future
+            });
         }
-      } catch {
-        setFetchError('Failed to load form data. Please close and try again.');
-      } finally {
+    } catch {
+        setFetchError(
+            'Failed to load form data. Please close and try again.');
+    } finally {
         setLoading(false);
-      }
-    };
+    }
+};
 
-    load();
+load();
+
+   
   }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Form helpers ──────────────────────────────────────────────────────────
@@ -260,10 +303,9 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
       rmMappings: prev.rmMappings.map(r => {
         if (r.rowId !== rowId) return r;
         if (field === 'rmId') {
-          // Auto-fill rmCode from the selected option label
+          // value = rm_id (e.g. "54"), label = rm_name (e.g. "Acrylic Acid")
           const opt = rmOptions.find(o => o.value === value);
-          const codeMatch = opt?.label?.match(/^(\S+)/);
-          return { ...r, rmId: value, rmCode: codeMatch?.[1] ?? '' };
+          return { ...r, rmId: value, rmCode: value ?? '' };
         }
         return { ...r, [field]: value ?? '' };
       }),
@@ -498,7 +540,7 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
               </Paper>
 
               {/* ── Section 2: RM Mapping Sub-table ── */}
-              <Paper withBorder p="md" radius="sm"
+              <Paper withBorder p="md" radius="sm" mb="md"
                 style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
 
                 <Group justify="space-between" mb="sm">
@@ -555,17 +597,16 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
                   <Table highlightOnHover withTableBorder withColumnBorders>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th style={{ width: '50%' }}>Raw Material</Table.Th>
-                        <Table.Th style={{ width: '20%' }}>RM Code</Table.Th>
-                        <Table.Th style={{ width: '22%' }}>Percentage (%)</Table.Th>
-                        <Table.Th style={{ width: '8%' }}></Table.Th>
+                        <Table.Th style={{ width: '60%' }}>Raw Material</Table.Th>
+                        <Table.Th style={{ width: '30%' }}>Percentage (%)</Table.Th>
+                        <Table.Th style={{ width: '10%' }}></Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
                       {form.rmMappings.map(row => (
                         <Table.Tr key={row.rowId}>
 
-                          {/* Raw Material dropdown */}
+                          {/* Raw Material dropdown — value=rmId, label=rmName from options */}
                           <Table.Td>
                             <FormSelect
                               label=""
@@ -574,17 +615,6 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
                               data={rmOptions}
                               placeholder="Select raw material"
                               searchable
-                            />
-                          </Table.Td>
-
-                          {/* RM Code — auto-filled, readonly */}
-                          <Table.Td>
-                            <FormTextInput
-                              label=""
-                              value={row.rmCode}
-                              onChange={() => {}}
-                              placeholder="—"
-                              readOnly
                             />
                           </Table.Td>
 
@@ -618,7 +648,6 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
                   </Table>
                 )}
 
-                {/* Percentage hint */}
                 {form.rmMappings.length > 0 && (
                   <Text size="xs" c="dimmed" mt="xs">
                     Percentages represent the mix ratio for this product.
@@ -627,6 +656,37 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
                       : ` Total is ${totalPct.toFixed(2)}% — does not need to equal 100%.`}
                   </Text>
                 )}
+
+              </Paper>
+
+              {/* ── Section 3: PM Details (placeholder for future) ── */}
+              <Paper withBorder p="md" radius="sm"
+                style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
+
+                <Group justify="space-between" mb="sm">
+                  <Group gap="sm">
+                    <Text size="xs" fw={600} c="dimmed" tt="uppercase">
+                      Packing Material Details
+                    </Text>
+                    <Badge size="xs" variant="light" color="gray">Coming soon</Badge>
+                  </Group>
+                  <Button size="xs" variant="light" leftSection={<IconPlus size={12} />} disabled>
+                    Add Row
+                  </Button>
+                </Group>
+
+                <Box
+                  py="xl"
+                  style={{
+                    textAlign: 'center',
+                    border: '1.5px dashed var(--mantine-color-gray-3)',
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text size="sm" c="dimmed">
+                    Packing material mapping will be configured here
+                  </Text>
+                </Box>
 
               </Paper>
 

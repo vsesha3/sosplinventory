@@ -182,4 +182,19 @@ public class DropDownRepository {
                         rs.getString("name"),
                         rs.getString("quantity")));
     }
+    
+    public List<DropDownResponse> getProductGroupDropDown() {
+        return jdbcTemplate.query("""
+                SELECT
+                    product_group_id AS id,
+                    group_name       AS name
+                FROM sos_product_group_master_t
+                WHERE is_active = 1
+                AND is_deleted = 0
+                ORDER BY group_name ASC
+                """,
+                (rs, rowNum) -> new DropDownResponse(
+                        rs.getLong("id"),
+                        rs.getString("name")));
+    }
 }

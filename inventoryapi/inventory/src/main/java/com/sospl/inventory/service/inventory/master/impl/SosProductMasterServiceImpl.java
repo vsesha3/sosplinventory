@@ -6,6 +6,8 @@ import com.sospl.inventory.dto.inventory.master.SosProductMasterResponse;
 import com.sospl.inventory.model.inventory.master.SosProductMaster;
 import com.sospl.inventory.repository.inventory.master.SosProductMasterRepository;
 import com.sospl.inventory.service.inventory.master.SosProductMasterService;
+import com.sospl.inventory.service.master.SosProdMasterRmDetlsService;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,9 +22,12 @@ import java.util.stream.Collectors;
 public class SosProductMasterServiceImpl implements SosProductMasterService {
 
     private final SosProductMasterRepository repository;
+    private final SosProdMasterRmDetlsService rmDetlsService;
 
-    public SosProductMasterServiceImpl(SosProductMasterRepository repository) {
+
+    public SosProductMasterServiceImpl(SosProductMasterRepository repository,SosProdMasterRmDetlsService rmDetlsService) {
         this.repository = repository;
+        this.rmDetlsService = rmDetlsService;
     }
 
     @Override

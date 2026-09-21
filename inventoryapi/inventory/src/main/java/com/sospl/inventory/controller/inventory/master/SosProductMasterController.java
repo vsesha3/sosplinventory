@@ -5,7 +5,10 @@ import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosProductMasterResponse;
 import com.sospl.inventory.model.inventory.master.SosProductMaster;
+import com.sospl.inventory.model.master.SosProdMasterRmDetls;
 import com.sospl.inventory.service.inventory.master.SosProductMasterService;
+import com.sospl.inventory.service.master.SosProdMasterRmDetlsService;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,10 +28,12 @@ import java.util.List;
 public class SosProductMasterController {
 
     private final SosProductMasterService service;
+    private final SosProdMasterRmDetlsService rmDetlsService;
     
 
-    public SosProductMasterController(SosProductMasterService service) {
+    public SosProductMasterController(SosProductMasterService service,SosProdMasterRmDetlsService rmDetlsService) {
         this.service = service;
+        this.rmDetlsService = rmDetlsService;
     }
 
     // Create
@@ -119,5 +124,17 @@ public class SosProductMasterController {
                         "PM dropdown fetched successfully",
                         service.findAllForDropDown()));
     }
+    
+    
+ // Get RM details by product id
+    @GetMapping("/rm-details/{productId}")
+    public ResponseEntity<ApiResponse<List<SosProdMasterRmDetls>>> getRmDetailsByProductId(
+            @PathVariable Long productId) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "RM details fetched successfully",
+                        rmDetlsService.findByProductId(productId)));
+    }
+    
     
 }
