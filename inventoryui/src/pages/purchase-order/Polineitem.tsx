@@ -253,6 +253,7 @@ const handleRmChange = async (value: string | null) => {
   ...prev,
   poUom:   rmDetail?.uomId   != null ? String(rmDetail.uomId)   : prev.poUom,
   hsnCode: rmDetail?.hsnCode ?? prev.hsnCode,
+  poPackSize:rmDetail?.packSize ?? prev.poPackSize
 }));
 
     // TODO: use rmDetail in next step

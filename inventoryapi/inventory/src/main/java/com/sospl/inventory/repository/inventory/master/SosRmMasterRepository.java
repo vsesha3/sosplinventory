@@ -31,27 +31,28 @@ public interface SosRmMasterRepository
     List<SosRmMaster> findByRmNameContainingIgnoreCaseAndIsDeletedFalse(
             String keyword);
 
-    // ── Existing queries — DO NOT CHANGE ─────────────────────────────────
-
-    @Query("""
-           SELECT new com.sospl.inventory.dto.inventory.master.SosRmMasterResponse(
-                r.rmId,
-                r.rmCode,
-                r.rmName,
-               
-                u.uomName,
-                g.rmGroupName,
-                t.testName,
-                r.avgRate,
-                 r.rmGroupId
-           )
-           FROM SosRmMaster r
-           LEFT JOIN SosUomMaster u ON r.uomId = u.uomId
-           LEFT JOIN SosRmGroupMaster g ON r.rmGroupId = g.rmGroupId
-           LEFT JOIN SosTestMaster t ON r.testId = t.testId
-           """)
-    List<SosRmMasterResponse> findAllWithDetails();
-
+    @Query(value = """
+    	       SELECT
+    	           r.rm_id             AS rmId,
+    	           r.rm_code           AS rmCode,
+    	           r.rm_name           AS rmName,
+    	           u.uom_name          AS uomName,
+    	           g.rm_group_name     AS rmGroupName,
+    	           t.test_name         AS testName,
+    	           r.avg_rate          AS avgRate,
+    	           r.rm_group_id       AS rmGroupId
+    	       FROM sos_rm_master_t r
+    	       LEFT JOIN sos_uom_master_t u
+    	           ON r.uom_id = u.uom_id
+    	       LEFT JOIN sos_rm_group_master_t g
+    	           ON r.rm_group_id = g.rm_group_id
+    	       LEFT JOIN sos_test_master_t t
+    	           ON r.test_id = t.test_id
+    	       WHERE r.is_deleted = 0
+    	       ORDER BY r.rm_name ASC
+    	       """, nativeQuery = true)
+    	List<Object[]> findAllWithDetails();
+    	
     @Query("""
            SELECT new com.sospl.inventory.dto.inventory.master.SosRmMasterResponse(
                 r.rmId,

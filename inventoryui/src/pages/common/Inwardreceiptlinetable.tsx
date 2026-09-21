@@ -130,6 +130,14 @@ const handleEdit = () => {
   setErrorMessages([]);
 };
 
+const handleAddNewEntry = () =>{
+
+
+    console.log(lines);
+    
+
+}
+
   const handleDelete = () => {
     onChange(lines.filter(l => !selectedLines.includes(l.poDetId)));
     setSelectedLines([]);
@@ -321,7 +329,7 @@ const handleEdit = () => {
         onToggleSelectAll={toggleAll}
         selectedCount={selectedLines.length}
         footer={footer}
-        onAdd={undefined}
+        onAdd={handleAddNewEntry}
         onEdit={readOnly ? undefined : handleEdit}
         onDelete={readOnly ? undefined : handleDelete}
         onRefresh={undefined}

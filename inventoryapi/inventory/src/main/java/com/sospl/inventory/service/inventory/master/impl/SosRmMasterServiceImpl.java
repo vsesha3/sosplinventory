@@ -10,13 +10,13 @@ import com.sospl.inventory.model.inventory.master.SosRmMaster;
 import com.sospl.inventory.repository.inventory.master.SosRmGroupMasterRepository;
 import com.sospl.inventory.repository.inventory.master.SosRmMasterRepository;
 import com.sospl.inventory.service.inventory.master.SosRmMasterService;
+import com.sospl.inventory.util.ParseUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,8 +27,10 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     private final SosRmMasterRepository repository;
     private final SosRmGroupMasterRepository rmGroupRepository;
 
-    public SosRmMasterServiceImpl(SosRmMasterRepository repository,SosRmGroupMasterRepository rmGroupRepository) {
-        this.repository = repository;
+    public SosRmMasterServiceImpl(
+            SosRmMasterRepository repository,
+            SosRmGroupMasterRepository rmGroupRepository) {
+        this.repository       = repository;
         this.rmGroupRepository = rmGroupRepository;
     }
 
@@ -40,9 +42,11 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     }
 
     @Override
-    public SosRmMasterResponse update(Integer id, SosRmMasterRequest request) {
+    public SosRmMasterResponse update(Integer id,
+            SosRmMasterRequest request) {
         SosRmMaster existing = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("RM not found"));
+                .orElseThrow(() -> new RuntimeException(
+                        "RM not found"));
         existing.setRmCode(request.getRmCode());
         existing.setRmName(request.getRmName());
         existing.setUomId(request.getUomId());
@@ -56,35 +60,64 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
         return findById(id);
     }
 
+    // ── Fix 1 — findAll returns List<SosRmMasterResponse> ────────────────
     @Override
     public List<SosRmMasterResponse> findAll() {
-        return repository.findAllWithDetails();
+        return findAllWithDetails();
+    }
+
+    // ── Fix 2 — findById returns SosRmMasterResponse ─────────────────────
+    @Override
+    public SosRmMasterResponse findById(Integer id) {
+        SosRmMaster entity = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException(
+                        "RM not found: " + id));
+        return new SosRmMasterResponse(
+                entity.getRmId(),
+                entity.getRmCode() != null
+                        ? entity.getRmCode().longValue() : null,
+                entity.getRmName(),
+                null,               // uomName — not available without join
+                null,               // rmGroupName
+                null,               // testName
+                entity.getAvgRate(),
+                entity.getRmGroupId() != null
+                        ? entity.getRmGroupId() : 0
+        );
+    }
+
+    // ── Fix 3 — findAllWithDetails uses Object[] mapping ─────────────────
+    @Override
+    public List<SosRmMasterResponse> findAllWithDetails() {
+        return repository.findAllWithDetails()
+                .stream()
+                .filter(row -> row != null && row[0] != null)
+                .map(row -> new SosRmMasterResponse(
+                        ParseUtil.toInteger(row[0]),
+                        ParseUtil.toInteger(row[1]) != null
+                                ? ParseUtil.toInteger(row[1])
+                                        .longValue()
+                                : null,
+                        ParseUtil.toString(row[2]),
+                        ParseUtil.toString(row[3]),
+                        ParseUtil.toString(row[4]),
+                        ParseUtil.toString(row[5]),
+                        ParseUtil.toBigDecimal(row[6]),
+                        ParseUtil.toInteger(row[7]) != null
+                                ? ParseUtil.toInteger(row[7])
+                                : 0
+                ))
+                .collect(Collectors.toList());
     }
 
     @Override
-    public SosRmMasterResponse findById(Integer id) {
-    	
-        return repository.findAllWithDetails()
-                .stream()
-                .filter(r -> r.getRmId().equals(id))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("RM not found"));
-    }
-    
-   
-    @Override
     public SosRmMaster findByRmCode(Integer code) {
-        SosRmMaster entity = repository
+        return repository
                 .findByRmCodeAndIsDeletedFalse(code)
                 .orElseThrow(() -> new RuntimeException(
                         "RM not found for code: " + code));
-
-        return entity;
     }
-    
 
-    
-    
     @Override
     public void delete(Integer id) {
         repository.deleteById(id);
@@ -92,7 +125,8 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
 
     @Override
     public PagedResponse<SosRmMasterResponse> findAllPaginated(
-            int page, int size, String sortBy, String sortDir) {
+            int page, int size,
+            String sortBy, String sortDir) {
         Pageable pageable = buildPageable(page, size, sortBy, sortDir);
         Page<SosRmMasterResponse> result =
                 repository.findAllWithDetailsPaginated(pageable);
@@ -109,7 +143,7 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
         return buildPagedResponse(result);
     }
 
-    // ── New methods using NativeResponse ─────────────────────────────────
+    // ── Native response methods ───────────────────────────────────────────
 
     @Override
     public List<SosRmMasterNativeResponse> findAllActiveWithDetails() {
@@ -117,35 +151,86 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     }
 
     @Override
-    public PagedResponse<SosRmMasterNativeResponse> findAllActiveWithDetailsPaginated(
-            int page, int size, String sortBy, String sortDir) {
+    public PagedResponse<SosRmMasterNativeResponse>
+            findAllActiveWithDetailsPaginated(
+                    int page, int size,
+                    String sortBy, String sortDir) {
         Pageable pageable = buildPageable(page, size, sortBy, sortDir);
-        Page<SosRmMasterNativeResponse> result =           // ← NativeResponse
+        Page<SosRmMasterNativeResponse> result =
                 repository.findAllActiveWithDetailsPaginated(pageable);
-        return buildNativePagedResponse(result);           // ← separate helper
+        return buildNativePagedResponse(result);
     }
 
     @Override
-    public PagedResponse<SosRmMasterNativeResponse> searchActiveWithDetails(
-            String keyword, int page, int size,
-            String sortBy, String sortDir) {
+    public PagedResponse<SosRmMasterNativeResponse>
+            searchActiveWithDetails(
+                    String keyword, int page, int size,
+                    String sortBy, String sortDir) {
         Pageable pageable = buildPageable(page, size, sortBy, sortDir);
-        Page<SosRmMasterNativeResponse> result =           // ← NativeResponse
-                repository.searchActiveWithDetailsPaginated(keyword, pageable);
-        return buildNativePagedResponse(result);           // ← separate helper
+        Page<SosRmMasterNativeResponse> result =
+                repository.searchActiveWithDetailsPaginated(
+                        keyword, pageable);
+        return buildNativePagedResponse(result);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    // ── Dropdown methods ──────────────────────────────────────────────────
+
+    @Override
+    public List<DropDownResponse> findAllForDropDown() {
+        return repository
+                .findAllByIsActiveTrueAndIsDeletedFalse()
+                .stream()
+                .filter(r -> r.getRmId() != null)
+                .map(r -> new DropDownResponse(
+                        r.getRmId(),
+                        r.getRmName() != null
+                                ? r.getRmName() : "-"))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<DropDownResponse> findAllForDropDownRmGroup() {
+        return rmGroupRepository.findAll()
+                .stream()
+                .filter(r -> r.getRmGroupId() != null)
+                .map(r -> new DropDownResponse(
+                        r.getRmGroupId(),
+                        r.getRmGroupName() != null
+                                ? r.getRmGroupName() : "-"))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SosRmMasterResponse> findAllActiveWithDetailsLong() {
+        return repository.findAllActiveWithDetails()
+                .stream()
+                .filter(r -> r.getRmId() != null)
+                .map(r -> new SosRmMasterResponse(
+                        r.getRmId() != null
+                                ? r.getRmId().longValue() : null,
+                        r.getRmCode(),
+                        r.getRmName() != null ? r.getRmName() : "-",
+                        r.getUomId(),
+                        r.getUomName() != null ? r.getUomName() : "-",
+                        r.getPackUom(),
+                        r.getPackUomName() != null
+                                ? r.getPackUomName() : "-",
+                        r.getAvgRate(),
+                        r.getPackSize()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────
 
     private Pageable buildPageable(int page, int size,
-                                    String sortBy, String sortDir) {
+            String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()
                 : Sort.by(sortBy).ascending();
         return PageRequest.of(page, size, sort);
     }
 
-    // For SosRmMasterResponse (existing)
     private PagedResponse<SosRmMasterResponse> buildPagedResponse(
             Page<SosRmMasterResponse> page) {
         return new PagedResponse<>(
@@ -155,13 +240,12 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
                 page.getTotalElements(),
                 page.getTotalPages(),
                 page.isFirst(),
-                page.isLast()
-        );
+                page.isLast());
     }
 
-    // For SosRmMasterNativeResponse (new)  ← added separate helper
-    private PagedResponse<SosRmMasterNativeResponse> buildNativePagedResponse(
-            Page<SosRmMasterNativeResponse> page) {
+    private PagedResponse<SosRmMasterNativeResponse>
+            buildNativePagedResponse(
+                    Page<SosRmMasterNativeResponse> page) {
         return new PagedResponse<>(
                 page.getContent(),
                 page.getNumber(),
@@ -169,54 +253,6 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
                 page.getTotalElements(),
                 page.getTotalPages(),
                 page.isFirst(),
-                page.isLast()
-        );
+                page.isLast());
     }
-    
-    //drop down 
-    
-    @Override
-    public List<DropDownResponse> findAllForDropDown() {
-        return repository.findAllByIsActiveTrueAndIsDeletedFalse()
-                .stream()
-                .filter(r -> r.getRmId() != null)           // ← skip null id records
-                .map(r -> new DropDownResponse(
-                        r.getRmId(),
-                        r.getRmName() != null ? r.getRmName() : "-"))  // ← null safe name
-                .collect(Collectors.toList());
-    }
-    
-    @Override
-    public List<DropDownResponse> findAllForDropDownRmGroup() {
-        return rmGroupRepository.findAll()
-                .stream()
-                .filter(r -> r.getRmGroupId() != null)           // ← skip null id records
-                .map(r -> new DropDownResponse(
-                        r.getRmGroupId(),
-                        r.getRmGroupName() != null ? r.getRmGroupName() : "-"))  // ← null safe name
-                .collect(Collectors.toList());
-    }
-    
-    @Override
-    public List<SosRmMasterResponse> findAllActiveWithDetailsLong() {
-        return repository.findAllActiveWithDetails()  // ← native query with joins
-                .stream()
-                .filter(r -> r.getRmId() != null)
-                .map(r -> new SosRmMasterResponse(
-                        r.getRmId() != null
-                                ? r.getRmId().longValue() : null,    // Integer → Long
-                        r.getRmCode(),                               // Long
-                        r.getRmName() != null ? r.getRmName() : "-",
-                        r.getUomId(),                                // Long
-                        r.getUomName() != null ? r.getUomName() : "-",
-                        r.getPackUom(),                              // Long
-                        r.getPackUomName() != null
-                                ? r.getPackUomName() : "-",
-                        r.getAvgRate(),
-                        r.getPackSize()
-                ))
-                .collect(Collectors.toList());
-    }
-    
-    
 }

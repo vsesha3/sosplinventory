@@ -198,6 +198,7 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
   const handleSubmitClick = () => {
     const errors = validateForm(form);
     setValidationErrors(errors);
+   console.log(errors);
     if (errors.length === 0) setConfirmOpen(true);
   };
 

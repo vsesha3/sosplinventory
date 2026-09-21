@@ -13,40 +13,24 @@ import java.util.Optional;
 public interface SosRmMasterService {
 
     SosRmMasterResponse create(SosRmMasterRequest request);
-
     SosRmMasterResponse update(Integer id, SosRmMasterRequest request);
-
     List<SosRmMasterResponse> findAll();
-
+    List<SosRmMasterResponse> findAllWithDetails();    // ← add this
     SosRmMasterResponse findById(Integer id);
-
     void delete(Integer id);
-
     PagedResponse<SosRmMasterResponse> findAllPaginated(
             int page, int size, String sortBy, String sortDir);
-
     PagedResponse<SosRmMasterResponse> search(
             String keyword, int page, int size,
             String sortBy, String sortDir);
-
-    // ← Changed to NativeResponse
     List<SosRmMasterNativeResponse> findAllActiveWithDetails();
-
     PagedResponse<SosRmMasterNativeResponse> findAllActiveWithDetailsPaginated(
             int page, int size, String sortBy, String sortDir);
-
     PagedResponse<SosRmMasterNativeResponse> searchActiveWithDetails(
             String keyword, int page, int size,
             String sortBy, String sortDir);
-    
     List<DropDownResponse> findAllForDropDown();
     List<DropDownResponse> findAllForDropDownRmGroup();
-    
     List<SosRmMasterResponse> findAllActiveWithDetailsLong();
-
-	
-	SosRmMaster findByRmCode(Integer code);
-	
-    
-    
+    SosRmMaster findByRmCode(Integer code);
 }
