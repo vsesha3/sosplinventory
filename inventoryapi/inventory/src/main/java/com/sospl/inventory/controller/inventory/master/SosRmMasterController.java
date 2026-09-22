@@ -6,6 +6,7 @@ import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterNativeResponse;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterRequest;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterResponse;
+import com.sospl.inventory.model.inventory.master.SosRmGroupMaster;
 import com.sospl.inventory.model.inventory.master.SosRmMaster;
 import com.sospl.inventory.service.inventory.master.SosRmMasterService;
 import jakarta.validation.Valid;
@@ -159,5 +160,53 @@ public class SosRmMasterController {
         return ResponseEntity.ok(
                 ApiResponse.success("RM fetched successfully",
                         service.findById(id)));
+    }
+    
+    
+ // ── RM Group endpoints ────────────────────────────────────────────────────
+
+    @GetMapping("/group/all")
+    public ResponseEntity<ApiResponse<List<SosRmGroupMaster>>> getAllRmGroups() {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "RM groups fetched successfully",
+                        service.findAllRmGroups()));
+    }
+
+    @GetMapping("/group/{id}")
+    public ResponseEntity<ApiResponse<SosRmGroupMaster>> getRmGroupById(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "RM group fetched successfully",
+                        service.findRmGroupById(id)));
+    }
+
+    @PostMapping("/group")
+    public ResponseEntity<ApiResponse<SosRmGroupMaster>> createRmGroup(
+            @RequestBody SosRmGroupMaster request) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "RM group created successfully",
+                        service.createRmGroup(request)));
+    }
+
+    @PutMapping("/group/{id}")
+    public ResponseEntity<ApiResponse<SosRmGroupMaster>> updateRmGroup(
+            @PathVariable Long id,
+            @RequestBody SosRmGroupMaster request) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "RM group updated successfully",
+                        service.updateRmGroup(id, request)));
+    }
+
+    @DeleteMapping("/group/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteRmGroup(
+            @PathVariable Long id) {
+        service.deleteRmGroup(id);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "RM group deleted successfully", null));
     }
 }

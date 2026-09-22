@@ -5,6 +5,7 @@ import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterNativeResponse;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterRequest;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterResponse;
+import com.sospl.inventory.model.inventory.master.SosRmGroupMaster;
 import com.sospl.inventory.model.inventory.master.SosRmMaster;
 
 import java.util.List;
@@ -33,4 +34,12 @@ public interface SosRmMasterService {
     List<DropDownResponse> findAllForDropDownRmGroup();
     List<SosRmMasterResponse> findAllActiveWithDetailsLong();
     SosRmMaster findByRmCode(Integer code);
+    
+    
+ // ── RM Group ──────────────────────────────────────────────────────────
+    SosRmGroupMaster createRmGroup(SosRmGroupMaster request);
+    SosRmGroupMaster updateRmGroup(Long id, SosRmGroupMaster request);
+    SosRmGroupMaster findRmGroupById(Long id);
+    List<SosRmGroupMaster> findAllRmGroups();
+    void deleteRmGroup(Long id);
 }

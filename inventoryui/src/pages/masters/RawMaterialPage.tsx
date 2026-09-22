@@ -127,9 +127,10 @@ const RawMaterialPage: React.FC = () => {
     
     
     try {
+      
       const payload = {
         rmId: data.rmId ? Number(data.rmId) : null,
-        rmCode: data.rmCode ? Number(data.rmCode) : null, // ← Integer
+        rmCode: data.sapCode ? Number(data.sapCode) : null, // ← Integer
         rmName: data.rmName,
         uomId: data.uomId ? Number(data.uomId) : null,
         rmGroupId: data.rmGroupId ? Number(data.rmGroupId) : null,

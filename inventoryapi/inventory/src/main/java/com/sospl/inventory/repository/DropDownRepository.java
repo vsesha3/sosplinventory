@@ -197,4 +197,36 @@ public class DropDownRepository {
                         rs.getLong("id"),
                         rs.getString("name")));
     }
+    
+    public List<DropDownResponse> getSupplierTypeDropDown() {
+        return jdbcTemplate.query("""
+                SELECT
+                    supplier_type_id  AS id,
+                    supplier_type_name       AS name
+                FROM sos_supplier_type_master
+                WHERE is_active = 1
+                AND is_deleted = 0
+                ORDER BY supplier_type_name ASC
+                """,
+                (rs, rowNum) -> new DropDownResponse(
+                        rs.getLong("id"),
+                        rs.getString("name")));
+    }
+    
+    public List<DropDownResponse> getCountryListForDropDown() {
+        return jdbcTemplate.query("""
+                SELECT
+                    country_id_id  AS id,
+                    country_name       AS name
+                FROM sos_country_master
+                WHERE is_active = 1
+                AND is_deleted = 0
+                ORDER BY country_name ASC
+                """,
+                (rs, rowNum) -> new DropDownResponse(
+                        rs.getLong("id"),
+                        rs.getString("name")));
+    }
+    
+    
 }

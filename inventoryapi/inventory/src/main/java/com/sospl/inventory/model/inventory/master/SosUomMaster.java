@@ -11,6 +11,7 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosUomMaster extends BaseAuditEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "uom_id", nullable = false, unique = true)
     private Integer uomId;
 

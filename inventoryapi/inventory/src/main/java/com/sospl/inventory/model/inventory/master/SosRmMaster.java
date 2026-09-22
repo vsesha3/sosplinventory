@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 public class SosRmMaster extends BaseAuditEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "rm_id", nullable = false, unique = true)
     private Integer rmId;
 
@@ -40,7 +41,7 @@ public class SosRmMaster extends BaseAuditEntity {
     private Integer packUom;
 
     @Column(name = "h_nh_id")
-    private Integer hNhId;
+    private Long hNhId;
 
 	public Integer getRmId() {
 		return rmId;
@@ -123,11 +124,11 @@ public class SosRmMaster extends BaseAuditEntity {
 		this.packUom = packUom;
 	}
 
-	public Integer gethNhId() {
+	public Long gethNhId() {
 		return hNhId;
 	}
 
-	public void sethNhId(Integer hNhId) {
+	public void sethNhId(Long hNhId) {
 		this.hNhId = hNhId;
 	}
 

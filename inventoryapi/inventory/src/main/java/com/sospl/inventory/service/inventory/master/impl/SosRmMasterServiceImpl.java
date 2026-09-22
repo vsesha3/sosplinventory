@@ -6,6 +6,7 @@ import com.sospl.inventory.dto.inventory.master.SosRmMasterNativeResponse;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterRequest;
 import com.sospl.inventory.dto.inventory.master.SosRmMasterResponse;
 import com.sospl.inventory.mapper.inventory.master.SosRmMasterMapper;
+import com.sospl.inventory.model.inventory.master.SosRmGroupMaster;
 import com.sospl.inventory.model.inventory.master.SosRmMaster;
 import com.sospl.inventory.repository.inventory.master.SosRmGroupMasterRepository;
 import com.sospl.inventory.repository.inventory.master.SosRmMasterRepository;
@@ -37,8 +38,15 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     @Override
     public SosRmMaster create(SosRmMasterRequest request) {
         SosRmMaster entity = SosRmMasterMapper.toEntity(request);
-        repository.save(entity);
-        return findById(entity.getRmId());
+
+        // ── Auto generate rmCode if not provided ─────────────────────────
+        if (entity.getRmCode() == null) {
+            Integer nextCode = repository.getNextRmCode();
+            entity.setRmCode(nextCode);
+        }
+
+        SosRmMaster saved = repository.save(entity);
+        return findById(saved.getRmId());
     }
 
     @Override
@@ -242,5 +250,41 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
                 page.getTotalPages(),
                 page.isFirst(),
                 page.isLast());
+    }
+    
+ // ── RM Group methods ──────────────────────────────────────────────────────
+
+    @Override
+    public SosRmGroupMaster createRmGroup(SosRmGroupMaster request) {
+        return rmGroupRepository.save(request);
+    }
+
+    @Override
+    public SosRmGroupMaster updateRmGroup(Long id,
+            SosRmGroupMaster request) {
+        SosRmGroupMaster existing = rmGroupRepository
+                .findById(id)
+                .orElseThrow(() -> new RuntimeException(
+                        "RM Group not found: " + id));
+        existing.setRmGroupName(request.getRmGroupName());
+        existing.setIsActive(request.getIsActive());
+        return rmGroupRepository.save(existing);
+    }
+
+    @Override
+    public SosRmGroupMaster findRmGroupById(Long id) {
+        return rmGroupRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException(
+                        "RM Group not found: " + id));
+    }
+
+    @Override
+    public List<SosRmGroupMaster> findAllRmGroups() {
+        return rmGroupRepository.findAll();
+    }
+
+    @Override
+    public void deleteRmGroup(Long id) {
+        rmGroupRepository.deleteById(id);
     }
 }

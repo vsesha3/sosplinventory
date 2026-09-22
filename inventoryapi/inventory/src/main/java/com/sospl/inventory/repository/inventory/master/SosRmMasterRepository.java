@@ -170,6 +170,12 @@ public interface SosRmMasterRepository
            """, nativeQuery = true)
     Page<SosRmMasterNativeResponse> searchActiveWithDetailsPaginated(
             @Param("keyword") String keyword, Pageable pageable);
+    
+    @Query(value = """
+    	       SELECT COALESCE(MAX(rm_code), 1000000000) + 1
+    	       FROM sos_rm_master_t
+    	       """, nativeQuery = true)
+    	Integer getNextRmCode();
 
 	
 }

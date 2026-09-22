@@ -2,13 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
-  Grid, Stack, Loader, Center,
+  Grid, Stack, Loader, Center, Tooltip, ActionIcon, TextInput,
 } from '@mantine/core';
-import { IconPackage } from '@tabler/icons-react';
+import { IconPackage, IconPlus } from '@tabler/icons-react';
 import { FormTextInput } from '../../../components/common/FormTextInput';
-import { FormSelect } from '../../../components/common/FormSelect';
+import { FormSelect }    from '../../../components/common/FormSelect';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
-import FormHeader from '../../common/Formheader';
+import FormHeader        from '../../common/Formheader';
 import api from '../../../services/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -16,53 +16,53 @@ import api from '../../../services/api';
 interface DropDownOption {
   value: string;
   label: string;
-  code:string;
+  code:  string;
 }
 
 export interface RawMaterialFormData {
-  id?: number | null;
-  rmCode: string;
-  sapCode: string;
-  rmName: string;
-  uomId: string | null;
+  id?:       number | null;
+  rmCode:    string;
+  sapCode:   string;
+  rmName:    string;
+  uomId:     string | null;
   rmGroupId: string | null;
-  hNhId: string | null;
-  avgRate: string;
-  gstRate: string;
-  packUom: string | null;
-  packSize: string;
-  capacity: string;
-  testId: string | null;
-  testCode: string;
-  rmId:number | null;
+  hNhId:     string | null;
+  avgRate:   string;
+  gstRate:   string;
+  packUom:   string | null;
+  packSize:  string;
+  capacity:  string;
+  testId:    string | null;
+  testCode:  string;
+  rmId:      number | null;
 }
 
 export interface RawMaterialFormProps {
-  opened: boolean;
+  opened:  boolean;
   onClose: () => void;
   onSave?: (data: RawMaterialFormData) => void;
-  rmId?: number | null;
-  mode?: 'create' | 'update';
+  rmId?:   number | null;
+  mode?:   'create' | 'update';
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
 const defaultForm: RawMaterialFormData = {
-  id: null,
-  rmCode: '',
-  sapCode: '',
-  rmName: '',
-  uomId: null,
+  id:        null,
+  rmCode:    '',
+  sapCode:   '',
+  rmName:    '',
+  uomId:     null,
   rmGroupId: null,
-  hNhId: null,
-  avgRate: '',
-  gstRate: '',
-  packUom: null,
-  packSize: '',
-  capacity: '',
-  testId: null,
-  testCode: '',
-  rmId:null
+  hNhId:     null,
+  avgRate:   '',
+  gstRate:   '',
+  packUom:   null,
+  packSize:  '',
+  capacity:  '',
+  testId:    null,
+  testCode:  '',
+  rmId:      null,
 };
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -96,11 +96,62 @@ const validateForm = (form: RawMaterialFormData): string[] => {
   if (form.capacity && isNaN(parseFloat(form.capacity)))
     errors.push('Capacity must be a valid number');
 
-  if (form.packSize && parseFloat(form.packSize) > 0 && !form.packUomId)
-    errors.push('Pack UOM is required when Pack Size is entered');
-
   return errors;
 };
+
+// ── QuickAdd Modal — single field, reusable ───────────────────────────────────
+
+interface QuickAddModalProps {
+  opened:   boolean;
+  onClose:  () => void;
+  title:    string;
+  label:    string;
+  value:    string;
+  onChange: (v: string) => void;
+  onSave:   () => void;
+  saving:   boolean;
+}
+
+const QuickAddModal: React.FC<QuickAddModalProps> = ({
+  opened, onClose, title, label, value, onChange, onSave, saving,
+}) => (
+  <Modal
+    opened={opened}
+    onClose={onClose}
+    title={title}
+    size="sm"
+    zIndex={350}
+    centered
+  >
+    <Stack gap="md">
+      <TextInput
+        label={label}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={`Enter ${label.toLowerCase()}`}
+        required
+        autoFocus
+        onKeyDown={e => { if (e.key === 'Enter' && value.trim()) onSave(); }}
+      />
+      <Group justify="flex-end" gap="sm">
+        <Button variant="default" size="sm" onClick={onClose}>Cancel</Button>
+        <Button
+          size="sm"
+          loading={saving}
+          disabled={!value.trim()}
+          onClick={onSave}
+        >
+          Add
+        </Button>
+      </Group>
+    </Stack>
+  </Modal>
+);
+
+const HNH_OPTIONS: DropDownOption[] = [
+  { value: '1', label: 'Hazardous',     code: 'H'  },
+  { value: '2', label: 'Non-Hazardous', code: 'NH' },
+];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -112,22 +163,29 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
   mode = 'create',
 }) => {
 
-  const [form, setForm] = useState<RawMaterialFormData>({ ...defaultForm });
-  const [loading, setLoading] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [form,        setForm]        = useState<RawMaterialFormData>({ ...defaultForm });
+  const [loading,     setLoading]     = useState(false);
+  const [fetchError,  setFetchError]  = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const [uomOptions, setUomOptions] = useState<DropDownOption[]>([]);
-  const [groupOptions, setGroupOptions] = useState<DropDownOption[]>([]);
-  const [hNhOptions, setHNhOptions] = useState<DropDownOption[]>([]);
-  const [packUomOptions, setPackUomOptions] = useState<DropDownOption[]>([]);
-  const [testOptions, setTestOptions] = useState<DropDownOption[]>([]);
+  // Dropdown options
+  const [uomOptions,      setUomOptions]      = useState<DropDownOption[]>([]);
+  const [groupOptions,    setGroupOptions]    = useState<DropDownOption[]>([]);
+ 
+  const [packUomOptions,  setPackUomOptions]  = useState<DropDownOption[]>([]);
+  const [testOptions,     setTestOptions]     = useState<DropDownOption[]>([]);
   const [testCodeOptions, setTestCodeOptions] = useState<DropDownOption[]>([]);
 
-  // ── Filter helper ─────────────────────────────────────────────────────────
+  // QuickAdd state
+  const [addGroupOpen, setAddGroupOpen] = useState(false);
+  const [addUomOpen,   setAddUomOpen]   = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newUomName,   setNewUomName]   = useState('');
+  const [quickSaving,  setQuickSaving]  = useState(false);
 
-  // Clean function — maps API response to DropDownOption
+  // ── Clean helper ─────────────────────────────────────────────────────────
+
   const clean = (data: any[]): DropDownOption[] => {
     if (!data || !Array.isArray(data)) return [];
     return data
@@ -135,9 +193,10 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
       .map(item => ({
         value: String(item.value),
         label: item.label ?? '-',
-        code : item.code ?? ''
+        code:  item.code  ?? '',
       }));
   };
+
   // ── Load ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -152,38 +211,35 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
       setLoading(true);
       try {
         const [uomRes, groupRes, testRes] = await Promise.all([
-          api.get('/api/dropdown/uom')
-            .catch(() => ({ data: { data: [] } })),
-          api.get('/api/dropdown/rm-group')
-            .catch(() => ({ data: { data: [] } })),
-          api.get('/api/dropdown/test-master')
-            .catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/uom').catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/rm-group').catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/test-master').catch(() => ({ data: { data: [] } })),
         ]);
 
         setUomOptions(clean(uomRes.data.data));
         setGroupOptions(clean(groupRes.data.data));
         setTestOptions(clean(testRes.data.data));
-        setPackUomOptions(clean(uomRes.data.data));  // reuse UOM list
+        setPackUomOptions(clean(uomRes.data.data));   // reuse UOM list
 
         if (mode === 'update' && rmId) {
           const res = await api.get(`/api/rm/${rmId}`);
-          const d = res.data.data ?? res.data;
+          const d   = res.data.data ?? res.data;
           setForm({
-            id: d.rmId ?? null,
-            rmCode: d.rmCode != null ? String(d.rmCode) : '',
-            sapCode: d.sapCode ?? '',
-            rmName: d.rmName ?? '',
-            uomId: d.uomId != null ? String(d.uomId) : null,
+            id:        d.rmId      ?? null,
+            rmCode:    d.rmCode    != null ? String(d.rmCode)    : '',
+            sapCode:   d.rmCode  ?? '',
+            rmName:    d.rmName    ?? '',
+            uomId:     d.uomId     != null ? String(d.uomId)     : null,
             rmGroupId: d.rmGroupId != null ? String(d.rmGroupId) : null,
-            hNhId: d.hNhId != null ? String(d.hNhId) : null,
-            avgRate: d.avgRate != null ? String(d.avgRate) : '',
-            gstRate: d.gstRate != null ? String(d.gstRate) : '',
-            packUom: d.packUom != null ? String(d.packUom) : null,
-            packSize: d.packSize != null ? String(d.packSize) : '',
-            capacity: d.capacity != null ? String(d.capacity) : '',
-            testId: d.testId != null ? String(d.testId) : null,
-            testCode: d.testCode != null ? String(d.testCode) : '',
-            rmId:d.rmId ?? null 
+            hNhId:     d.hNhId     != null ? String(d.hNhId)     : null,
+            avgRate:   d.avgRate   != null ? String(d.avgRate)   : '',
+            gstRate:   d.gstRate   != null ? String(d.gstRate)   : '',
+            packUom:   d.packUom   != null ? String(d.packUom)   : null,
+            packSize:  d.packSize  != null ? String(d.packSize)  : '',
+            capacity:  d.capacity  != null ? String(d.capacity)  : '',
+            testId:    d.testId    != null ? String(d.testId)    : null,
+            testCode:  d.testCode  != null ? String(d.testCode)  : '',
+            rmId:      d.rmId      ?? null,
           });
         }
       } catch {
@@ -196,7 +252,71 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
     load();
   }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── QuickAdd handlers ─────────────────────────────────────────────────────
+
+  const handleAddGroup = async () => {
+    if (!newGroupName.trim()) return;
+    setQuickSaving(true);
+    try {
+      const res     = await api.post('/api/rm/group', { rmGroupName: newGroupName.trim() });
+      const created = res.data?.data ?? res.data;
+      // Refresh group dropdown
+      const groupRes = await api.get('/api/dropdown/rm-group');
+      const updated  = clean(groupRes.data.data);
+      setGroupOptions(updated);
+      // Auto-select the new group
+      if (created?.id != null) {
+        setForm(prev => ({ ...prev, rmGroupId: String(created.id) }));
+      } else {
+        // fallback: find by name
+        const match = updated.find(o => o.label === newGroupName.trim());
+        if (match) setForm(prev => ({ ...prev, rmGroupId: match.value }));
+      }
+      setNewGroupName('');
+      setAddGroupOpen(false);
+    } catch (err: any) {
+    console.error('[handleAddGroup] Failed:', err?.response?.data ?? err);
+    setFetchError(
+      err?.response?.data?.message || 'Failed to add RM Group. Please try again.'
+    );
+      
+      // silently fail — user can still select manually
+    } finally {
+      setQuickSaving(false);
+    }
+  };
+
+const handleAddUom = async () => {
+  if (!newUomName.trim()) return;
+  setQuickSaving(true);
+  try {
+    const res     = await api.post('/api/uom', { uomName: newUomName.trim() });
+    const created = res.data?.data ?? res.data;
+    // Refresh UOM dropdown (used for both UOM and Pack UOM)
+    const uomRes  = await api.get('/api/dropdown/uom');
+    const updated = clean(uomRes.data.data);
+    setUomOptions(updated);
+    setPackUomOptions(updated);
+    // Auto-select the new UOM
+    if (created?.id != null) {
+      setForm(prev => ({ ...prev, uomId: String(created.id) }));
+    } else {
+      const match = updated.find(o => o.label === newUomName.trim());
+      if (match) setForm(prev => ({ ...prev, uomId: match.value }));
+    }
+    setNewUomName('');
+    setAddUomOpen(false);
+  } catch (err: any) {
+    console.error('[handleAddUom] Failed:', err?.response?.data ?? err);
+    setFetchError(
+      err?.response?.data?.message || 'Failed to add UOM. Please try again.'
+    );
+  } finally {
+    setQuickSaving(false);
+  }
+};
+
+  // ── Form helpers ──────────────────────────────────────────────────────────
 
   const setStr = (field: keyof RawMaterialFormData) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -218,7 +338,7 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
   };
 
   const confirmLabel = mode === 'update' ? 'Update' : 'Submit';
-  const headerTitle = mode === 'update' && form.id
+  const headerTitle  = mode === 'update' && form.id
     ? `Edit Raw Material — ${form.rmName || `#${rmId}`}`
     : 'New Raw Material';
 
@@ -277,13 +397,13 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
 
                   {/* ── Row 1: Code | SAP Code ── */}
                   <Grid.Col span={6}>
-                    <FormTextInput
-                      label="Code"
-                      value={form.rmCode}
-                      onChange={setStr('rmCode')}
-                      placeholder="Auto-generated"
-                      readOnly={mode === 'update'}
-                    />
+                      <FormTextInput
+                        label="RM ID"
+                        value={form.rmId != null ? String(form.rmId) : ''}
+                        onChange={() => { }}
+                        placeholder="Auto-generated"
+                        readOnly                        // ← always readonly, system generated
+                      />
                   </Grid.Col>
                   <Grid.Col span={6}>
                     <FormTextInput
@@ -304,30 +424,60 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
                       required
                     />
                   </Grid.Col>
+
+                  {/* ── Row 3: RM Group | UOM — both with QuickAdd "+" button ── */}
                   <Grid.Col span={6}>
-                    <FormSelect
-                      label="RM Group Name"
-                      value={form.rmGroupId}
-                      onChange={setSelect('rmGroupId')}
-                      data={groupOptions}
-                      placeholder="--SELECT--"
-                      searchable
-                    />
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+                        <FormSelect
+                          label="RM Group Name"
+                          value={form.rmGroupId}
+                          onChange={setSelect('rmGroupId')}
+                          data={groupOptions}
+                          placeholder="--SELECT--"
+                          searchable
+                        />
+                      </Box>
+                      <Tooltip label="Add new RM Group" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewGroupName(''); setAddGroupOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Grid.Col>
 
-                  {/* ── Row 3: UOM | RM Group ── */}
                   <Grid.Col span={6}>
-                    <FormSelect
-                      label="* UOM"
-                      value={form.uomId}
-                      onChange={setSelect('uomId')}
-                      data={uomOptions}
-                      placeholder="----Select----"
-                      required
-                      searchable
-                    />
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+                        <FormSelect
+                          label="* UOM"
+                          value={form.uomId}
+                          onChange={setSelect('uomId')}
+                          data={uomOptions}
+                          placeholder="----Select----"
+                          required
+                          searchable
+                        />
+                      </Box>
+                      <Tooltip label="Add new UOM" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewUomName(''); setAddUomOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Grid.Col>
-
 
                   {/* ── Row 4: H/NH | Avg Rate | GST % ── */}
                   <Grid.Col span={4}>
@@ -335,7 +485,7 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
                       label="H/NH"
                       value={form.hNhId}
                       onChange={setSelect('hNhId')}
-                      data={hNhOptions}
+                      data={HNH_OPTIONS}
                       placeholder="-----Select------"
                       searchable
                     />
@@ -415,7 +565,7 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
             </Box>
           )}
 
-          {/* ── Footer — always pinned ── */}
+          {/* ── Footer ── */}
           <Box px="lg" py="sm"
             style={{
               borderTop: '1px solid var(--mantine-color-gray-3)',
@@ -433,6 +583,7 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
         </Paper>
       </Modal>
 
+      {/* ── Main confirm dialog ── */}
       <ConfirmDialog
         opened={confirmOpen}
         onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
@@ -445,6 +596,30 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
         confirmLabel={confirmLabel}
         errors={validationErrors}
         zIndex={250}
+      />
+
+      {/* ── QuickAdd: RM Group ── */}
+      <QuickAddModal
+        opened={addGroupOpen}
+        onClose={() => setAddGroupOpen(false)}
+        title="Add RM Group"
+        label="Group Name"
+        value={newGroupName}
+        onChange={setNewGroupName}
+        onSave={handleAddGroup}
+        saving={quickSaving}
+      />
+
+      {/* ── QuickAdd: UOM ── */}
+      <QuickAddModal
+        opened={addUomOpen}
+        onClose={() => setAddUomOpen(false)}
+        title="Add UOM"
+        label="UOM Name"
+        value={newUomName}
+        onChange={setNewUomName}
+        onSave={handleAddUom}
+        saving={quickSaving}
       />
     </>
   );

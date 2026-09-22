@@ -25,7 +25,87 @@ public class SosSupplierMaster extends BaseAuditEntity {
     @Column(name = "country_id")
     private Integer countryId;
 
-    @Column(name = "type_id")
+    public Integer getSupplierId() {
+		return supplierId;
+	}
+
+	public void setSupplierId(Integer supplierId) {
+		this.supplierId = supplierId;
+	}
+
+	public String getSupplierName() {
+		return supplierName;
+	}
+
+	public void setSupplierName(String supplierName) {
+		this.supplierName = supplierName;
+	}
+
+	public String getSupplierCode() {
+		return supplierCode;
+	}
+
+	public void setSupplierCode(String supplierCode) {
+		this.supplierCode = supplierCode;
+	}
+
+	public String getAddress() {
+		return address;
+	}
+
+	public void setAddress(String address) {
+		this.address = address;
+	}
+
+	public Integer getCountryId() {
+		return countryId;
+	}
+
+	public void setCountryId(Integer countryId) {
+		this.countryId = countryId;
+	}
+
+	public Boolean getTypeId() {
+		return typeId;
+	}
+
+	public void setTypeId(Boolean typeId) {
+		this.typeId = typeId;
+	}
+
+	public Boolean getSupplierTypeId() {
+		return supplierTypeId;
+	}
+
+	public void setSupplierTypeId(Boolean supplierTypeId) {
+		this.supplierTypeId = supplierTypeId;
+	}
+
+	public String getPhoneNo() {
+		return phoneNo;
+	}
+
+	public void setPhoneNo(String phoneNo) {
+		this.phoneNo = phoneNo;
+	}
+
+	public String getEmailId() {
+		return emailId;
+	}
+
+	public void setEmailId(String emailId) {
+		this.emailId = emailId;
+	}
+
+	public String getGstNo() {
+		return gstNo;
+	}
+
+	public void setGstNo(String gstNo) {
+		this.gstNo = gstNo;
+	}
+
+	@Column(name = "type_id")
     private Boolean typeId;
 
     @Column(name = "supplier_type_id")
@@ -37,5 +117,6 @@ public class SosSupplierMaster extends BaseAuditEntity {
     @Column(name = "e_mailid", length = 25)
     private String emailId;
 
-    // remaining fields same as earlier version
+    @Column(name="gst_no",length=50)
+    private String gstNo;
 }
