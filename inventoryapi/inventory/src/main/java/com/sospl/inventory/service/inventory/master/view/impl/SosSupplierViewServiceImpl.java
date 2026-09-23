@@ -107,31 +107,12 @@ public class SosSupplierViewServiceImpl implements SosSupplierViewService {
         response.setSupplierCode(entity.getSupplierCode());
         response.setAddress(entity.getAddress());
         response.setCountryName(entity.getCountryName());
-        response.setCreatedBy(entity.getCreatedBy());
-        response.setCreatedOn(entity.getCreatedOn());
-        response.setLastUpdatedBy(entity.getLastUpdatedBy());
-        response.setLastUpdatedOn(entity.getLastUpdatedOn());
-        response.setIsActive(entity.getIsActive());
-        response.setType(entity.getType());
         response.setSupplierTypeName(entity.getSupplierTypeName());
-        response.seteCCNo(entity.geteCCNo());
         response.setiTNo(entity.getiTNo());
-        response.setrCNo(entity.getrCNo());
-        response.setcSTNo(entity.getcSTNo());
-        response.setlSTNo(entity.getlSTNo());
-        response.setSerTaxRegNo(entity.getSerTaxRegNo());
-        response.setSerTaxCertificateNo(entity.getSerTaxCertificateNo());
-        response.setSerTaxClassificationNo(entity.getSerTaxClassificationNo());
-        response.setRangeNo(entity.getRangeNo());
-        response.setRangeAddress(entity.getRangeAddress());
-        response.setDivisionNo(entity.getDivisionNo());
-        response.setDivisionAddress(entity.getDivisionAddress());
-        response.setCommissionerate(entity.getCommissionerate());
-        response.setCheqFavr(entity.getCheqFavr());
-        response.setPhoneNo(entity.getPhoneNo());
         response.seteMailId(entity.geteMailId());
         response.setContactPerson(entity.getContactPerson());
         response.setContactMobile(entity.getContactMobile());
+        response.setGstNo(entity.getGstNo());
         return response;
     }
     

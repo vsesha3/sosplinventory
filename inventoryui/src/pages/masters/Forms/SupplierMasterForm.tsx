@@ -1,444 +1,220 @@
-import React, { useEffect, useState } from 'react';
-
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import React, { useState, useEffect } from 'react';
 import {
-  Modal,
-  Paper,
-  Box,
-  Text,
-  Group,
-  Button,
-  Grid,
-  Stack,
-  Loader,
-  Center,
-  Textarea,
+  Modal, Paper, Box, Text, Group, Button,
+  Grid, Stack, Loader, Center, Textarea,Alert,List
 } from '@mantine/core';
-
 import { IconTruckDelivery } from '@tabler/icons-react';
-
 import { FormTextInput } from '../../../components/common/FormTextInput';
-import { FormSelect } from '../../../components/common/FormSelect';
+import { FormSelect }    from '../../../components/common/FormSelect';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
-import FormHeader from '../../common/Formheader';
+import FormHeader        from '../../common/Formheader';
+import api from '../../../services/api';
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-// -----------------------------------------------------------------------------
-// Types
-// -----------------------------------------------------------------------------
-
-export interface DropDownOption {
+interface DropDownOption {
   value: string;
   label: string;
   code?: string;
 }
 
-
 export interface SupplierMasterFormData {
-
-  supplierId: number | null;
-
-  supplierName: string;
-
-  supplierCode: string;
-
-  address: string;
-
-  countryId: string | null;
-
-  gstNumber: string;
-
-  typeId: string | null;
-
-  supplierTypeId: string | null;
-
-  phoneNo: string;
-
-  emailId: string;
-
-  // Keep these if they already exist in your actual entity
-  contactPersonName?: string;
-
-  contactMobileNumber?: string;
-
-  lstNo?: string;
-
-  itNo?: string;
-
-  cstNo?: string;
+  supplierId:          number | null;
+  supplierName:        string;
+  supplierCode:        string;
+  address:             string;
+  countryId:           string | null;
+  gstNo:           string;
+  supplierTypeId:      string | null;
+  emailId:             string;
+  panNo:               string;
+  contactPersonName:   string;
+  contactMobileNumber: string;
+  itNo:                string;
 }
-
 
 export interface SupplierMasterFormProps {
-
-  opened: boolean;
-
-  onClose: () => void;
-
-  onSave?: (data: SupplierMasterFormData) => void;
-
+  opened:     boolean;
+  onClose:    () => void;
+  onSave?:    (data: SupplierMasterFormData) => void;
   supplierId?: number | null;
-
-  mode?: 'create' | 'update';
-
-  countryOptions?: DropDownOption[];
-
-  supplierTypeOptions?: DropDownOption[];
-
-  typeOptions?: DropDownOption[];
+  mode?:      'create' | 'update';
 }
 
-
-// -----------------------------------------------------------------------------
-// Defaults
-// -----------------------------------------------------------------------------
+// ── Defaults ──────────────────────────────────────────────────────────────────
 
 const defaultForm: SupplierMasterFormData = {
-
-  supplierId: null,
-
-  supplierName: '',
-
-  supplierCode: '',
-
-  address: '',
-
-  countryId: null,
-
-  gstNumber: '',
-
-  typeId: null,
-
-  supplierTypeId: null,
-
-  phoneNo: '',
-
-  emailId: '',
-
-  contactPersonName: '',
-
+  supplierId:          null,
+  supplierName:        '',
+  supplierCode:        'SOSPLS-',
+  address:             '',
+  countryId:           '582',
+  gstNo:           '',
+  supplierTypeId:      null,
+  emailId:             '',
+  panNo:               '',
+  contactPersonName:   '',
   contactMobileNumber: '',
-
-  lstNo: '',
-
-  itNo: '',
-
-  cstNo: '',
+  itNo:                '',
 };
 
+// ── Validation ────────────────────────────────────────────────────────────────
 
-// -----------------------------------------------------------------------------
-// Validation
-// -----------------------------------------------------------------------------
-
-const validateForm = (
-  form: SupplierMasterFormData
-): string[] => {
-
+const validateForm = (form: SupplierMasterFormData): string[] => {
   const errors: string[] = [];
 
-  if (!form.supplierName.trim()) {
+  if (!form.supplierName.trim())
     errors.push('Supplier Name is required');
-  }
 
-  if (!form.supplierCode.trim()) {
-    errors.push('Supplier Code is required');
-  }
-
-  if (!form.address.trim()) {
+  if (!form.address.trim())
     errors.push('Address is required');
-  }
 
-  if (!form.countryId) {
+  if (!form.countryId)
     errors.push('Country is required');
-  }
 
-  /*
-   * GST is currently optional.
-   *
-   * If you want GST to be mandatory, uncomment:
-   *
-   * if (!form.gstNumber.trim()) {
-   *   errors.push('GST Number is required');
-   * }
-   */
-
-  if (form.gstNumber.trim()) {
-
-    const gst = form.gstNumber.trim().toUpperCase();
-
-    const gstRegex =
-      /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-
-    if (!gstRegex.test(gst)) {
+  if (form.gstNo.trim()) {
+    const gst = form.gstNo.trim().toUpperCase();
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gst))
       errors.push('GST Number is not valid');
-    }
   }
 
-  if (
-    form.emailId.trim() &&
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.emailId.trim())
-  ) {
+  if (form.emailId.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.emailId.trim()))
     errors.push('Email ID is not valid');
-  }
 
   return errors;
 };
 
-
-// -----------------------------------------------------------------------------
-// Component
-// -----------------------------------------------------------------------------
+// ── Component ─────────────────────────────────────────────────────────────────
 
 const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
-
   opened,
-
   onClose,
-
   onSave,
-
   supplierId = null,
-
-  mode = 'create',
-
- 
-  typeOptions = [],
-
+  mode       = 'create',
 }) => {
 
-  const [form, setForm] =
-    useState<SupplierMasterFormData>({ ...defaultForm });
+  const [form,        setForm]        = useState<SupplierMasterFormData>({ ...defaultForm });
+  const [loading,     setLoading]     = useState(false);
+  const [fetchError,  setFetchError]  = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const [loading, setLoading] =
-    useState(false);
+  // Dropdowns
+  const [countryOptions,      setCountryOptions]      = useState<DropDownOption[]>([]);
+  const [supplierTypeOptions, setSupplierTypeOptions] = useState<DropDownOption[]>([]);
 
-  const [fetchError, setFetchError] =
-    useState<string | null>(null);
+  // ── Clean helper ─────────────────────────────────────────────────────────
 
-  const [confirmOpen, setConfirmOpen] =
-    useState(false);
+  const clean = (data: any[]): DropDownOption[] => {
+    if (!data || !Array.isArray(data)) return [];
+    return data
+      .filter(item => item != null && item.value != null)
+      .map(item => ({
+        value: String(item.value),
+        label: item.label ?? '-',
+        code:  item.code  ?? '',
+      }));
+  };
 
-  const [validationErrors, setValidationErrors] =
-    useState<string[]>([]);
-
-    const [supplierTypeOptions,      setSupplierTypeOptions]      = useState<DropDownOption[]>([]);
-    const [countryOptions,    setCountryOptions]    = useState<DropDownOption[]>([]);
-
-
-  // ---------------------------------------------------------------------------
-  // Load existing supplier
-  // ---------------------------------------------------------------------------
+  // ── Load ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-
     if (!opened) {
-
       setForm({ ...defaultForm });
-
       setFetchError(null);
-
       setValidationErrors([]);
-
       return;
     }
 
-
-    const loadSupplier = async () => {
-
-      if (mode !== 'update' || !supplierId) {
-
-        setForm({ ...defaultForm });
-
-        return;
-      }
-
-
+    const load = async () => {
       setLoading(true);
-
       setFetchError(null);
-
       try {
+        // Load dropdowns
+        const [countryRes, supplierTypeRes] = await Promise.all([
+          api.get('/api/dropdown/country-list').catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/supplier-type').catch(() => ({ data: { data: [] } })),
+        ]);
 
-        const response = await fetch(
-          `/api/supplier/${supplierId}`
-        );
+        setCountryOptions(clean(countryRes.data.data));
+        setSupplierTypeOptions(clean(supplierTypeRes.data.data));
 
-        if (!response.ok) {
-          throw new Error('Failed to load supplier');
+        // Load supplier data in edit mode
+        if (mode === 'update' && supplierId) {
+          const res = await api.get(`/api/supplier/${supplierId}`);
+          const d   = res.data.data ?? res.data;
+          setForm({
+            supplierId:          d.supplierId          ?? null,
+            supplierName:        d.supplierName        ?? '',
+            supplierCode:        d.supplierCode        ?? '',
+            address:             d.address             ?? '',
+           
+            gstNo:           d.gstNo           ?? '',
+           
+            
+            // In setForm inside load():
+emailId:             d.eMailId             ?? '',   // ← eMailId not emailId
+contactPersonName:   d.contactPerson       ?? '',   // ← contactPerson not contactPersonName
+contactMobileNumber: d.contactMobile       ?? '',   // ← contactMobile not contactMobileNumber
+countryId:           d.countryId           != null ? String(d.countryId)      : null,
+supplierTypeId:      d.supplierTypeId      != null ? String(d.supplierTypeId) : null,
+
+panNo:               d.panNo               ?? '',
+itNo:                d.iTNo                ?? '',   // ← iTNo not itNo
+          });
         }
-
-        const d = await response.json();
-
-
-        setForm({
-
-          supplierId:
-            d.supplierId ?? null,
-
-          supplierName:
-            d.supplierName ?? '',
-
-          supplierCode:
-            d.supplierCode ?? '',
-
-          address:
-            d.address ?? '',
-
-          countryId:
-            d.countryId != null
-              ? String(d.countryId)
-              : null,
-
-          gstNumber:
-            d.gstNumber ?? '',
-
-          typeId:
-            d.typeId != null
-              ? String(d.typeId)
-              : null,
-
-          supplierTypeId:
-            d.supplierTypeId != null
-              ? String(d.supplierTypeId)
-              : null,
-
-          phoneNo:
-            d.phoneNo ?? '',
-
-          emailId:
-            d.emailId ?? '',
-
-          contactPersonName:
-            d.contactPersonName ?? '',
-
-          contactMobileNumber:
-            d.contactMobileNumber ?? '',
-
-          lstNo:
-            d.lstNo ?? '',
-
-          itNo:
-            d.itNo ?? '',
-
-          cstNo:
-            d.cstNo ?? '',
-        });
-
-      } catch (error) {
-
-        console.error(error);
-
-        setFetchError(
-          'Failed to load supplier. Please close and try again.'
-        );
-
+      } catch {
+        setFetchError('Failed to load supplier. Please close and try again.');
       } finally {
-
         setLoading(false);
       }
     };
 
+    load();
+  }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    loadSupplier();
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
-  }, [opened, mode, supplierId]);
+  const setStr = (field: keyof SupplierMasterFormData) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      let value = e.target.value;
+      if (field === 'gstNo') value = value.toUpperCase();
+      setForm(prev => ({ ...prev, [field]: value }));
+      if (validationErrors.length > 0) setValidationErrors([]);
+    };
 
-
-  // ---------------------------------------------------------------------------
-  // Form helpers
-  // ---------------------------------------------------------------------------
-
-  const setStr =
-    (field: keyof SupplierMasterFormData) =>
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-
-        let value = e.target.value;
-
-        // GST should always be uppercase
-        if (field === 'gstNumber') {
-          value = value.toUpperCase();
-        }
-
-        setForm(prev => ({
-          ...prev,
-          [field]: value,
-        }));
-
-        if (validationErrors.length > 0) {
-          setValidationErrors([]);
-        }
-      };
-
-
-  const setSelect =
-    (field: keyof SupplierMasterFormData) =>
-      (value: string | null) => {
-
-        setForm(prev => ({
-          ...prev,
-          [field]: value,
-        }));
-
-        if (validationErrors.length > 0) {
-          setValidationErrors([]);
-        }
-      };
-
-
-  // ---------------------------------------------------------------------------
-  // Submit
-  // ---------------------------------------------------------------------------
+  const setSelect = (field: keyof SupplierMasterFormData) =>
+    (value: string | null) => {
+      setForm(prev => ({ ...prev, [field]: value }));
+      if (validationErrors.length > 0) setValidationErrors([]);
+    };
 
   const handleSubmitClick = () => {
-
     const errors = validateForm(form);
-
     setValidationErrors(errors);
-
-    if (errors.length === 0) {
-      setConfirmOpen(true);
-    }
+    if (errors.length === 0) setConfirmOpen(true);
   };
 
+  const confirmLabel = mode === 'update' ? 'Update' : 'Submit';
+  const headerTitle  = mode === 'update' && form.supplierId
+    ? `Edit Supplier — ${form.supplierName || `#${supplierId}`}`
+    : 'New Supplier';
 
-  const confirmLabel =
-    mode === 'update'
-      ? 'Update'
-      : 'Submit';
-
-
-  const headerTitle =
-    mode === 'update' && form.supplierId
-      ? `Edit Supplier — ${form.supplierName || `#${form.supplierId}`}`
-      : 'New Supplier';
-
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-
     <>
-
       <Modal
-
         opened={opened}
-
         onClose={onClose}
-
         title={null}
-
         size="70%"
-
         padding={0}
-
         radius="md"
-
         withCloseButton={false}
-
         zIndex={200}
-
         styles={{
           body: {
             padding: 0,
@@ -448,591 +224,233 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
             overflow: 'hidden',
           },
         }}
-
       >
+        <Paper withBorder radius="md"
+          style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
 
-        <Paper
-          withBorder
-          radius="md"
-          style={{
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            maxHeight: '90vh',
-          }}
-        >
-
-          {/* --------------------------------------------------------------- */}
-          {/* Header */}
-          {/* --------------------------------------------------------------- */}
-
+          {/* ── Header ── */}
           <FormHeader
-
             title={headerTitle}
-
-            icon={
-              <IconTruckDelivery
-                size={18}
-                color="white"
-              />
-            }
-
+            icon={<IconTruckDelivery size={18} color="white" />}
             color="#4a6fa5"
-
-            badge={
-              mode === 'update'
-                ? 'Edit Mode'
-                : 'New'
-            }
-
-            badgeColor={
-              mode === 'update'
-                ? 'orange'
-                : 'green'
-            }
-
+            badge={mode === 'update' ? 'Edit Mode' : 'New'}
+            badgeColor={mode === 'update' ? 'orange' : 'green'}
             onClose={onClose}
           />
 
-
-          {/* --------------------------------------------------------------- */}
-          {/* Body */}
-          {/* --------------------------------------------------------------- */}
-
+          {/* ── Body ── */}
           {loading ? (
-
-            <Center
-              py={80}
-              style={{ flex: 1 }}
-            >
-
-              <Stack
-                align="center"
-                gap="sm"
-              >
-
+            <Center py={80} style={{ flex: 1 }}>
+              <Stack align="center" gap="sm">
                 <Loader size="md" />
-
-                <Text
-                  size="sm"
-                  c="dimmed"
-                >
-                  Loading supplier...
-                </Text>
-
+                <Text size="sm" c="dimmed">Loading supplier...</Text>
               </Stack>
-
             </Center>
-
           ) : (
+            <Box style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} p="lg">
 
-            <Box
-              style={{
-                flex: 1,
-                overflowY: 'auto',
-                overflowX: 'hidden',
-              }}
-              p="lg"
-            >
+              {fetchError && <Text size="xs" c="red" mb="sm">{fetchError}</Text>}
 
-              {fetchError && (
+              {/* ── Section 1: Supplier Information ── */}
+              <Paper withBorder p="md" radius="sm" mb="md"
+                style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
 
-                <Text
-                  size="xs"
-                  c="red"
-                  mb="sm"
-                >
-                  {fetchError}
-                </Text>
+                <Text fw={600} size="sm" mb="md">Supplier Information</Text>
 
-              )}
+                <Grid columns={12} gutter="sm">
 
-
-              {/* ========================================================= */}
-              {/* Supplier Information */}
-              {/* ========================================================= */}
-
-              <Paper
-                withBorder
-                p="md"
-                radius="sm"
-                mb="md"
-                style={{
-                  backgroundColor:
-                    'var(--mantine-color-gray-0)',
-                }}
-              >
-
-                <Text
-                  fw={600}
-                  size="sm"
-                  mb="md"
-                >
-                  Supplier Information
-                </Text>
-
-
-                <Grid
-                  columns={12}
-                  gutter="sm"
-                >
-
-                  {/* Supplier ID */}
-
-                  <Grid.Col span={6}>
-
+                  {/* Row 1: Supplier ID | Supplier Code | Supplier Name */}
+                  <Grid.Col span={4}>
                     <FormTextInput
-
                       label="Supplier ID"
-
-                      value={
-                        form.supplierId != null
-                          ? String(form.supplierId)
-                          : ''
-                      }
-
+                      value={form.supplierId != null ? String(form.supplierId) : ''}
                       onChange={() => {}}
-
                       placeholder="Auto-generated"
-
                       readOnly
                     />
-
                   </Grid.Col>
-
-
-                  {/* Supplier Code */}
-
-                  <Grid.Col span={6}>
-
+                  <Grid.Col span={4}>
                     <FormTextInput
-
                       label="* Supplier Code"
-
                       value={form.supplierCode}
-
                       onChange={setStr('supplierCode')}
-
                       placeholder="Supplier Code"
-
-                      required
+                      
                     />
-
                   </Grid.Col>
-
-
-                  {/* Supplier Name */}
-
-                  <Grid.Col span={12}>
-
+                  <Grid.Col span={4}>
                     <FormTextInput
-
                       label="* Supplier Name"
-
                       value={form.supplierName}
-
                       onChange={setStr('supplierName')}
-
                       placeholder="Supplier Name"
-
                       required
                     />
-
                   </Grid.Col>
 
+                  {/* Row 2: Address */}
+                  <Grid.Col span={12}>
+                    <Textarea
+                      label="* Address"
+                      value={form.address}
+                      onChange={e => {
+                        setForm(prev => ({ ...prev, address: e.target.value }));
+                        if (validationErrors.length > 0) setValidationErrors([]);
+                      }}
+                      placeholder="Enter supplier address"
+                      minRows={2}
+                      maxLength={250}
+                      autosize
+                      required
+                    />
+                    <Text size="xs" c="dimmed" ta="right" mt={2}>
+                      {form.address.length} / 250
+                    </Text>
+                  </Grid.Col>
 
-                  {/* Address */}
-
-                 <Grid.Col span={12}>
-  <Textarea
-    label="* Address"
-    value={form.address}
-    onChange={(e) => {
-      setForm(prev => ({
-        ...prev,
-        address: e.target.value,
-      }));
-
-      if (validationErrors.length > 0) {
-        setValidationErrors([]);
-      }
-    }}
-    placeholder="Enter supplier address"
-    minRows={4}
-    maxLength={250}
-    autosize
-    required
-  />
-
-  <Text
-    size="xs"
-    c="dimmed"
-    ta="right"
-    mt={3}
-  >
-    {form.address.length} / 250
-  </Text>
-</Grid.Col>
-
-
-                  {/* Country */}
-
+                  {/* Row 3: Country | Supplier Type */}
                   <Grid.Col span={6}>
-
                     <FormSelect
-
                       label="* Country"
-
                       value={form.countryId}
-
                       onChange={setSelect('countryId')}
-
                       data={countryOptions}
-
                       placeholder="--SELECT--"
-
                       searchable
-
                       required
                     />
-
                   </Grid.Col>
-
-
-                  {/* Supplier Type */}
-
                   <Grid.Col span={6}>
-
                     <FormSelect
-
                       label="Supplier Type"
-
                       value={form.supplierTypeId}
-
                       onChange={setSelect('supplierTypeId')}
-
                       data={supplierTypeOptions}
-
                       placeholder="--SELECT--"
-
                       searchable
                     />
-
                   </Grid.Col>
 
-
-                  {/* Phone */}
-
-                  <Grid.Col span={6}>
-
+                  {/* Row 4: Email | Contact Person | Contact Mobile */}
+                  <Grid.Col span={4}>
                     <FormTextInput
-
-                      label="Phone No"
-
-                      value={form.phoneNo}
-
-                      onChange={setStr('phoneNo')}
-
-                      placeholder="Phone Number"
-                    />
-
-                  </Grid.Col>
-
-
-                  {/* Email */}
-
-                  <Grid.Col span={6}>
-
-                    <FormTextInput
-
                       label="Email ID"
-
                       value={form.emailId}
-
                       onChange={setStr('emailId')}
-
                       placeholder="Email Address"
                     />
-
                   </Grid.Col>
-
-
-                  {/* Type */}
-
-                  <Grid.Col span={6}>
-
-                    <FormSelect
-
-                      label="Type"
-
-                      value={form.typeId}
-
-                      onChange={setSelect('typeId')}
-
-                      data={typeOptions}
-
-                      placeholder="--SELECT--"
-
-                      searchable
-                    />
-
-                  </Grid.Col>
-
-
-                  {/* Contact Person */}
-
-                  <Grid.Col span={6}>
-
+                  <Grid.Col span={4}>
                     <FormTextInput
-
-                      label="Contact Person Name"
-
-                      value={
-                        form.contactPersonName ?? ''
-                      }
-
-                      onChange={
-                        setStr('contactPersonName')
-                      }
-
+                      label="Contact Person"
+                      value={form.contactPersonName}
+                      onChange={setStr('contactPersonName')}
                       placeholder="Contact Person Name"
                     />
-
                   </Grid.Col>
-
-
-                  {/* Contact Mobile */}
-
-                  <Grid.Col span={6}>
-
+                  <Grid.Col span={4}>
                     <FormTextInput
-
-                      label="Contact Mobile Number"
-
-                      value={
-                        form.contactMobileNumber ?? ''
-                      }
-
-                      onChange={
-                        setStr('contactMobileNumber')
-                      }
-
+                      label="Contact Mobile"
+                      value={form.contactMobileNumber}
+                      onChange={setStr('contactMobileNumber')}
                       placeholder="Contact Mobile Number"
                     />
-
                   </Grid.Col>
 
                 </Grid>
-
               </Paper>
 
+              {/* ── Section 2: Registration Details ── */}
+              <Paper withBorder p="md" radius="sm"
+                style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
 
-              {/* ========================================================= */}
-              {/* Registration Details */}
-              {/* ========================================================= */}
+                <Text fw={600} size="sm" mb="md">Registration Details</Text>
 
-              <Paper
+                <Grid columns={12} gutter="sm">
 
-                withBorder
-
-                p="md"
-
-                radius="sm"
-
-                style={{
-                  backgroundColor:
-                    'var(--mantine-color-gray-0)',
-                }}
-              >
-
-                <Text
-                  fw={600}
-                  size="sm"
-                  mb="md"
-                >
-                  Registration Details
-                </Text>
-
-
-                <Grid
-                  columns={12}
-                  gutter="sm"
-                >
-
-                  {/* GST */}
-
+                  {/* Row 1: GST | PAN | IT No */}
                   <Grid.Col span={6}>
-
                     <FormTextInput
-
                       label="GST Number"
-
-                      value={form.gstNumber}
-
-                      onChange={setStr('gstNumber')}
-
-                      placeholder="GST Number"
-
+                      value={form.gstNo}
+                      onChange={setStr('gstNo')}
+                      placeholder="e.g. 33ABCDE1234F1Z5"
                       maxLength={15}
                     />
-
                   </Grid.Col>
-
-
-                  {/* LST */}
-
                   <Grid.Col span={6}>
-
                     <FormTextInput
-
-                      label="L.S.T. No"
-
-                      value={form.lstNo ?? ''}
-
-                      onChange={setStr('lstNo')}
-
-                      placeholder="L.S.T. Number"
+                      label="PAN No"
+                      value={form.panNo}
+                      onChange={setStr('panNo')}
+                      placeholder="e.g. ABCDE1234F"
+                      maxLength={10}
                     />
-
                   </Grid.Col>
-
-
-                  {/* IT */}
-
-                  <Grid.Col span={6}>
-
-                    <FormTextInput
-
-                      label="I.T. No"
-
-                      value={form.itNo ?? ''}
-
-                      onChange={setStr('itNo')}
-
-                      placeholder="I.T. Number"
-                    />
-
-                  </Grid.Col>
-
-
-                  {/* CST */}
-
-                  <Grid.Col span={6}>
-
-                    <FormTextInput
-
-                      label="C.S.T. No"
-
-                      value={form.cstNo ?? ''}
-
-                      onChange={setStr('cstNo')}
-
-                      placeholder="C.S.T. Number"
-                    />
-
-                  </Grid.Col>
+                  
 
                 </Grid>
-
               </Paper>
 
             </Box>
           )}
+          {/* -- error Panel -- */}
 
+          {validationErrors.length > 0 && (
+            <Box px="lg" pt="sm"
+              style={{
+                borderTop: '1px solid var(--mantine-color-red-3)',
+                backgroundColor: 'var(--mantine-color-red-0)',
+                flexShrink: 0,
+              }}>
+              <Alert
+                color="red"
+                variant="light"
+                title={`${validationErrors.length} error${validationErrors.length > 1 ? 's' : ''} — please fix before saving`}
+                py="xs"
+              >
+                <List size="xs" spacing={2}>
+                  {validationErrors.map((err, i) => (
+                    <List.Item key={i}>{err}</List.Item>
+                  ))}
+                </List>
+              </Alert>
+            </Box>
+          )}
 
-          {/* --------------------------------------------------------------- */}
-          {/* Footer */}
-          {/* --------------------------------------------------------------- */}
-
-          <Box
-
-            px="lg"
-
-            py="sm"
-
+          {/* ── Footer ── */}
+          <Box px="lg" py="sm"
             style={{
-              borderTop:
-                '1px solid var(--mantine-color-gray-3)',
-
-              backgroundColor:
-                'var(--mantine-color-body)',
-
+              borderTop: '1px solid var(--mantine-color-gray-3)',
+              backgroundColor: 'var(--mantine-color-body)',
               flexShrink: 0,
-            }}
-          >
-
-            <Group
-              justify="flex-end"
-              gap="sm"
-            >
-
-              <Button
-                variant="default"
-                size="sm"
-                onClick={onClose}
-              >
-                Cancel
-              </Button>
-
-
-              <Button
-                size="sm"
-                color="blue"
-                onClick={handleSubmitClick}
-              >
+            }}>
+            <Group justify="flex-end" gap="sm">
+              <Button variant="default" size="sm" onClick={onClose}>Cancel</Button>
+              <Button size="sm" color="blue" onClick={handleSubmitClick}>
                 {confirmLabel}
               </Button>
-
             </Group>
-
           </Box>
 
         </Paper>
-
       </Modal>
 
-
-      {/* ----------------------------------------------------------------- */}
-      {/* Confirmation */}
-      {/* ----------------------------------------------------------------- */}
-
       <ConfirmDialog
-
         opened={confirmOpen}
-
-        onClose={() => {
-          setConfirmOpen(false);
-          setValidationErrors([]);
-        }}
-
+        onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
         onConfirm={() => {
-
-          onSave?.({
-            ...form,
-            gstNumber:
-              form.gstNumber.trim().toUpperCase(),
-          });
-
+          onSave?.({ ...form, gstNo: form.gstNo.trim().toUpperCase() });
           setConfirmOpen(false);
-
           onClose();
         }}
-
-        message={
-          `Are you sure you want to ` +
-          `${confirmLabel.toLowerCase()} this Supplier?`
-        }
-
+        message={`Are you sure you want to ${confirmLabel.toLowerCase()} this Supplier?`}
         confirmLabel={confirmLabel}
-
         errors={validationErrors}
-
         zIndex={250}
       />
-
     </>
   );
 };
-
 
 export default SupplierMasterForm;

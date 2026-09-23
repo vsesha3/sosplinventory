@@ -21,6 +21,7 @@ import type { ColumnDef } from '../../components/common/MasterTable';
 
 import type { PagedApiResponse } from '../../types/api.types';
 
+
 import SupplierMasterForm, {
   type SupplierMasterFormData,
 } from './Forms/SupplierMasterForm';
@@ -89,7 +90,7 @@ interface Supplier {
   lastUpdatedBy: string | null;
 
   // New field
-  gstNumber?: string | null;
+  gstNo?: string | null;
 }
 
 
@@ -154,7 +155,7 @@ const COLUMNS: ColumnDef[] = [
 
   // GST replaces the old ECC column
   {
-    key: 'gstNumber',
+    key: 'gstNo',
     label: 'GST Number',
     width: 150,
   },
@@ -169,19 +170,7 @@ const COLUMNS: ColumnDef[] = [
     key: 'rCNo',
     label: 'RC No',
     width: 90,
-  },
-
-  {
-    key: 'cSTNo',
-    label: 'CST No',
-    width: 90,
-  },
-
-  {
-    key: 'lSTNo',
-    label: 'LST No',
-    width: 90,
-  },
+  }
 ];
 
 
@@ -739,7 +728,7 @@ const SupplierPage: React.FC = () => {
           {/* GST */}
 
           <Table.Td>
-            {val(item.gstNumber)}
+            {val(item.gstNo)}
           </Table.Td>
 
 
@@ -753,14 +742,7 @@ const SupplierPage: React.FC = () => {
           </Table.Td>
 
 
-          <Table.Td>
-            {val(item.cSTNo)}
-          </Table.Td>
-
-
-          <Table.Td>
-            {val(item.lSTNo)}
-          </Table.Td>
+        
 
         </Table.Tr>
       );

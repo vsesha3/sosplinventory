@@ -10,6 +10,7 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosSupplierMaster extends BaseAuditEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "supplier_id", nullable = false, unique = true)
     private Integer supplierId;
 
@@ -46,7 +47,7 @@ public class SosSupplierMaster extends BaseAuditEntity {
 	}
 
 	public void setSupplierCode(String supplierCode) {
-		this.supplierCode = supplierCode;
+		this.supplierCode = "SOSPLS-"+getSupplierId();
 	}
 
 	public String getAddress() {
@@ -73,11 +74,11 @@ public class SosSupplierMaster extends BaseAuditEntity {
 		this.typeId = typeId;
 	}
 
-	public Boolean getSupplierTypeId() {
+	public Integer getSupplierTypeId() {
 		return supplierTypeId;
 	}
 
-	public void setSupplierTypeId(Boolean supplierTypeId) {
+	public void setSupplierTypeId(Integer supplierTypeId) {
 		this.supplierTypeId = supplierTypeId;
 	}
 
@@ -109,7 +110,7 @@ public class SosSupplierMaster extends BaseAuditEntity {
     private Boolean typeId;
 
     @Column(name = "supplier_type_id")
-    private Boolean supplierTypeId;
+    private Integer supplierTypeId;
 
     @Column(name = "phone_no", length = 25)
     private String phoneNo;

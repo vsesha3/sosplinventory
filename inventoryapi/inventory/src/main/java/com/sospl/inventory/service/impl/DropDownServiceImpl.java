@@ -34,8 +34,8 @@ public class DropDownServiceImpl implements DropDownService {
             case "transporter"  -> repository.getTransporterDropdown();
             case "rm-stock"     -> repository.getRmStockDropdown();
             case "product-group" -> repository.getProductGroupDropDown();
-            case "SupplierType" ->repository.getSupplierTypeDropDown();
-            case "CountryList" ->repository.getCountryListForDropDown();
+            case "supplier-type" ->repository.getSupplierTypeDropDown();
+            case "country-list" ->repository.getCountryListForDropDown();
 
             // ── Unknown type ──────────────────────────────────────────────
             default -> throw new RuntimeException(

@@ -203,7 +203,7 @@ public class DropDownRepository {
                 SELECT
                     supplier_type_id  AS id,
                     supplier_type_name       AS name
-                FROM sos_supplier_type_master
+                FROM sos_supplier_type_master_t
                 WHERE is_active = 1
                 AND is_deleted = 0
                 ORDER BY supplier_type_name ASC
@@ -216,9 +216,9 @@ public class DropDownRepository {
     public List<DropDownResponse> getCountryListForDropDown() {
         return jdbcTemplate.query("""
                 SELECT
-                    country_id_id  AS id,
+                    country_id AS id,
                     country_name       AS name
-                FROM sos_country_master
+                FROM sos_country_master_t
                 WHERE is_active = 1
                 AND is_deleted = 0
                 ORDER BY country_name ASC
