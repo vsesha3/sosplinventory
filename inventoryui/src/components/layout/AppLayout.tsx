@@ -5,6 +5,9 @@ import {
   Burger, Divider, Avatar,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+
+/*
+
 import {
   IconDashboard, IconUsers, IconShield, IconKey, IconLogout,
   IconChevronDown, IconSettings, IconDatabase,
@@ -12,6 +15,19 @@ import {
   IconBuildingStore, IconCategory, IconScale,
   IconUser, IconBuildingWarehouse, IconTag,
   IconAtom, IconReceipt, IconStack2,
+  IconShoppingCart, IconClipboardList,IconBriefcase,IconFileInvoice,
+  IconCalendarStats,
+  IconClipboardData,IconFileText 
+  
+} from '@tabler/icons-react';
+*/
+
+import {
+  IconDashboard, IconUsers, IconShield, IconKey, IconLogout,
+  IconChevronDown, IconSettings, IconDatabase,
+  IconBox, IconFlask, 
+  IconBuildingStore, 
+  IconAtom, 
   IconShoppingCart, IconClipboardList,IconBriefcase,IconFileInvoice,
   IconCalendarStats,
   IconClipboardData,IconFileText 
@@ -76,22 +92,14 @@ const navGroups = [
     group: 'Masters',
     icon: <IconDatabase size={17} />,
     items: [
-      { label: 'Country Master',          path: '/masters/country',          icon: <IconTag size={17} /> },
-      { label: 'Transporter Master',      path: '/masters/transporter',      icon: <IconTruck size={17} /> },
-      { label: 'Product Group Master',    path: '/masters/product-group',    icon: <IconCategory size={17} /> },
-      { label: 'RM Group Master',         path: '/masters/rm-group',         icon: <IconAtom size={17} /> },
-      { label: 'PM Group Master',         path: '/masters/pm-group',         icon: <IconStack2 size={17} /> },
-      { label: 'UOM Master',              path: '/masters/uom',              icon: <IconScale size={17} /> },
-      { label: 'Customer Master',         path: '/masters/customer',         icon: <IconUser size={17} /> },
       { label: 'Product Master',          path: '/masters/product',          icon: <IconBox size={17} /> },
       { label: 'Raw Material Master',     path: '/masters/raw-material',     icon: <IconAtom size={17} /> },
-      { label: 'Packing Material Master', path: '/masters/packing-material', icon: <IconPackage size={17} /> },
       { label: 'Supplier Master',         path: '/masters/supplier',         icon: <IconBuildingStore size={17} /> },
-      { label: 'Capital Goods Master',    path: '/masters/capital-goods',    icon: <IconBuildingWarehouse size={17} /> },
+      //{ label: 'Capital Goods Master',    path: '/masters/capital-goods',    icon: <IconBuildingWarehouse size={17} /> }, 
       { label: 'Lab Test Master',         path: '/masters/lab-test',         icon: <IconFlask size={17} /> },
-      { label: 'Subitem Master',          path: '/masters/subitem',          icon: <IconReceipt size={17} /> },
-      { label: 'Miscellaneous Master',    path: '/masters/miscellaneous',    icon: <IconTag size={17} /> },
-      { label: 'Brand Master',            path: '/masters/brand',            icon: <IconTag size={17} /> },
+      //{ label: 'Subitem Master',          path: '/masters/subitem',          icon: <IconReceipt size={17} /> },
+      //{ label: 'Miscellaneous Master',    path: '/masters/miscellaneous',    icon: <IconTag size={17} /> },
+      //{ label: 'Brand Master',            path: '/masters/brand',            icon: <IconTag size={17} /> },
     ],
   },
 
