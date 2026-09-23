@@ -41,7 +41,7 @@ public class DropDownRepository {
     public List<DropDownResponse> getRmGroupDropdown() {
         return query("""
                 SELECT
-                    rm_group_id   AS id,
+                    id  AS id,
                     rm_group_name AS name
                 FROM sos_rm_group_master_t
                 WHERE is_active = 1

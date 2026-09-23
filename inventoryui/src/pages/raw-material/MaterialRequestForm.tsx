@@ -26,9 +26,10 @@ import type { DropDownOption, DropDownApiResponse } from '../../types/common.typ
 
 // ── RM Mapping types ──────────────────────────────────────────────────────────
 
-import StockIssuanceEditModal from './Stockissuanceeditmodal.tsx';
+import StockIssuanceEditModal from './StockIssuanceEditModal';
 
-import type { StockIssuanceLine } from './Stockissuanceeditmodal.tsx';
+
+import type { StockIssuanceLine } from './StockIssuanceEditModal';
 
 
 const extractDecimal = (v: any): number | null => {

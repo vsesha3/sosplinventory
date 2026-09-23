@@ -181,7 +181,7 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
  
   const [packUomOptions,  setPackUomOptions]  = useState<DropDownOption[]>([]);
   const [testOptions,     setTestOptions]     = useState<DropDownOption[]>([]);
-  const [testCodeOptions, setTestCodeOptions] = useState<DropDownOption[]>([]);
+  //const [testCodeOptions, setTestCodeOptions] = useState<DropDownOption[]>([]);
 
   // QuickAdd state
   const [addGroupOpen, setAddGroupOpen] = useState(false);
@@ -567,7 +567,7 @@ const handleAddUom = async () => {
                       label="Test Code"
                       value={form.testCode || null}
                       onChange={setSelect('testCode')}
-                      data={testCodeOptions}
+                      data={[]}
                       placeholder=""
                       searchable
                     />

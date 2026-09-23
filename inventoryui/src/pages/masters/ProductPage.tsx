@@ -5,7 +5,7 @@ import { IconAlertCircle } from '@tabler/icons-react';
 import api from '../../services/api';
 import MasterTable from '../../components/common/MasterTable';
 import type { ColumnDef } from '../../components/common/MasterTable';
-import type { PagedApiResponse } from '../../types/api.types';
+//import type { PagedApiResponse } from '../../types/api.types';
 import ProductMasterForm from './Forms/ProductMasterForm';
 import type { ProductMasterFormData } from './Forms/ProductMasterForm';
 import SaveStatusBanner from '../../pages/common/Savestatusbanner';

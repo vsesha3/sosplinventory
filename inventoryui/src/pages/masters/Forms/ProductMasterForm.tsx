@@ -147,7 +147,7 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
   const [uomOptions,     setUomOptions]     = useState<DropDownOption[]>([]);
   const [groupOptions,   setGroupOptions]   = useState<DropDownOption[]>([]);
   const [testOptions,    setTestOptions]    = useState<DropDownOption[]>([]);
-  const [testCodeOpts,   setTestCodeOpts]   = useState<DropDownOption[]>([]);
+  //const [testCodeOpts,   setTestCodeOpts]   = useState<DropDownOption[]>([]);
   const [rmOptions,      setRmOptions]      = useState<DropDownOption[]>([]);
 
   // ── Filter helper ─────────────────────────────────────────────────────────
@@ -304,7 +304,7 @@ load();
         if (r.rowId !== rowId) return r;
         if (field === 'rmId') {
           // value = rm_id (e.g. "54"), label = rm_name (e.g. "Acrylic Acid")
-          const opt = rmOptions.find(o => o.value === value);
+          //const opt = rmOptions.find(o => o.value === value);
           return { ...r, rmId: value, rmCode: value ?? '' };
         }
         return { ...r, [field]: value ?? '' };
@@ -530,7 +530,7 @@ load();
                       label="Test Code"
                       value={form.testCode}
                       onChange={setSelect('testCode')}
-                      data={testCodeOpts}
+                      data={[]}
                       placeholder=""
                       searchable
                     />
