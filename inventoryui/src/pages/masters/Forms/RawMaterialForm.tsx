@@ -35,6 +35,7 @@ export interface RawMaterialFormData {
   testId:    string | null;
   testCode:  string;
   rmId:      number | null;
+  materialType: string | null;
 }
 
 export interface RawMaterialFormProps {
@@ -63,6 +64,7 @@ const defaultForm: RawMaterialFormData = {
   testId:    null,
   testCode:  '',
   rmId:      null,
+  materialType: null,
 };
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -89,12 +91,16 @@ const validateForm = (form: RawMaterialFormData): string[] => {
 
   if (form.gstRate && isNaN(parseFloat(form.gstRate)))
     errors.push('GST % must be a valid number');
-
+{/*}
   if (form.packSize && isNaN(parseFloat(form.packSize)))
     errors.push('Pack Size must be a valid number');
 
   if (form.capacity && isNaN(parseFloat(form.capacity)))
     errors.push('Capacity must be a valid number');
+*/}
+
+if (!form.materialType)
+    errors.push('Material Type is required');
 
   return errors;
 };
@@ -240,6 +246,7 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
             testId:    d.testId    != null ? String(d.testId)    : null,
             testCode:  d.testCode  != null ? String(d.testCode)  : '',
             rmId:      d.rmId      ?? null,
+            materialType: d.materialType ?? null ,
           });
         }
       } catch {
@@ -338,9 +345,10 @@ const handleAddUom = async () => {
   };
 
   const confirmLabel = mode === 'update' ? 'Update' : 'Submit';
-  const headerTitle  = mode === 'update' && form.id
-    ? `Edit Raw Material — ${form.rmName || `#${rmId}`}`
-    : 'New Raw Material';
+  
+  const headerTitle = mode === 'update' && form.id
+  ? `Edit Raw Material — ${form.rmName || `#${rmId}`} [ID: ${form.rmId}]`
+  : 'New Raw Material';
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -396,15 +404,21 @@ const handleAddUom = async () => {
                 <Grid columns={12} gutter="sm">
 
                   {/* ── Row 1: Code | SAP Code ── */}
+                 
                   <Grid.Col span={6}>
-                      <FormTextInput
-                        label="RM ID"
-                        value={form.rmId != null ? String(form.rmId) : ''}
-                        onChange={() => { }}
-                        placeholder="Auto-generated"
-                        readOnly                        // ← always readonly, system generated
-                      />
-                  </Grid.Col>
+  <FormSelect
+    label="* Material Type"
+    value={form.materialType}
+    onChange={setSelect('materialType')}
+    data={[
+      { value: 'RM',      label: 'Raw Material'       },
+      { value: 'PM',  label: 'Packing Material'   },
+      { value: 'MI',     label: 'Miscellaneous Items' },
+    ]}
+    placeholder="--SELECT--"
+    required
+  />
+</Grid.Col>
                   <Grid.Col span={6}>
                     <FormTextInput
                       label="SAP Code"

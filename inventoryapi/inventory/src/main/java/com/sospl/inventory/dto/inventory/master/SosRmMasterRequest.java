@@ -35,8 +35,21 @@ public class SosRmMasterRequest {
     private Integer packUom;
     @JsonProperty("hNhId")
     private Long hNhId;
+    private String materialType;
    
-    // ── Getters and Setters ───────────────────────────────────────────────
+    public Long gethNhId() {
+		return hNhId;
+	}
+	public void sethNhId(Long hNhId) {
+		this.hNhId = hNhId;
+	}
+	public String getMaterialType() {
+		return materialType;
+	}
+	public void setMaterialType(String materialType) {
+		this.materialType = materialType;
+	}
+	// ── Getters and Setters ───────────────────────────────────────────────
     public Integer getRmCode() { return rmCode; }
     public void setRmCode(Integer rmCode) { this.rmCode = rmCode; }
 

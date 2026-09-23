@@ -42,6 +42,17 @@ public class SosRmMaster extends BaseAuditEntity {
 
     @Column(name = "h_nh_id")
     private Long hNhId;
+    
+    @Column(name="material_type")
+    private String materialType;
+
+	public String getMaterialType() {
+		return materialType;
+	}
+
+	public void setMaterialType(String materialType) {
+		this.materialType = materialType;
+	}
 
 	public Integer getRmId() {
 		return rmId;

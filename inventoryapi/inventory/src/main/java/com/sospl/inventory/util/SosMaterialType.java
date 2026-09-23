@@ -2,9 +2,9 @@ package com.sospl.inventory.util;
 
 public enum SosMaterialType {
 
-    RM("RAW_MATERIAL",      "Raw Material"),
-    PM("PACKING_MATERIAL",  "Packing Material"),
-    MI("MISCELLANEOUS",     "Miscellaneous Items");
+    RM("RM",      "Raw Material"),
+    PM("PM",  "Packing Material"),
+    MI("MI",     "Miscellaneous Items");
 
     private final String code;
     private final String displayName;

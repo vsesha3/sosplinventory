@@ -64,6 +64,8 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
         existing.setPackSize(request.getPackSize());
         existing.setCapacity(request.getCapacity());
         existing.setPackUom(request.getPackUom());
+        existing.setMaterialType(request.getMaterialType());
+        existing.sethNhId(request.getHNhId());
         repository.save(existing);
         return findById(id);
     }

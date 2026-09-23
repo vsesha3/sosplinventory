@@ -140,6 +140,7 @@ const RawMaterialPage: React.FC = () => {
         packSize: data.packSize ? Number(data.packSize) : null,
         capacity: data.capacity ? Number(data.capacity) : null,
         testId: data.testId ? Number(data.testId) : null,
+        materialType:data.materialType ,
       };
       if (formMode === 'update' && data.id) {
         await api.put(`/api/rm/${data.id}`, payload);

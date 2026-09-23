@@ -26,6 +26,8 @@ import SupplierMasterForm, {
   type SupplierMasterFormData,
 } from './Forms/SupplierMasterForm';
 
+import SaveStatusBanner from '../../pages/common/Savestatusbanner';
+import type { SaveStatus } from '../../pages/common/Savestatusbanner';
 
 // =============================================================================
 // Supplier list interface
@@ -220,6 +222,10 @@ const SupplierPage: React.FC = () => {
 
   const [editingSupplierId, setEditingSupplierId] =
     useState<number | null>(null);
+
+
+  const [saveStatus,  setSaveStatus]  = useState<SaveStatus>('idle');
+  const [saveMessage, setSaveMessage] = useState('');    
 
 
   // ===========================================================================
@@ -458,69 +464,37 @@ const SupplierPage: React.FC = () => {
   // SAVE
   // ===========================================================================
 
-  const handleSave = async (
-    form: SupplierMasterFormData
-  ) => {
+ const handleSave = async (form: SupplierMasterFormData) => {
+  setSaveStatus('saving');          // ← add
+  try {
+    setError(null);
 
-    try {
-
-      setError(null);
-
-
-      if (formMode === 'create') {
-
-        await api.post(
-          '/api/supplier',
-          form
-        );
-
-      } else {
-
-        if (!editingSupplierId) {
-
-          throw new Error(
-            'Supplier ID is missing.'
-          );
-        }
-
-
-        await api.put(
-          `/api/supplier/${editingSupplierId}`,
-          form
-        );
-      }
-
-
-      // Close form
-      setFormOpened(false);
-
-      setEditingSupplierId(null);
-
-
-      // Refresh current page
-      await fetchData(
-        page,
-        keyword
-      );
-
-    } catch (err: any) {
-
-      console.error(
-        '[Supplier Save]',
-        err
-      );
-
-
-      setError(
-        err?.response?.data?.message ||
-        `Failed to ${
-          formMode === 'create'
-            ? 'create'
-            : 'update'
-        } supplier.`
-      );
+    if (formMode === 'create') {
+      await api.post('/api/supplier', form);
+    } else {
+      if (!editingSupplierId) throw new Error('Supplier ID is missing.');
+      await api.put(`/api/supplier/${editingSupplierId}`, form);
     }
-  };
+
+    setSaveStatus('success');       // ← add
+    setSaveMessage(formMode === 'create' ? 'Supplier created!' : 'Supplier updated!');  // ← add
+    setFormOpened(false);
+    setEditingSupplierId(null);
+    await fetchData(page, keyword);
+
+  } catch (err: any) {
+    console.error('[Supplier Save]', err);
+    setSaveStatus('error');         // ← add
+    setSaveMessage(               // ← add
+      err?.response?.data?.message ||
+      `Failed to ${formMode === 'create' ? 'create' : 'update'} supplier.`
+    );
+    setError(
+      err?.response?.data?.message ||
+      `Failed to ${formMode === 'create' ? 'create' : 'update'} supplier.`
+    );
+  }
+};
 
 
   // ===========================================================================
@@ -939,6 +913,12 @@ const SupplierPage: React.FC = () => {
           formMode
         }
 
+      />
+      <SaveStatusBanner
+        status={saveStatus}
+        successMessage={saveMessage}
+        errorMessage={saveMessage}
+        onDismiss={() => setSaveStatus('idle')}
       />
 
     </Box>
