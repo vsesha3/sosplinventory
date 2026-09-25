@@ -1,7 +1,9 @@
-package com.sospl.inventory.model.inventory.master;
+package com.sospl.inventory.model.master;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import com.sospl.inventory.model.common.BaseAuditEntity;
@@ -11,6 +13,7 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosTestMaster extends BaseAuditEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "test_id", nullable = false, unique = true)
     private Long testId;
 

@@ -229,4 +229,36 @@ public class DropDownRepository {
     }
     
     
+    
+    public List<DropDownResponse> getSupplierListForDropDown() {
+        return jdbcTemplate.query("""
+                SELECT
+                    supplier_id AS id,
+                    supplier_name       AS name
+                FROM sos_supplier_master_t
+                WHERE is_active = 1
+                AND is_deleted = 0
+                ORDER BY supplier_name ASC
+                """,
+                (rs, rowNum) -> new DropDownResponse(
+                        rs.getLong("id"),
+                        rs.getString("name")));
+    }
+    
+   
+    
+    public List<DropDownResponse>  getTransporterListForDropDown() {
+        return jdbcTemplate.query("""
+                SELECT
+                    transporter_id AS id,
+                    transporter_name       AS name
+                FROM sos_transporter_master_t
+                WHERE is_active = 1
+                AND is_deleted = 0
+                ORDER BY transporter_name ASC
+                """,
+                (rs, rowNum) -> new DropDownResponse(
+                        rs.getLong("id"),
+                        rs.getString("name")));
+    }
 }

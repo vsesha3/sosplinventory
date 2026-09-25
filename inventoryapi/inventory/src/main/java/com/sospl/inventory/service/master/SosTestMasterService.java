@@ -1,8 +1,8 @@
-package com.sospl.inventory.service.inventory.master;
+package com.sospl.inventory.service.master;
 
 import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
-import com.sospl.inventory.model.inventory.master.SosTestMaster;
+import com.sospl.inventory.model.master.SosTestMaster;
 import com.sospl.inventory.service.common.BaseMasterService;
 
 import java.util.List;

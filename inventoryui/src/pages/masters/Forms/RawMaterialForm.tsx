@@ -10,6 +10,7 @@ import { FormSelect }    from '../../../components/common/FormSelect';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import FormHeader        from '../../common/Formheader';
 import api from '../../../services/api';
+import QuickAddModal from '../../../components/common/QuickAddModal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -107,52 +108,8 @@ if (!form.materialType)
 
 // ── QuickAdd Modal — single field, reusable ───────────────────────────────────
 
-interface QuickAddModalProps {
-  opened:   boolean;
-  onClose:  () => void;
-  title:    string;
-  label:    string;
-  value:    string;
-  onChange: (v: string) => void;
-  onSave:   () => void;
-  saving:   boolean;
-}
 
-const QuickAddModal: React.FC<QuickAddModalProps> = ({
-  opened, onClose, title, label, value, onChange, onSave, saving,
-}) => (
-  <Modal
-    opened={opened}
-    onClose={onClose}
-    title={title}
-    size="sm"
-    zIndex={350}
-    centered
-  >
-    <Stack gap="md">
-      <TextInput
-        label={label}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={`Enter ${label.toLowerCase()}`}
-        required
-        autoFocus
-        onKeyDown={e => { if (e.key === 'Enter' && value.trim()) onSave(); }}
-      />
-      <Group justify="flex-end" gap="sm">
-        <Button variant="default" size="sm" onClick={onClose}>Cancel</Button>
-        <Button
-          size="sm"
-          loading={saving}
-          disabled={!value.trim()}
-          onClick={onSave}
-        >
-          Add
-        </Button>
-      </Group>
-    </Stack>
-  </Modal>
-);
+
 
 const HNH_OPTIONS: DropDownOption[] = [
   { value: '1', label: 'Hazardous',     code: 'H'  },
@@ -635,6 +592,9 @@ const handleAddUom = async () => {
         onSave={handleAddUom}
         saving={quickSaving}
       />
+
+      
+      
     </>
   );
 };

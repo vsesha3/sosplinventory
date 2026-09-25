@@ -1,10 +1,10 @@
-package com.sospl.inventory.controller.inventory.master;
+package com.sospl.inventory.controller.master;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
-import com.sospl.inventory.model.inventory.master.SosTestMaster;
-import com.sospl.inventory.service.inventory.master.SosTestMasterService;
+import com.sospl.inventory.model.master.SosTestMaster;
+import com.sospl.inventory.service.master.SosTestMasterService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

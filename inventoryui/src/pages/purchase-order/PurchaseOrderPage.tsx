@@ -48,6 +48,7 @@ interface PurchaseOrder {
   addCharges: number | null;
   createdBy: string | null;
   createdAt: string | null;
+  poLegacyRefNo: string | null;
 }
 
 interface PoDetail {
@@ -329,7 +330,8 @@ const getSelectedPoNo = (): string | null => {
         parentCells={
           <>
             <Table.Td fw={500} c="blue" style={{ cursor: 'pointer' }}>
-              {item.poNo}
+              
+              {item.poLegacyRefNo ?? item.poNo}
             </Table.Td>
             <Table.Td>{fmtDate(item.poDate)}</Table.Td>
           

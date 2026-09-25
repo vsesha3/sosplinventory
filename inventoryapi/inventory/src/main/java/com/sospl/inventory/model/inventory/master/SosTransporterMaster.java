@@ -10,6 +10,7 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosTransporterMaster extends BaseAuditEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "transporter_id", nullable = false, unique = true)
     private Integer transporterId;
 

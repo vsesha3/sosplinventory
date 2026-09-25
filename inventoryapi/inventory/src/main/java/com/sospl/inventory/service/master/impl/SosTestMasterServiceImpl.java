@@ -1,11 +1,11 @@
-package com.sospl.inventory.service.inventory.master.impl;
+package com.sospl.inventory.service.master.impl;
 
 import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
-import com.sospl.inventory.model.inventory.master.SosTestMaster;
-import com.sospl.inventory.repository.inventory.master.SosTestMasterRepository;
+import com.sospl.inventory.model.master.SosTestMaster;
+import com.sospl.inventory.repository.master.SosTestMasterRepository;
 import com.sospl.inventory.service.common.impl.BaseMasterServiceImpl;
-import com.sospl.inventory.service.inventory.master.SosTestMasterService;
+import com.sospl.inventory.service.master.SosTestMasterService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

@@ -16,6 +16,7 @@ import api from '../../../services/api';
 export interface LabTestParameter {
   rowId:         string;   // local React key
   paramId?:      number | null;
+  testId:        number | 0;
   specification: string;
   method:        string;
   limits:        string;
@@ -51,6 +52,7 @@ const newRow = (): LabTestParameter => ({
   specification: '',
   method:        '',
   limits:        '',
+  testId:        0
 });
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -98,36 +100,51 @@ const LabTestMasterForm: React.FC<LabTestMasterFormProps> = ({
       return;
     }
 
-    if (mode === 'update' && testId) {
-      const load = async () => {
-        setLoading(true);
-        setFetchError(null);
-        try {
-          const res = await api.get(`/api/inventory/test-master/${testId}`);
-          const d   = res.data.data ?? res.data;
+   if (mode === 'update' && testId) {
+    
+  const load = async () => {
+    setLoading(true);
+    setFetchError(null);
 
-          const parameters: LabTestParameter[] = (d.parameters ?? []).map((p: any) => ({
-            rowId:         crypto.randomUUID(),
-            paramId:       p.paramId       ?? null,
-            specification: p.specification ?? '',
-            method:        p.method        ?? '',
-            limits:        p.limits        ?? '',
-          }));
+    try {
+      // Load Test Master
+      const res = await api.get(`/api/inventory/test-master/${testId}`);
+      const d = res.data.data ?? res.data;
 
-          setForm({
-            id:         d.testId   ?? null,
-            testCode:   d.testCode ?? '',
-            testName:   d.testName ?? '',
-            parameters,
-          });
-        } catch {
-          setFetchError('Failed to load test master. Please close and try again.');
-        } finally {
-          setLoading(false);
-        }
-      };
-      load();
+      // Load Parameters associated with Test ID
+      const parameterRes = await api.get(
+        `/api/test-parameters/test/${testId}`
+      );
+
+      const parameterData =
+        parameterRes.data.data ?? parameterRes.data ?? [];
+
+      const parameters: LabTestParameter[] = parameterData.map((p: any) => ({
+        rowId: crypto.randomUUID(),
+        paramId: p.paramId ?? null,
+        specification: p.specification ?? '',
+        method: p.method ?? '',
+        limits: p.limits ?? '',
+      }));
+
+      setForm({
+        id: d.testId ?? null,
+        testCode: d.testCode ?? '',
+        testName: d.testName ?? '',
+        parameters,
+      });
+
+    } catch (error) {
+      setFetchError(
+        'Failed to load test master. Please close and try again.'
+      );
+    } finally {
+      setLoading(false);
     }
+  };
+
+  load();
+}
   }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Form helpers ──────────────────────────────────────────────────────────

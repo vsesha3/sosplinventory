@@ -1,6 +1,6 @@
-package com.sospl.inventory.repository.inventory.master;
+package com.sospl.inventory.repository.master;
 
-import com.sospl.inventory.model.inventory.master.SosTestMaster;
+import com.sospl.inventory.model.master.SosTestMaster;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

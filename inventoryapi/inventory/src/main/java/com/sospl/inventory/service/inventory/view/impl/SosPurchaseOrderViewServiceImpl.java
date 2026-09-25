@@ -193,6 +193,7 @@ public class SosPurchaseOrderViewServiceImpl
         header.setAddCharges(request.getAddCharges());
         header.setIsActive(true);
         header.setIsDeleted(false);
+        header.setPoLegacyRefNo(request.getPoLegacyRefNo());
         
 
         // Parse requestedBy if present

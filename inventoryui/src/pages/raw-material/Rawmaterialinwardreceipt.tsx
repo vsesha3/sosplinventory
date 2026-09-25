@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
-  Grid, Badge, Stack, Loader, Center, Divider,
+  Grid, Badge, Stack, Loader, Center, Divider,Tooltip, ActionIcon,
 } from '@mantine/core';
 import { IconClipboardCheck } from '@tabler/icons-react';
 import type { DateValue } from '@mantine/dates';
@@ -15,7 +15,8 @@ import InwardReceiptLineTable from '../common/Inwardreceiptlinetable';
 import type { InwardReceiptLine } from '../common/Inwardreceiptlinetable';
 import api from '../../services/api';
 import { PO_TYPE_LABELS } from '../../types/api.types';
-
+import {  IconPlus } from '@tabler/icons-react';
+import QuickAddModal from '../../components/common/QuickAddModal';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface DropDownOption {
@@ -154,12 +155,16 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
   const poDateRef = React.useRef<string | null>(initialPoDate);
   poDateRef.current = initialPoDate; // ← updated on every render, before effects run
 
+  const [newTransporterName,setNewTransporterName]  = useState('');
+  const [addTransporterOpen,setAddTransporterOpen] = useState(false);
+  const [quickSaving,  setQuickSaving]  = useState(false);
+
   // ── Load shared dropdowns ─────────────────────────────────────────────────
 
   const loadDropdowns = async () => {
     const [supplierRes, transporterRes] = await Promise.all([
-      api.get('/api/supplier-view/dropdown'),
-      api.get('/api/transporter/dropdown').catch(() => ({ data: { data: [] } })),
+      api.get('/api/dropdown/supplier-list'),
+      api.get('/api/dropdown/transporter_list').catch(() => ({ data: { data: [] } })),
     ]);
     setSupplierOptions(supplierRes.data.data ?? []);
     setTransporterOptions(transporterRes.data.data ?? []);
@@ -412,6 +417,40 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
     isEditMode ? `Edit Receipt #${initialReceiptDetId}` : 'New Inward Receipt'
   } — PO: ${poLabel}${form.poDate ? ` | ${fmtDate(form.poDate)}` : ''}`;
 
+  const handleTransporterAdd = async () => {
+
+       if (!newTransporterName.trim()) return;
+       setQuickSaving(true);
+        try {
+    const res     = await api.post('/api/transporter', { transporterName: newTransporterName.trim() });
+    const created = res.data?.data ?? res.data;
+    // Refresh UOM dropdown (used for both UOM and Pack UOM)
+    
+    loadDropdowns();
+   
+    
+    // Auto-select the new transporter
+    if (created?.id != null) {
+      setForm(prev => ({ ...prev,  transporterId: String(created.transporterId) }));
+    } else {
+      const match = transporterOptions.find(o => o.label === newTransporterName.trim());
+      if (match) setForm(prev => ({ ...prev, transporterId: match.value }));
+    }
+    setNewTransporterName('');
+    setAddTransporterOpen(false);
+  } catch (err: any) {
+    console.error('[handleAddUom] Failed:', err?.response?.data ?? err);
+    setFetchError(
+      err?.response?.data?.message || 'Failed to add UOM. Please try again.'
+    );
+  } finally {
+     setAddTransporterOpen(false);
+    setQuickSaving(false);
+  }
+
+
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -534,6 +573,7 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
 
                   {/* ── Row 3 ── */}
                   <Grid.Col span={3}>
+                    <Box>
                     <FormSelect
                       label="* Supplier Name"
                       value={form.supplierId}
@@ -543,17 +583,41 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
                       required
                       searchable
                     />
+                    
+                    </Box>
                   </Grid.Col>
-                  <Grid.Col span={3}>
-                    <FormSelect
-                      label="Transporter"
-                      value={form.transporterId}
-                      onChange={setSelect('transporterId')}
-                      data={transporterOptions}
-                      placeholder="--------Select----------"
-                      searchable
-                    />
-                  </Grid.Col>
+
+                    <Grid.Col span={3}>
+  <Box>
+    <Group align="flex-end" gap="xs">
+      <Box style={{ flex: 1 }}>
+        <FormSelect
+          label="Transporter"
+          value={form.transporterId}
+          onChange={setSelect('transporterId')}
+          data={transporterOptions}
+          placeholder="--------Select----------"
+          searchable
+        />
+      </Box>
+
+      <Tooltip label="Add new Transporter" position="top">
+        <ActionIcon
+          variant="light"
+          color="blue"
+          size="lg"
+          mb={1}
+          onClick={() => {
+            setNewTransporterName('');
+            setAddTransporterOpen(true);
+          }}
+        >
+          <IconPlus size={14} />
+        </ActionIcon>
+      </Tooltip>
+    </Group>
+  </Box>
+</Grid.Col>
                   <Grid.Col span={3}>
                     <FormTextInput
                       label="L.R's Number"
@@ -694,6 +758,7 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
           </Box>
 
         </Paper>
+
       </Modal>
 
       <ConfirmDialog
@@ -726,6 +791,16 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
   errors={[]}   // ← empty errors so it shows confirm mode not error mode
   zIndex={400}
 />
+<QuickAddModal
+        opened={addTransporterOpen}
+        onClose={() => setAddTransporterOpen(false)}
+        title="Add New Transporter"
+        label="Transporter Name"
+        value={newTransporterName}
+        onChange={setNewTransporterName}
+        onSave={handleTransporterAdd}
+        saving={quickSaving}
+      />
     </>
   );
 };
