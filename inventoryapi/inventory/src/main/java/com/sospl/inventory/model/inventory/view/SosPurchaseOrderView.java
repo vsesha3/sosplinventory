@@ -37,7 +37,8 @@ import java.time.LocalDateTime;
             pht.created_by,
             pht.created_at,
             pht.updated_by,
-            pht.updated_at
+            pht.updated_at,
+            pht.po_legacy_refno
         FROM sos_po_header_t pht
         LEFT JOIN sos_supplier_master_t smt
             ON pht.supplier_id = smt.supplier_id
@@ -122,8 +123,16 @@ public class SosPurchaseOrderView {
     
     @Column(name="freight_gst")
     private String freightGst;
+    
+    @Column(name = "po_legacy_refno", length = 50)
+    private String poLegacyRefNo;
+    
 
-    public Long getPoRefNo() { return poRefNo; }
+    
+    public String getPoLegacyRefNo() {
+		return poLegacyRefNo;
+	}
+	public Long getPoRefNo() { return poRefNo; }
     public String getPoNo() { return poNo; }
     public LocalDateTime getPoDate() { return poDate; }
     public String getPoKindAttention() { return poKindAttention; }

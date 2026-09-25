@@ -37,6 +37,7 @@ export interface PurchaseOrderFormData {
   requestedBy: string | null;
   freight: string;
   freightGst: string;
+  poLegacyRefNo: string;
  
 }
 

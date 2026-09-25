@@ -21,8 +21,15 @@ public class SosPoHeaderRequest {
     private String requestedBy;   
     private String freight;
     private String freightGst;// employee id string
+    private String poLegacyRefNo;
     
    
+	public String getPoLegacyRefNo() {
+		return poLegacyRefNo;
+	}
+	public void setPoLegacyRefNo(String poLegacyRefNo) {
+		this.poLegacyRefNo = poLegacyRefNo;
+	}
 	private List<SosPoDetailsRequestDto> lineItems;
 
     public Long getPoRefNo() { return poRefNo; }

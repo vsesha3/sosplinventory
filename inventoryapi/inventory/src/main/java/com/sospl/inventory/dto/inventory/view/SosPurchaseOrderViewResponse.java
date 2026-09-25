@@ -31,9 +31,15 @@ public class SosPurchaseOrderViewResponse {
     private LocalDateTime updatedAt;
     private String freight;
     private String freightGst;
-   
+    private String poLegacyRefNo;   
 
-    public String getFreight() {
+    public String getPoLegacyRefNo() {
+		return poLegacyRefNo;
+	}
+	public void setPoLegacyRefNo(String poLegacyRefNo) {
+		this.poLegacyRefNo = poLegacyRefNo;
+	}
+	public String getFreight() {
 		return freight;
 	}
 	public void setFreight(String freight) {

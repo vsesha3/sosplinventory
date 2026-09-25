@@ -64,7 +64,8 @@ interface PurchaseOrderApiData {
   createdAt: string | null;
   updatedBy: string | null;
   updatedAt: string | null;
-}
+  poLegacyRefNo: string | null;
+  }
 
 interface PoDetailApiResponse {
   success: boolean;
@@ -115,6 +116,8 @@ const defaultForm: PurchaseOrderFormData = {
   requestedBy: null,
   freight: '',
   freightGst: '',
+  poLegacyRefNo: ''
+  
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -217,6 +220,8 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       addCharges:         apiData.addCharges != null ? String(apiData.addCharges) : '',
       freight:            apiData.freight != null ? String(apiData.freight) : '',
       freightGst:         apiData.freightGst ?? '',
+      poLegacyRefNo:      apiData.poLegacyRefNo ?? '',
+    
     };
   };
 
@@ -696,19 +701,23 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
 
             {/* ── Row 1: PO Date | PO Type | Supplier Name | PO Number | Delivery Schedule ── */}
             <Grid columns={20} gutter="md" mb="md">
-              <Grid.Col span={4}>
+              <Grid.Col span={3}>
                 <FormDatePicker label="PO Date" value={form.poDate} onChange={setDate('poDate')} required readOnly={readOnly} />
               </Grid.Col>
-              <Grid.Col span={4}>
+              <Grid.Col span={3}>
                 <FormSelect label="PO Type" value={form.poType} onChange={handlePoTypeChange} data={poTypeOptions} placeholder="Select type" required readOnly={readOnly || mode === 'update'} />
               </Grid.Col>
               <Grid.Col span={4}>
                 <FormSelect label="Supplier Name" value={form.supplierId} onChange={set('supplierId')} data={dropdowns.supplierOptions} placeholder="Select supplier" required searchable readOnly={readOnly} />
               </Grid.Col>
-              <Grid.Col span={4}>
+              <Grid.Col span={3}>
                 <FormTextInput label="PO Number" value={form.poNo} onChange={setStr('poNo')} placeholder="e.g. RM/694/2025-2026" required readOnly={true} />
+                 </Grid.Col>
+                 <Grid.Col span={3}>
+                <FormTextInput label="Legacy Ref No" value={form.poLegacyRefNo} onChange={setStr('poLegacyRefNo')} placeholder="e.g. teleconversation" readOnly={readOnly} />
               </Grid.Col>
-              <Grid.Col span={4}>
+                
+              <Grid.Col span={3}>
                 <FormDatePicker label="Delivery Schedule" value={form.poDeliverySchedule} onChange={setDate('poDeliverySchedule')} required readOnly={readOnly} />
               </Grid.Col>
             </Grid>
@@ -724,9 +733,12 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
               <Grid.Col span={4}>
                 <FormTextInput label="Delivery Terms" value={form.poDeliveryTerms} onChange={setStr('poDeliveryTerms')} placeholder="e.g. Door delivery" readOnly={readOnly} />
               </Grid.Col>
-              <Grid.Col span={4}>
-                <FormTextInput label="PO Reference" value={form.poReference} onChange={setStr('poReference')} placeholder="e.g. teleconversation" readOnly={readOnly} />
+               <Grid.Col span={4}>
+              <FormTextInput label="PO Reference" value={form.poReference} onChange={setStr('poReference')} placeholder="e.g. teleconversation"  readOnly={readOnly} />
+             
               </Grid.Col>
+             
+               
               <Grid.Col span={4}>
                 <FormSelect label="Requested By" value={form.requestedBy} onChange={set('requestedBy')} data={dropdowns.employeeOptions} placeholder="Select employee" searchable readOnly={readOnly} />
               </Grid.Col>

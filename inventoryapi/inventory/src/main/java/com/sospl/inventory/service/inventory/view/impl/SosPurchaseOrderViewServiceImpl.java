@@ -163,6 +163,7 @@ public class SosPurchaseOrderViewServiceImpl
         response.setCreatedAt(entity.getCreatedAt());
         response.setUpdatedBy(entity.getUpdatedBy());
         response.setUpdatedAt(entity.getUpdatedAt());
+        response.setPoLegacyRefNo(entity.getPoLegacyRefNo());
         return response;
     }
     
@@ -246,6 +247,7 @@ public class SosPurchaseOrderViewServiceImpl
         header.setFreightGst(request.getFreightGst());
         
         header.setAddCharges(request.getAddCharges());
+        header.setPoLegacyRefNo(request.getPoLegacyRefNo());
       
         if (request.getRequestedBy() != null
                 && !request.getRequestedBy().isBlank()) {

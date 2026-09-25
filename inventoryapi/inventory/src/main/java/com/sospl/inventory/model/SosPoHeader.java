@@ -18,9 +18,15 @@ public class SosPoHeader extends BaseAuditEntity {
     @Column(name = "po_ref_no")
     @GeneratedValue(strategy = GenerationType.IDENTITY) 
     private Long poRefNo;
+    
+    
 
     @Column(name = "po_no", length = 50)
     private String poNo;
+    
+    @Column(name = "po_legacy_refno", length = 50)
+    private String poLegacyRefNo;
+    
 
     @Column(name = "po_date")
     private java.time.LocalDateTime poDate;
@@ -72,8 +78,16 @@ public class SosPoHeader extends BaseAuditEntity {
     
     @Column(name="freight_gst")
     private String freightGst;
+    
+   
 
    
+	public String getPoLegacyRefNo() {
+		return poLegacyRefNo;
+	}
+	public void setPoLegacyRefNo(String poLegacyRefNo) {
+		this.poLegacyRefNo = poLegacyRefNo;
+	}
 	public Long getPoRefNo() { return poRefNo; }
     public void setPoRefNo(Long poRefNo) { this.poRefNo = poRefNo; }
 

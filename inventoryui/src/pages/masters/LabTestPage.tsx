@@ -6,6 +6,13 @@ import MasterCardGrid from '../../components/common/MasterCardGrid';
 import type { CardFieldDef } from '../../components/common/MasterCardGrid';
 import type { PagedApiResponse } from '../../types/api.types';
 
+
+import LabTestMasterForm from './Forms/LabTestMasterForm';
+
+import type { LabTestMasterFormData, LabTestParameter } from './Forms/LabTestMasterForm';
+import SaveStatusBanner from '../common/Savestatusbanner';
+import type { SaveStatus } from '../common/Savestatusbanner';
+
 interface LabTest {
   testId: number;
   testCode: string;
@@ -30,6 +37,13 @@ const LabTestPage: React.FC = () => {
   const [page, setPage]                   = useState(1);
   const [totalPages, setTotalPages]       = useState(1);
   const [totalElements, setTotalElements] = useState(0);
+
+  // ── Form state ───────────────────────────────────────────────────────────────
+  const [formOpen,     setFormOpen]     = useState(false);
+  const [formMode,     setFormMode]     = useState<'create' | 'update'>('create');
+  const [editTestId,   setEditTestId]   = useState<number | null>(null);
+  const [saveStatus,   setSaveStatus]   = useState<SaveStatus>('idle');
+  const [saveMessage,  setSaveMessage]  = useState('');
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async (currentPage: number, currentKeyword: string) => {
@@ -67,7 +81,10 @@ const LabTestPage: React.FC = () => {
       setKeyword(searchInput);
       setPage(1);
     }, 400);
-    return () => clearTimeout(timer);
+    // ── Save ─────────────────────────────────────────────────────────────────────
+
+
+  return () => clearTimeout(timer);
   }, [searchInput]);
 
   // ── Selection ─────────────────────────────────────────────────────────────
@@ -88,6 +105,39 @@ const LabTestPage: React.FC = () => {
     setSelected((prev) =>
       prev.includes(numId) ? prev.filter((s) => s !== numId) : [...prev, numId]
     );
+  };
+
+  // ── Save ─────────────────────────────────────────────────────────────────────
+  const handleSave = async (formData: LabTestMasterFormData) => {
+    setSaveStatus('saving');
+    try {
+      const payload = {
+        testCode:   formData.testCode,
+        testName:   formData.testName,
+        parameters: formData.parameters.map((p: LabTestParameter) => ({
+          paramId:       p.paramId ?? null,
+          specification: p.specification,
+          method:        p.method,
+          limits:        p.limits,
+        })),
+      };
+
+      if (formMode === 'update' && formData.id) {
+        await api.put(`/api/inventory/test-master/${formData.id}`, payload);
+      } else {
+        await api.post('/api/inventory/test-master', payload);
+      }
+
+      setSaveStatus('success');
+      setSaveMessage(formMode === 'create' ? 'Lab Test created!' : 'Lab Test updated!');
+      setFormOpen(false);
+      setEditTestId(null);
+      fetchData(page, keyword);
+    } catch (err: any) {
+      setSaveStatus('error');
+      setSaveMessage(err?.response?.data?.message || 'Failed to save Lab Test.');
+      setError(err?.response?.data?.message || 'Failed to save Lab Test.');
+    }
   };
 
   return (
@@ -126,13 +176,40 @@ const LabTestPage: React.FC = () => {
           onToggleSelectAll={toggleSelectAll}
           allSelected={allSelected}
           someSelected={someSelected}
-          onAdd={() => console.log('Add')}
-          onEdit={() => console.log('Edit', selected)}
+          onAdd={() => {
+            setEditTestId(null);
+            setFormMode('create');
+            setFormOpen(true);
+          }}
+          onEdit={selected.length === 1
+            ? () => {
+                setEditTestId(selected[0]);
+                setFormMode('update');
+                setFormOpen(true);
+              }
+            : undefined
+          }
           onDelete={() => console.log('Delete', selected)}
           onRefresh={() => fetchData(page, keyword)}
           onExport={() => console.log('Export')}
         />
       )}
+
+      <LabTestMasterForm
+        opened={formOpen}
+        onClose={() => { setFormOpen(false); setEditTestId(null); }}
+        onSave={handleSave}
+        testId={editTestId}
+        mode={formMode}
+      />
+
+      <SaveStatusBanner
+        status={saveStatus}
+        successMessage={saveMessage}
+        errorMessage={saveMessage}
+        onDismiss={() => setSaveStatus('idle')}
+      />
+
     </Box>
   );
 };

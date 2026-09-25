@@ -32,8 +32,15 @@ public class SosPoDetailsResponse {
     private Long poReceiptNo;
     private String freight;
     private BigDecimal rmRcvdQty;
+    private String poLegacyRefNo;
     
-    public BigDecimal getRmRcvdQty() {
+    public String getPoLegacyRefNo() {
+		return poLegacyRefNo;
+	}
+	public void setPoLegacyRefNo(String poLegacyRefNo) {
+		this.poLegacyRefNo = poLegacyRefNo;
+	}
+	public BigDecimal getRmRcvdQty() {
 		return rmRcvdQty;
 	}
 	public void setRmRcvdQty(BigDecimal rmRcvdQty) {
