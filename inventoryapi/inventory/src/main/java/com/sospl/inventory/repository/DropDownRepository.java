@@ -55,7 +55,7 @@ public class DropDownRepository {
         return query("""
                 SELECT
                     test_id   AS id,
-                    test_name AS name,test_code as testCode
+                    concat(test_name,"~",test_code) AS name,test_code as testCode
                 FROM sos_test_master_t
                 WHERE is_active = 1
                 AND is_deleted = 0

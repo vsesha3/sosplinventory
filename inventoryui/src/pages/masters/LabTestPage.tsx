@@ -112,6 +112,7 @@ const LabTestPage: React.FC = () => {
     setSaveStatus('saving');
     try {
       const payload = {
+        testId: formData.id,
         testCode:   formData.testCode,
         testName:   formData.testName,
         parameters: formData.parameters.map((p: LabTestParameter) => ({

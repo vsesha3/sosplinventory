@@ -6,9 +6,9 @@ import {
 } from '@mantine/core';
 import { IconPackage, IconPlus } from '@tabler/icons-react';
 import { FormTextInput } from '../../../components/common/FormTextInput';
-import { FormSelect }    from '../../../components/common/FormSelect';
+import { FormSelect } from '../../../components/common/FormSelect';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
-import FormHeader        from '../../common/Formheader';
+import FormHeader from '../../common/Formheader';
 import api from '../../../services/api';
 import QuickAddModal from '../../../components/common/QuickAddModal';
 
@@ -17,54 +17,54 @@ import QuickAddModal from '../../../components/common/QuickAddModal';
 interface DropDownOption {
   value: string;
   label: string;
-  code:  string;
+  code: string;
 }
 
 export interface RawMaterialFormData {
-  id?:       number | null;
-  rmCode:    string;
-  sapCode:   string;
-  rmName:    string;
-  uomId:     string | null;
+  id?: number | null;
+  rmCode: string;
+  sapCode: string;
+  rmName: string;
+  uomId: string | null;
   rmGroupId: string | null;
-  hNhId:     string | null;
-  avgRate:   string;
-  gstRate:   string;
-  packUom:   string | null;
-  packSize:  string;
-  capacity:  string;
-  testId:    string | null;
-  testCode:  string;
-  rmId:      number | null;
+  hNhId: string | null;
+  avgRate: string;
+  gstRate: string;
+  packUom: string | null;
+  packSize: string;
+  capacity: string;
+  testId: string | null;
+  testCode: string;
+  rmId: number | null;
   materialType: string | null;
 }
 
 export interface RawMaterialFormProps {
-  opened:  boolean;
+  opened: boolean;
   onClose: () => void;
   onSave?: (data: RawMaterialFormData) => void;
-  rmId?:   number | null;
-  mode?:   'create' | 'update';
+  rmId?: number | null;
+  mode?: 'create' | 'update';
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
 const defaultForm: RawMaterialFormData = {
-  id:        null,
-  rmCode:    '',
-  sapCode:   '',
-  rmName:    '',
-  uomId:     null,
+  id: null,
+  rmCode: '',
+  sapCode: '',
+  rmName: '',
+  uomId: null,
   rmGroupId: null,
-  hNhId:     null,
-  avgRate:   '',
-  gstRate:   '',
-  packUom:   null,
-  packSize:  '',
-  capacity:  '',
-  testId:    null,
-  testCode:  '',
-  rmId:      null,
+  hNhId: null,
+  avgRate: '',
+  gstRate: '',
+  packUom: null,
+  packSize: '',
+  capacity: '',
+  testId: null,
+  testCode: '',
+  rmId: null,
   materialType: null,
 };
 
@@ -92,7 +92,7 @@ const validateForm = (form: RawMaterialFormData): string[] => {
 
   if (form.gstRate && isNaN(parseFloat(form.gstRate)))
     errors.push('GST % must be a valid number');
-{/*}
+  {/*}
   if (form.packSize && isNaN(parseFloat(form.packSize)))
     errors.push('Pack Size must be a valid number');
 
@@ -100,7 +100,7 @@ const validateForm = (form: RawMaterialFormData): string[] => {
     errors.push('Capacity must be a valid number');
 */}
 
-if (!form.materialType)
+  if (!form.materialType)
     errors.push('Material Type is required');
 
   return errors;
@@ -112,7 +112,7 @@ if (!form.materialType)
 
 
 const HNH_OPTIONS: DropDownOption[] = [
-  { value: '1', label: 'Hazardous',     code: 'H'  },
+  { value: '1', label: 'Hazardous', code: 'H' },
   { value: '2', label: 'Non-Hazardous', code: 'NH' },
 ];
 
@@ -126,38 +126,53 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
   mode = 'create',
 }) => {
 
-  const [form,        setForm]        = useState<RawMaterialFormData>({ ...defaultForm });
-  const [loading,     setLoading]     = useState(false);
-  const [fetchError,  setFetchError]  = useState<string | null>(null);
+  const [form, setForm] = useState<RawMaterialFormData>({ ...defaultForm });
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Dropdown options
-  const [uomOptions,      setUomOptions]      = useState<DropDownOption[]>([]);
-  const [groupOptions,    setGroupOptions]    = useState<DropDownOption[]>([]);
- 
-  const [packUomOptions,  setPackUomOptions]  = useState<DropDownOption[]>([]);
-  const [testOptions,     setTestOptions]     = useState<DropDownOption[]>([]);
+  const [uomOptions, setUomOptions] = useState<DropDownOption[]>([]);
+  const [groupOptions, setGroupOptions] = useState<DropDownOption[]>([]);
+
+  const [packUomOptions, setPackUomOptions] = useState<DropDownOption[]>([]);
+  const [testOptions, setTestOptions] = useState<DropDownOption[]>([]);
   //const [testCodeOptions, setTestCodeOptions] = useState<DropDownOption[]>([]);
 
   // QuickAdd state
   const [addGroupOpen, setAddGroupOpen] = useState(false);
-  const [addUomOpen,   setAddUomOpen]   = useState(false);
+  const [addUomOpen, setAddUomOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
-  const [newUomName,   setNewUomName]   = useState('');
-  const [quickSaving,  setQuickSaving]  = useState(false);
+  const [newUomName, setNewUomName] = useState('');
+  const [newTestName, setNewTestName] = useState('');
+  const [addTestNameOpen, setAddTestNameOpen] = useState(false);
+
+  const [quickSaving, setQuickSaving] = useState(false);
 
   // ── Clean helper ─────────────────────────────────────────────────────────
-
   const clean = (data: any[]): DropDownOption[] => {
-    if (!data || !Array.isArray(data)) return [];
-    return data
-      .filter(item => item != null && item.value != null)
-      .map(item => ({
-        value: String(item.value),
-        label: item.label ?? '-',
-        code:  item.code  ?? '',
-      }));
+    return data.map((item) => {
+      const value = String(item.value ?? '');
+      const name = String(item.label ?? '');
+
+      if (name.includes('~')) {
+        const [label = '', code = ''] = name.split('~');
+        console.log(label, code);
+        return {
+          value,
+          label: label.trim(),
+          code: code.trim(),
+        };
+      }
+
+      // Normal dropdown without "~"
+      return {
+        value,
+        label: name.trim(),
+        code: '',
+      };
+    });
   };
 
   // ── Load ──────────────────────────────────────────────────────────────────
@@ -186,24 +201,28 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
 
         if (mode === 'update' && rmId) {
           const res = await api.get(`/api/rm/${rmId}`);
-          const d   = res.data.data ?? res.data;
+          const d = res.data.data ?? res.data;
           setForm({
-            id:        d.rmId      ?? null,
-            rmCode:    d.rmCode    != null ? String(d.rmCode)    : '',
-            sapCode:   d.rmCode  ?? '',
-            rmName:    d.rmName    ?? '',
-            uomId:     d.uomId     != null ? String(d.uomId)     : null,
+            id: d.rmId ?? null,
+            rmCode: d.rmCode != null ? String(d.rmCode) : '',
+            sapCode: d.rmCode ?? '',
+            rmName: d.rmName ?? '',
+            uomId: d.uomId != null ? String(d.uomId) : null,
             rmGroupId: d.rmGroupId != null ? String(d.rmGroupId) : null,
-            hNhId:     d.hNhId     != null ? String(d.hNhId)     : null,
-            avgRate:   d.avgRate   != null ? String(d.avgRate)   : '',
-            gstRate:   d.gstRate   != null ? String(d.gstRate)   : '',
-            packUom:   d.packUom   != null ? String(d.packUom)   : null,
-            packSize:  d.packSize  != null ? String(d.packSize)  : '',
-            capacity:  d.capacity  != null ? String(d.capacity)  : '',
-            testId:    d.testId    != null ? String(d.testId)    : null,
-            testCode:  d.testCode  != null ? String(d.testCode)  : '',
-            rmId:      d.rmId      ?? null,
-            materialType: d.materialType ?? null ,
+            hNhId: d.hNhId != null ? String(d.hNhId) : null,
+            avgRate: d.avgRate != null ? String(d.avgRate) : '',
+            gstRate: d.gstRate != null ? String(d.gstRate) : '',
+            packUom: d.packUom != null ? String(d.packUom) : null,
+            packSize: d.packSize != null ? String(d.packSize) : '',
+            capacity: d.capacity != null ? String(d.capacity) : '',
+            testId: d.testId != null ? String(d.testId) : null,
+            
+            testCode:
+  testOptions.find(
+    (option) => Number(option.value) === Number(d.testId)
+  )?.code ?? '',
+            rmId: d.rmId ?? null,
+            materialType: d.materialType ?? null,
           });
         }
       } catch {
@@ -222,11 +241,11 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
     if (!newGroupName.trim()) return;
     setQuickSaving(true);
     try {
-      const res     = await api.post('/api/rm/group', { rmGroupName: newGroupName.trim() });
+      const res = await api.post('/api/rm/group', { rmGroupName: newGroupName.trim() });
       const created = res.data?.data ?? res.data;
       // Refresh group dropdown
       const groupRes = await api.get('/api/dropdown/rm-group');
-      const updated  = clean(groupRes.data.data);
+      const updated = clean(groupRes.data.data);
       setGroupOptions(updated);
       // Auto-select the new group
       if (created?.id != null) {
@@ -239,46 +258,78 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
       setNewGroupName('');
       setAddGroupOpen(false);
     } catch (err: any) {
-    console.error('[handleAddGroup] Failed:', err?.response?.data ?? err);
-    setFetchError(
-      err?.response?.data?.message || 'Failed to add RM Group. Please try again.'
-    );
-      
+      console.error('[handleAddGroup] Failed:', err?.response?.data ?? err);
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add RM Group. Please try again.'
+      );
+
       // silently fail — user can still select manually
     } finally {
       setQuickSaving(false);
     }
   };
 
-const handleAddUom = async () => {
-  if (!newUomName.trim()) return;
-  setQuickSaving(true);
-  try {
-    const res     = await api.post('/api/uom', { uomName: newUomName.trim() });
-    const created = res.data?.data ?? res.data;
-    // Refresh UOM dropdown (used for both UOM and Pack UOM)
-    const uomRes  = await api.get('/api/dropdown/uom');
-    const updated = clean(uomRes.data.data);
-    setUomOptions(updated);
-    setPackUomOptions(updated);
-    // Auto-select the new UOM
-    if (created?.id != null) {
-      setForm(prev => ({ ...prev, uomId: String(created.id) }));
-    } else {
-      const match = updated.find(o => o.label === newUomName.trim());
-      if (match) setForm(prev => ({ ...prev, uomId: match.value }));
+  const handleAddUom = async () => {
+    if (!newUomName.trim()) return;
+    setQuickSaving(true);
+    try {
+      const res = await api.post('/api/uom', { uomName: newUomName.trim() });
+      const created = res.data?.data ?? res.data;
+      // Refresh UOM dropdown (used for both UOM and Pack UOM)
+      const uomRes = await api.get('/api/dropdown/uom');
+      const updated = clean(uomRes.data.data);
+      setUomOptions(updated);
+      setPackUomOptions(updated);
+      // Auto-select the new UOM
+      if (created?.id != null) {
+        setForm(prev => ({ ...prev, uomId: String(created.id) }));
+      } else {
+        const match = updated.find(o => o.label === newUomName.trim());
+        if (match) setForm(prev => ({ ...prev, uomId: match.value }));
+      }
+      setNewUomName('');
+      setAddUomOpen(false);
+    } catch (err: any) {
+      console.error('[handleAddUom] Failed:', err?.response?.data ?? err);
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add UOM. Please try again.'
+      );
+    } finally {
+      setQuickSaving(false);
     }
-    setNewUomName('');
-    setAddUomOpen(false);
-  } catch (err: any) {
-    console.error('[handleAddUom] Failed:', err?.response?.data ?? err);
-    setFetchError(
-      err?.response?.data?.message || 'Failed to add UOM. Please try again.'
-    );
-  } finally {
-    setQuickSaving(false);
-  }
-};
+  };
+
+  const handleAddTestName = async () => {
+    if (!newTestName.trim()) return;
+    setQuickSaving(true);
+    try {
+      const res = await api.post('/api/inventory/test-master', { testName: newTestName.trim() });
+      const created = res.data?.data ?? res.data;
+      // Refresh UOM dropdown (used for both UOM and Pack UOM)
+      const uomRes = await api.get('/api/dropdown/test-master');
+      const updated = clean(uomRes.data.data);
+      setTestOptions(updated);
+      // Auto-select the new UOM
+      if (created?.testId != null) {
+        setForm(prev => ({ ...prev, testId: String(created.testId) }));
+      } else {
+        const match = updated.find(o => o.label === newUomName.trim());
+        if (match) setForm(prev => ({ ...prev, testId: match.value }));
+      }
+      setNewTestName('');
+      setAddTestNameOpen(false);
+    } catch (err: any) {
+      console.error('[handleAddUom] Failed:', err?.response?.data ?? err);
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add UOM. Please try again.'
+      );
+    } finally {
+      setQuickSaving(false);
+    }
+  };
+
+
+
 
   // ── Form helpers ──────────────────────────────────────────────────────────
 
@@ -302,10 +353,10 @@ const handleAddUom = async () => {
   };
 
   const confirmLabel = mode === 'update' ? 'Update' : 'Submit';
-  
+
   const headerTitle = mode === 'update' && form.id
-  ? `Edit Raw Material — ${form.rmName || `#${rmId}`} [ID: ${form.rmId}]`
-  : 'New Raw Material';
+    ? `Edit Raw Material — ${form.rmName || `#${rmId}`} [ID: ${form.rmId}]`
+    : 'New Raw Material';
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -361,21 +412,21 @@ const handleAddUom = async () => {
                 <Grid columns={12} gutter="sm">
 
                   {/* ── Row 1: Code | SAP Code ── */}
-                 
+
                   <Grid.Col span={6}>
-  <FormSelect
-    label="* Material Type"
-    value={form.materialType}
-    onChange={setSelect('materialType')}
-    data={[
-      { value: 'RM',      label: 'Raw Material'       },
-      { value: 'PM',  label: 'Packing Material'   },
-      { value: 'MI',     label: 'Miscellaneous Items' },
-    ]}
-    placeholder="--SELECT--"
-    required
-  />
-</Grid.Col>
+                    <FormSelect
+                      label="* Material Type"
+                      value={form.materialType}
+                      onChange={setSelect('materialType')}
+                      data={[
+                        { value: 'RM', label: 'Raw Material' },
+                        { value: 'PM', label: 'Packing Material' },
+                        { value: 'MI', label: 'Miscellaneous Items' },
+                      ]}
+                      placeholder="--SELECT--"
+                      required
+                    />
+                  </Grid.Col>
                   <Grid.Col span={6}>
                     <FormTextInput
                       label="SAP Code"
@@ -509,25 +560,53 @@ const handleAddUom = async () => {
 
                   {/* ── Row 6: Test Name | Test Code ── */}
                   <Grid.Col span={6}>
-                    <FormSelect
-                      label="* Test Name"
-                      value={form.testId}
-                      onChange={setSelect('testId')}
-                      data={testOptions}
-                      placeholder="--SELECT--"
-                      required
-                      searchable
-                    />
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+
+                        <FormSelect
+                          label="* Test Name"
+                          value={form.testId}
+                          onChange={(value) => {
+                            const selectedOption = testOptions.find(
+                              (option) => Number(option.value) === Number(value)
+                            );
+
+                            setForm((prev) => ({
+                              ...prev,
+                              testId: value,
+                              testCode: selectedOption?.code ?? '',
+                            }));
+                          }}
+                          data={testOptions}
+                          placeholder="--SELECT--"
+                          required
+                          searchable
+                        />
+                      </Box>
+                      <Tooltip label="Add new Lab Test" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewTestName(''); setAddTestNameOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Grid.Col>
                   <Grid.Col span={6}>
-                    <FormSelect
+
+
+                    <FormTextInput
                       label="Test Code"
-                      value={form.testCode || null}
-                      onChange={setSelect('testCode')}
-                      data={[]}
-                      placeholder=""
-                      searchable
+                      value={form.testCode}
+                      onChange={setStr('testCode')}
+                      placeholder="0"
+                      readOnly
                     />
+
                   </Grid.Col>
 
                 </Grid>
@@ -593,8 +672,19 @@ const handleAddUom = async () => {
         saving={quickSaving}
       />
 
-      
-      
+      <QuickAddModal
+        opened={addTestNameOpen}
+        onClose={() => setAddTestNameOpen(false)}
+        title="Add Lab Test Name"
+        label="Lab Test Name"
+        value={newTestName}
+        onChange={setNewTestName}
+        onSave={handleAddTestName}
+        saving={quickSaving}
+      />
+
+
+
     </>
   );
 };

@@ -3,12 +3,17 @@ package com.sospl.inventory.controller.master;
 import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
+import com.sospl.inventory.dto.master.SosTestMasterRequest;
 import com.sospl.inventory.model.master.SosTestMaster;
+import com.sospl.inventory.model.master.SosTestParameter;
 import com.sospl.inventory.service.master.SosTestMasterService;
+import com.sospl.inventory.service.master.SosTestParameterService;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @RestController
@@ -16,18 +21,43 @@ import java.util.stream.Collectors;
 public class SosTestMasterController {
 
     private final SosTestMasterService service;
+    private final SosTestParameterService parameterService;
 
-    public SosTestMasterController(SosTestMasterService service) {
+    public SosTestMasterController(SosTestMasterService service,SosTestParameterService parameterService) {
         this.service = service;
+        this.parameterService = parameterService;
     }
 
-    // Create
     @PostMapping
     public ResponseEntity<ApiResponse<SosTestMaster>> create(
-            @RequestBody SosTestMaster entity) {
+            @RequestBody SosTestMasterRequest request) {
+
+        SosTestMaster entity = new SosTestMaster();
+
+        entity.setTestCode(request.getTestCode());
+        entity.setTestName(request.getTestName());
+        entity.setTestId(request.getTestId());
+
+        // Save Test Master first
+        SosTestMaster savedMaster = service.save(entity);
+
+        // Save Test Parameters
+        if (request.getParameters() != null) {
+
+            for (SosTestParameter parameter : request.getParameters()) {
+
+                // Associate parameter with newly created Test Master
+                parameter.setTestId(savedMaster.getTestId());
+
+                // paramId should be null for new parameters
+                parameterService.save(parameter);
+            }
+        }
+
         return ResponseEntity.ok(
-                ApiResponse.success("Test master created successfully",
-                        service.save(entity)));
+                ApiResponse.success(
+                        "Test master and parameters created successfully",
+                        savedMaster));
     }
     
     
@@ -39,24 +69,140 @@ public class SosTestMasterController {
     }
 
     // Update
+ 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<SosTestMaster>> update(
             @PathVariable Long id,
-            @RequestBody SosTestMaster entity) {
-        return ResponseEntity.ok(
-                ApiResponse.success("Test master updated successfully",
-                        service.update(id, entity)));
-    }
+            @RequestBody SosTestMasterRequest request) {
 
-    // Get by id
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<SosTestMaster>> getById(
-            @PathVariable Long id) {
+        System.out.println("========== TEST MASTER UPDATE ==========");
+        System.out.println("Master ID: " + id);
+        System.out.println("Test ID from request: " + request.getTestId());
+        System.out.println("Test Code: " + request.getTestCode());
+        System.out.println("Test Name: " + request.getTestName());
+
+        if (request.getParameters() == null) {
+            System.out.println("Parameters: NULL");
+        } else {
+            System.out.println("Parameter count: " + request.getParameters().size());
+
+            for (SosTestParameter p : request.getParameters()) {
+                System.out.println(
+                    "Parameter -> paramId=" + p.getParamId()
+                    + ", testId=" + p.getTestId()
+                    + ", method=" + p.getMethod()
+                    + ", limits=" + p.getLimits()
+                    + ", specification=" + p.getSpecification()
+                );
+            }
+        }
+
+        // Update Test Master
+        SosTestMaster entity = new SosTestMaster();
+
+        entity.setTestCode(request.getTestCode());
+        entity.setTestName(request.getTestName());
+        entity.setTestId(id);
+
+        SosTestMaster updatedMaster = service.update(id, entity);
+
+        System.out.println("Updated Master Test ID: "
+                + updatedMaster.getTestId());
+
+        // Update / Insert Parameters
+        if (request.getParameters() != null) {
+        	
+        	List<SosTestParameter> existingParameters =
+                    parameterService.getByTestId(id);
+
+            // Get parameter IDs received from UI
+            List<Long> requestParameterIds =
+                    request.getParameters()
+                            .stream()
+                            .map(SosTestParameter::getParamId)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toList());
+            
+            for (SosTestParameter existing : existingParameters) {
+
+                if (!requestParameterIds.contains(existing.getParamId())) {
+
+                    System.out.println(
+                            "SOFT DELETE parameter: "
+                            + existing.getParamId()
+                    );
+
+                    parameterService.delete(
+                            existing.getParamId()
+                    );
+                }
+            }
+
+
+            for (SosTestParameter parameter : request.getParameters()) {
+
+                parameter.setTestId(id);
+
+                if (parameter.getParamId() != null) {
+
+                    System.out.println(
+                        "UPDATING parameter: "
+                        + parameter.getParamId()
+                    );
+
+                    parameterService.getById(parameter.getParamId())
+                            .ifPresent(existing -> {
+
+                                existing.setTestId(updatedMaster.getTestId());
+                                existing.setMethod(parameter.getMethod());
+                                existing.setLimits(parameter.getLimits());
+                                existing.setSpecification(parameter.getSpecification());
+
+                                parameterService.save(existing);
+                            });
+
+                } else {
+
+                    System.out.println(
+                        "INSERTING NEW parameter for testId: "
+                        + updatedMaster.getTestId()
+                    );
+
+                    parameterService.save(parameter);
+                }
+            }
+        }
+
+        System.out.println("========== UPDATE COMPLETE ==========");
+
         return ResponseEntity.ok(
-                ApiResponse.success("Test master fetched successfully",
-                        service.findById(id)
-                                .orElseThrow(() -> new RuntimeException(
-                                        "Test master not found"))));
+                ApiResponse.success(
+                        "Test master updated successfully",
+                        updatedMaster));
+    }
+    
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<SosTestMasterRequest>> getById(
+            @PathVariable Long id) {
+
+        SosTestMaster master = service.findById(id)
+                .orElseThrow(() -> new RuntimeException(
+                        "Test master not found"));
+
+        List<SosTestParameter> parameters =
+                parameterService.getByTestId(master.getTestId());
+
+        SosTestMasterRequest response = new SosTestMasterRequest();
+
+        response.setTestId(master.getTestId());
+        response.setTestCode(master.getTestCode());
+        response.setTestName(master.getTestName());
+        response.setParameters(parameters);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Test master fetched successfully",
+                        response));
     }
 
     // Get all active - no pagination

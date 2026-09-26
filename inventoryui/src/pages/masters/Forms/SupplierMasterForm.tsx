@@ -2,13 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
-  Grid, Stack, Loader, Center, Textarea,Alert,List
+  Grid, Stack, Loader, Center, Textarea, Alert, List
 } from '@mantine/core';
 import { IconTruckDelivery } from '@tabler/icons-react';
 import { FormTextInput } from '../../../components/common/FormTextInput';
-import { FormSelect }    from '../../../components/common/FormSelect';
+import { FormSelect } from '../../../components/common/FormSelect';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
-import FormHeader        from '../../common/Formheader';
+import FormHeader from '../../common/Formheader';
 import api from '../../../services/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -20,43 +20,43 @@ interface DropDownOption {
 }
 
 export interface SupplierMasterFormData {
-  supplierId:          number | null;
-  supplierName:        string;
-  supplierCode:        string;
-  address:             string;
-  countryId:           string | null;
-  gstNo:           string;
-  supplierTypeId:      string | null;
-  emailId:             string;
-  panNo:               string;
-  contactPersonName:   string;
+  supplierId: number | null;
+  supplierName: string;
+  supplierCode: string;
+  address: string;
+  countryId: string | null;
+  gstNo: string;
+  supplierTypeId: string | null;
+  emailId: string;
+  panNo: string;
+  contactPersonName: string;
   contactMobileNumber: string;
-  itNo:                string;
+  itNo: string;
 }
 
 export interface SupplierMasterFormProps {
-  opened:     boolean;
-  onClose:    () => void;
-  onSave?:    (data: SupplierMasterFormData) => void;
+  opened: boolean;
+  onClose: () => void;
+  onSave?: (data: SupplierMasterFormData) => void;
   supplierId?: number | null;
-  mode?:      'create' | 'update';
+  mode?: 'create' | 'update';
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
 const defaultForm: SupplierMasterFormData = {
-  supplierId:          null,
-  supplierName:        '',
-  supplierCode:        'SOSPLS-',
-  address:             '',
-  countryId:           '582',
-  gstNo:           '',
-  supplierTypeId:      null,
-  emailId:             '',
-  panNo:               '',
-  contactPersonName:   '',
+  supplierId: null,
+  supplierName: '',
+  supplierCode: 'SOSPLS-',
+  address: '',
+  countryId: '582',
+  gstNo: '',
+  supplierTypeId: null,
+  emailId: '',
+  panNo: '',
+  contactPersonName: '',
   contactMobileNumber: '',
-  itNo:                '',
+  itNo: '',
 };
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -92,17 +92,17 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
   onClose,
   onSave,
   supplierId = null,
-  mode       = 'create',
+  mode = 'create',
 }) => {
 
-  const [form,        setForm]        = useState<SupplierMasterFormData>({ ...defaultForm });
-  const [loading,     setLoading]     = useState(false);
-  const [fetchError,  setFetchError]  = useState<string | null>(null);
+  const [form, setForm] = useState<SupplierMasterFormData>({ ...defaultForm });
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Dropdowns
-  const [countryOptions,      setCountryOptions]      = useState<DropDownOption[]>([]);
+  const [countryOptions, setCountryOptions] = useState<DropDownOption[]>([]);
   const [supplierTypeOptions, setSupplierTypeOptions] = useState<DropDownOption[]>([]);
 
   // ── Clean helper ─────────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
       .map(item => ({
         value: String(item.value),
         label: item.label ?? '-',
-        code:  item.code  ?? '',
+        code: item.code ?? '',
       }));
   };
 
@@ -144,25 +144,25 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
         // Load supplier data in edit mode
         if (mode === 'update' && supplierId) {
           const res = await api.get(`/api/supplier/${supplierId}`);
-          const d   = res.data.data ?? res.data;
+          const d = res.data.data ?? res.data;
           setForm({
-            supplierId:          d.supplierId          ?? null,
-            supplierName:        d.supplierName        ?? '',
-            supplierCode:        d.supplierCode        ?? '',
-            address:             d.address             ?? '',
-           
-            gstNo:           d.gstNo           ?? '',
-           
-            
-            // In setForm inside load():
-emailId:             d.eMailId             ?? '',   // ← eMailId not emailId
-contactPersonName:   d.contactPerson       ?? '',   // ← contactPerson not contactPersonName
-contactMobileNumber: d.contactMobile       ?? '',   // ← contactMobile not contactMobileNumber
-countryId:           d.countryId           != null ? String(d.countryId)      : null,
-supplierTypeId:      d.supplierTypeId      != null ? String(d.supplierTypeId) : null,
+            supplierId: d.supplierId ?? null,
+            supplierName: d.supplierName ?? '',
+            supplierCode: d.supplierCode ?? '',
+            address: d.address ?? '',
 
-panNo:               d.panNo               ?? '',
-itNo:                d.iTNo                ?? '',   // ← iTNo not itNo
+            gstNo: d.gstNo ?? '',
+
+
+            // In setForm inside load():
+            emailId: d.eMailId ?? '',   // ← eMailId not emailId
+            contactPersonName: d.contactPerson ?? '',   // ← contactPerson not contactPersonName
+            contactMobileNumber: d.contactMobile ?? '',   // ← contactMobile not contactMobileNumber
+            countryId: d.countryId != null ? String(d.countryId) : null,
+            supplierTypeId: d.supplierTypeId != null ? String(d.supplierTypeId) : null,
+
+            panNo: d.panNo ?? '',
+            itNo: d.iTNo ?? '',   // ← iTNo not itNo
           });
         }
       } catch {
@@ -198,7 +198,7 @@ itNo:                d.iTNo                ?? '',   // ← iTNo not itNo
   };
 
   const confirmLabel = mode === 'update' ? 'Update' : 'Submit';
-  const headerTitle  = mode === 'update' && form.supplierId
+  const headerTitle = mode === 'update' && form.supplierId
     ? `Edit Supplier — ${form.supplierName || `#${supplierId}`}`
     : 'New Supplier';
 
@@ -264,7 +264,7 @@ itNo:                d.iTNo                ?? '',   // ← iTNo not itNo
                     <FormTextInput
                       label="Supplier ID"
                       value={form.supplierId != null ? String(form.supplierId) : ''}
-                      onChange={() => {}}
+                      onChange={() => { }}
                       placeholder="Auto-generated"
                       readOnly
                     />
@@ -275,7 +275,7 @@ itNo:                d.iTNo                ?? '',   // ← iTNo not itNo
                       value={form.supplierCode}
                       onChange={setStr('supplierCode')}
                       placeholder="Supplier Code"
-                      
+
                     />
                   </Grid.Col>
                   <Grid.Col span={4}>
@@ -387,7 +387,7 @@ itNo:                d.iTNo                ?? '',   // ← iTNo not itNo
                       maxLength={10}
                     />
                   </Grid.Col>
-                  
+
 
                 </Grid>
               </Paper>

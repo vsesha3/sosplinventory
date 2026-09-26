@@ -8,51 +8,51 @@ import {
 import { IconFlask, IconPlus, IconTrash } from '@tabler/icons-react';
 import { FormTextInput } from '../../../components/common/FormTextInput';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
-import FormHeader        from '../../common/Formheader';
+import FormHeader from '../../common/Formheader';
 import api from '../../../services/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface LabTestParameter {
-  rowId:         string;   // local React key
-  paramId?:      number | null;
-  testId:        number | 0;
+  rowId: string;   // local React key
+  paramId?: number | null;
+  testId: number | 0;
   specification: string;
-  method:        string;
-  limits:        string;
+  method: string;
+  limits: string;
 }
 
 export interface LabTestMasterFormData {
-  id?:        number | null;
-  testCode:   string;
-  testName:   string;
+  id?: number | null;
+  testCode: string;
+  testName: string;
   parameters: LabTestParameter[];
 }
 
 export interface LabTestMasterFormProps {
-  opened:    boolean;
-  onClose:   () => void;
-  onSave?:   (data: LabTestMasterFormData) => void;
-  testId?:   number | null;
-  mode?:     'create' | 'update';
+  opened: boolean;
+  onClose: () => void;
+  onSave?: (data: LabTestMasterFormData) => void;
+  testId?: number | null;
+  mode?: 'create' | 'update';
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
 const defaultForm: LabTestMasterFormData = {
-  id:         null,
-  testCode:   '',
-  testName:   '',
+  id: null,
+  testCode: '',
+  testName: '',
   parameters: [],
 };
 
 const newRow = (): LabTestParameter => ({
-  rowId:         crypto.randomUUID(),
-  paramId:       null,
+  rowId: crypto.randomUUID(),
+  paramId: null,
   specification: '',
-  method:        '',
-  limits:        '',
-  testId:        0
+  method: '',
+  limits: '',
+  testId: 0
 });
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -81,12 +81,12 @@ const LabTestMasterForm: React.FC<LabTestMasterFormProps> = ({
   onClose,
   onSave,
   testId = null,
-  mode   = 'create',
+  mode = 'create',
 }) => {
 
-  const [form,        setForm]        = useState<LabTestMasterFormData>({ ...defaultForm });
-  const [loading,     setLoading]     = useState(false);
-  const [fetchError,  setFetchError]  = useState<string | null>(null);
+  const [form, setForm] = useState<LabTestMasterFormData>({ ...defaultForm });
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
@@ -100,51 +100,50 @@ const LabTestMasterForm: React.FC<LabTestMasterFormProps> = ({
       return;
     }
 
-   if (mode === 'update' && testId) {
-    
-  const load = async () => {
-    setLoading(true);
-    setFetchError(null);
+    if (mode === 'update' && testId) {
 
-    try {
-      // Load Test Master
-      const res = await api.get(`/api/inventory/test-master/${testId}`);
-      const d = res.data.data ?? res.data;
+      const load = async () => {
+        setLoading(true);
+        setFetchError(null);
 
-      // Load Parameters associated with Test ID
-      const parameterRes = await api.get(
-        `/api/test-parameters/test/${testId}`
-      );
+        try {
+          // Load Test Master + Parameters
+          const res = await api.get(
+            `/api/inventory/test-master/${testId}`
+          );
 
-      const parameterData =
-        parameterRes.data.data ?? parameterRes.data ?? [];
+          const d = res.data.data ?? res.data;
 
-      const parameters: LabTestParameter[] = parameterData.map((p: any) => ({
-        rowId: crypto.randomUUID(),
-        paramId: p.paramId ?? null,
-        specification: p.specification ?? '',
-        method: p.method ?? '',
-        limits: p.limits ?? '',
-      }));
+          // Parameters are now returned along with Test Master
+          const parameterData = d.parameters ?? [];
 
-      setForm({
-        id: d.testId ?? null,
-        testCode: d.testCode ?? '',
-        testName: d.testName ?? '',
-        parameters,
-      });
+          const parameters: LabTestParameter[] =
+            parameterData.map((p: any) => ({
+              rowId: crypto.randomUUID(),
+              paramId: p.paramId ?? null,
+              specification: p.specification ?? '',
+              method: p.method ?? '',
+              limits: p.limits ?? '',
+            }));
 
-    } catch (error) {
-      setFetchError(
-        'Failed to load test master. Please close and try again.'
-      );
-    } finally {
-      setLoading(false);
+          setForm({
+            id: d.testId ?? null,
+            testCode: d.testCode ?? '',
+            testName: d.testName ?? '',
+            parameters,
+          });
+
+        } catch (error) {
+          setFetchError(
+            'Failed to load test master. Please close and try again.'
+          );
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      load();
     }
-  };
-
-  load();
-}
   }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Form helpers ──────────────────────────────────────────────────────────
@@ -187,7 +186,7 @@ const LabTestMasterForm: React.FC<LabTestMasterFormProps> = ({
   };
 
   const confirmLabel = mode === 'update' ? 'Update' : 'Submit';
-  const headerTitle  = mode === 'update' && form.id
+  const headerTitle = mode === 'update' && form.id
     ? `Edit Lab Test — ${form.testName || `#${testId}`}`
     : 'New Lab Test Master';
 
@@ -321,7 +320,7 @@ const LabTestMasterForm: React.FC<LabTestMasterFormProps> = ({
                         <Table.Th style={{ width: '30%' }}>Specification</Table.Th>
                         <Table.Th style={{ width: '30%' }}>Method</Table.Th>
                         <Table.Th style={{ width: '32%' }}>Limits</Table.Th>
-                        <Table.Th style={{ width: '8%'  }}></Table.Th>
+                        <Table.Th style={{ width: '8%' }}></Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>

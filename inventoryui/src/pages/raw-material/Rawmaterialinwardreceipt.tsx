@@ -424,13 +424,14 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
         try {
     const res     = await api.post('/api/transporter', { transporterName: newTransporterName.trim() });
     const created = res.data?.data ?? res.data;
+    console.log(created);
     // Refresh UOM dropdown (used for both UOM and Pack UOM)
     
     loadDropdowns();
    
     
     // Auto-select the new transporter
-    if (created?.id != null) {
+    if (created?.transporterId != null) {
       setForm(prev => ({ ...prev,  transporterId: String(created.transporterId) }));
     } else {
       const match = transporterOptions.find(o => o.label === newTransporterName.trim());
