@@ -1,9 +1,12 @@
-package com.sospl.inventory.controller.inventory.master;
+package com.sospl.inventory.controller.master;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
+
+
 import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosProductMasterResponse;
+import com.sospl.inventory.dto.master.SosProductMasterRequest;
 import com.sospl.inventory.model.inventory.master.SosProductMaster;
 import com.sospl.inventory.model.master.SosProdMasterRmDetls;
 import com.sospl.inventory.service.inventory.master.SosProductMasterService;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/api/product")
 public class SosProductMasterController {
@@ -39,20 +43,26 @@ public class SosProductMasterController {
     // Create
     @PostMapping
     public ResponseEntity<ApiResponse<SosProductMaster>> create(
-            @RequestBody SosProductMaster entity) {
+            @RequestBody SosProductMasterRequest entity) {
+    	SosProductMaster updated = service.save(entity);
         return ResponseEntity.ok(
                 ApiResponse.success("Product created successfully",
-                        service.save(entity)));
+                        updated));
     }
 
     // Update
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<SosProductMaster>> update(
             @PathVariable Long id,
-            @RequestBody SosProductMaster entity) {
+            @RequestBody SosProductMasterRequest request) {
+    	
+    	
+    	 SosProductMaster updated = service.update(id,request);
+    	 System.out.println("testing");
+    	
+    	
         return ResponseEntity.ok(
-                ApiResponse.success("Product updated successfully",
-                        service.update(id, entity)));
+                ApiResponse.success("Product updated successfully",updated));
     }
 
     // Get by id

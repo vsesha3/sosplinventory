@@ -23,6 +23,8 @@ public class SosTestMaster extends BaseAuditEntity {
     @Column(name = "test_name", length = 50)
     private String testName;
 
+  
+    
     public Long getTestId() {
         return testId;
     }

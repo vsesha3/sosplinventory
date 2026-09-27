@@ -80,4 +80,43 @@ public class SosProdMasterRmDetlsServiceImpl
         existing.setDeletedAt(LocalDateTime.now());
         rmDetlsRepository.save(existing);
     }
+    
+    @Override
+    public void saveOrUpdateRMDetails(
+            Long productId,
+            List<SosProdMasterRmDetls> rmDetails) {
+
+        if (rmDetails == null || rmDetails.isEmpty()) {
+            System.out.println("rm details are empty");
+            return;
+        }
+
+        for (SosProdMasterRmDetls rmDetail : rmDetails) {
+
+            if (rmDetail.getPmRmDetslId() != null) {
+
+                // Existing record - UPDATE
+                SosProdMasterRmDetls existing =
+                        rmDetlsRepository
+                                .findById(rmDetail.getPmRmDetslId())
+                                .orElseThrow(() ->
+                                        new RuntimeException(
+                                                "RM Detail not found: "
+                                                        + rmDetail.getPmRmDetslId()));
+
+                existing.setProductId(productId);
+                existing.setRmId(rmDetail.getRmId());
+                existing.setMixPercentage(rmDetail.getMixPercentage());
+
+                rmDetlsRepository.save(existing);
+
+            } else {
+
+                // New record - INSERT
+                rmDetail.setProductId(productId);
+
+                rmDetlsRepository.save(rmDetail);
+            }
+        }
+    }
 }

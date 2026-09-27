@@ -20,10 +20,11 @@ interface DropDownOption {
 }
 
 export interface RmMappingRow {
+  pmRmDetslId:  number | null;
   rowId:       string;        // local key for React
   rmId:        string | null;
   rmCode:      string;
-  percentage:  string;
+  mixPercentage:  string;
 }
 
 export interface ProductMasterFormData {
@@ -82,7 +83,8 @@ const newRow = (): RmMappingRow => ({
   rowId:      crypto.randomUUID(),
   rmId:       null,
   rmCode:     '',
-  percentage: '',
+  mixPercentage: '',
+  pmRmDetslId: null
 });
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -118,9 +120,9 @@ const validateForm = (form: ProductMasterFormData): string[] => {
   for (const row of form.rmMappings) {
     if (!row.rmId)
       errors.push('All RM mapping rows must have a Raw Material selected');
-    if (!row.percentage || isNaN(parseFloat(row.percentage)))
+    if (!row.mixPercentage || isNaN(parseFloat(row.mixPercentage)))
       errors.push('All RM mapping rows must have a valid Percentage');
-    if (row.percentage && parseFloat(row.percentage) <= 0)
+    if (row.mixPercentage && parseFloat(row.mixPercentage) <= 0)
       errors.push('RM Percentage must be greater than 0');
   }
 
@@ -147,7 +149,7 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
   const [uomOptions,     setUomOptions]     = useState<DropDownOption[]>([]);
   const [groupOptions,   setGroupOptions]   = useState<DropDownOption[]>([]);
   const [testOptions,    setTestOptions]    = useState<DropDownOption[]>([]);
-  //const [testCodeOpts,   setTestCodeOpts]   = useState<DropDownOption[]>([]);
+  const [testCodeOpts,   setTestCodeOpts]   = useState<DropDownOption[]>([]);
   const [rmOptions,      setRmOptions]      = useState<DropDownOption[]>([]);
 
   // ── Filter helper ─────────────────────────────────────────────────────────
@@ -216,10 +218,11 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
             ).map((m: any) => {
               const rmIdStr = m.rmId != null ? String(m.rmId) : null;
               return {
+                pmRmDetslId:  m.pmRmDetslId ?? null,
                 rowId:      crypto.randomUUID(),
                 rmId:       rmIdStr,     // matches rmOptions value — enables auto-select
                 rmCode:     rmIdStr ?? '',
-                percentage: extractPct(m.mixPercentage),
+                mixPercentage: extractPct(m.mixPercentage),
               };
             });
             setForm({
@@ -304,7 +307,7 @@ load();
         if (r.rowId !== rowId) return r;
         if (field === 'rmId') {
           // value = rm_id (e.g. "54"), label = rm_name (e.g. "Acrylic Acid")
-          //const opt = rmOptions.find(o => o.value === value);
+          const opt = rmOptions.find(o => o.value === value);
           return { ...r, rmId: value, rmCode: value ?? '' };
         }
         return { ...r, [field]: value ?? '' };
@@ -327,7 +330,7 @@ load();
 
   // Total percentage
   const totalPct = form.rmMappings.reduce(
-    (s, r) => s + (parseFloat(r.percentage) || 0), 0
+    (s, r) => s + (parseFloat(r.mixPercentage) || 0), 0
   );
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -530,7 +533,7 @@ load();
                       label="Test Code"
                       value={form.testCode}
                       onChange={setSelect('testCode')}
-                      data={[]}
+                      data={testCodeOpts}
                       placeholder=""
                       searchable
                     />
@@ -539,156 +542,149 @@ load();
                 </Grid>
               </Paper>
 
-              {/* ── Section 2: RM Mapping Sub-table ── */}
-              <Paper withBorder p="md" radius="sm" mb="md"
-                style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
+              {/* ── Sections 2 & 3: RM + PM side by side ── */}
+              <Grid columns={12} gutter="md">
 
-                <Group justify="space-between" mb="sm">
-                  <Group gap="sm">
-                    <Text size="xs" fw={600} c="dimmed" tt="uppercase">
-                      Product RM Details
-                    </Text>
-                    {form.rmMappings.length > 0 && (
-                      <Badge size="xs" variant="light" color="blue">
-                        {form.rmMappings.length} row{form.rmMappings.length !== 1 ? 's' : ''}
-                      </Badge>
-                    )}
-                    {totalPct > 0 && (
-                      <Badge
+                {/* ── Left: RM Mapping ── */}
+                <Grid.Col span={6}>
+                  <Paper withBorder p="md" radius="sm" h="100%"
+                    style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
+
+                    <Group justify="space-between" mb="sm">
+                      <Group gap="sm">
+                        <Text size="xs" fw={600} c="dimmed" tt="uppercase">
+                          Product RM Details
+                        </Text>
+                        {form.rmMappings.length > 0 && (
+                          <Badge size="xs" variant="light" color="blue">
+                            {form.rmMappings.length} row{form.rmMappings.length !== 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                        {totalPct > 0 && (
+                          <Badge
+                            size="xs"
+                            variant="light"
+                            color={Math.abs(totalPct - 100) < 0.01 ? 'green' : 'orange'}
+                          >
+                            Total: {totalPct.toFixed(2)}%
+                          </Badge>
+                        )}
+                      </Group>
+                      <Button
                         size="xs"
                         variant="light"
-                        color={Math.abs(totalPct - 100) < 0.01 ? 'green' : 'orange'}
+                        leftSection={<IconPlus size={12} />}
+                        onClick={addRmRow}
                       >
-                        Total: {totalPct.toFixed(2)}%
-                      </Badge>
+                        Add Row
+                      </Button>
+                    </Group>
+
+                    {form.rmMappings.length === 0 ? (
+                      <Box py="xl"
+                        style={{
+                          textAlign: 'center',
+                          border: '1.5px dashed var(--mantine-color-gray-3)',
+                          borderRadius: 8,
+                        }}
+                      >
+                        <Text size="sm" c="dimmed">No RM mappings added yet</Text>
+                        <Button
+                          size="xs" variant="subtle"
+                          leftSection={<IconPlus size={12} />}
+                          mt="xs" onClick={addRmRow}
+                        >
+                          Add first row
+                        </Button>
+                      </Box>
+                    ) : (
+                      <Table highlightOnHover withTableBorder withColumnBorders>
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th style={{ width: '60%' }}>Raw Material</Table.Th>
+                            <Table.Th style={{ width: '30%' }}>Percentage (%)</Table.Th>
+                            <Table.Th style={{ width: '10%' }}></Table.Th>
+                          </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          {form.rmMappings.map(row => (
+                            <Table.Tr key={row.rowId}>
+                              <Table.Td>
+                                <FormSelect
+                                  label=""
+                                  value={row.rmId}
+                                  onChange={val => updateRmRow(row.rowId, 'rmId', val)}
+                                  data={rmOptions}
+                                  placeholder="Select raw material"
+                                  searchable
+                                />
+                              </Table.Td>
+                              <Table.Td>
+                                <FormTextInput
+                                  label=""
+                                  value={row.mixPercentage}
+                                  onChange={e => updateRmRow(row.rowId, 'mixPercentage', e.target.value)}
+                                  placeholder="0.00"
+                                />
+                              </Table.Td>
+                              <Table.Td>
+                                <ActionIcon size="sm" color="red" variant="subtle"
+                                  onClick={() => removeRmRow(row.rowId)}>
+                                  <IconTrash size={14} />
+                                </ActionIcon>
+                              </Table.Td>
+                            </Table.Tr>
+                          ))}
+                        </Table.Tbody>
+                      </Table>
                     )}
-                  </Group>
-                  <Button
-                    size="xs"
-                    variant="light"
-                    leftSection={<IconPlus size={12} />}
-                    onClick={addRmRow}
-                  >
-                    Add Row
-                  </Button>
-                </Group>
 
-                {form.rmMappings.length === 0 ? (
-                  <Box
-                    py="xl"
-                    style={{
-                      textAlign: 'center',
-                      border: '1.5px dashed var(--mantine-color-gray-3)',
-                      borderRadius: 8,
-                    }}
-                  >
-                    <Text size="sm" c="dimmed">No RM mappings added yet</Text>
-                    <Button
-                      size="xs"
-                      variant="subtle"
-                      leftSection={<IconPlus size={12} />}
-                      mt="xs"
-                      onClick={addRmRow}
+                    {form.rmMappings.length > 0 && (
+                      <Text size="xs" c="dimmed" mt="xs">
+                        Percentages represent the mix ratio for this product.
+                        {Math.abs(totalPct - 100) < 0.01
+                          ? ' ✓ Total is 100%'
+                          : ` Total is ${totalPct.toFixed(2)}% — does not need to equal 100%.`}
+                      </Text>
+                    )}
+
+                  </Paper>
+                </Grid.Col>
+
+                {/* ── Right: PM Details (placeholder) ── */}
+                <Grid.Col span={6}>
+                  <Paper withBorder p="md" radius="sm" h="100%"
+                    style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
+
+                    <Group justify="space-between" mb="sm">
+                      <Group gap="sm">
+                        <Text size="xs" fw={600} c="dimmed" tt="uppercase">
+                          Packing Material Details
+                        </Text>
+                        <Badge size="xs" variant="light" color="gray">Coming soon</Badge>
+                      </Group>
+                      <Button size="xs" variant="light"
+                        leftSection={<IconPlus size={12} />} disabled>
+                        Add Row
+                      </Button>
+                    </Group>
+
+                    <Box py="xl"
+                      style={{
+                        textAlign: 'center',
+                        border: '1.5px dashed var(--mantine-color-gray-3)',
+                        borderRadius: 8,
+                      }}
                     >
-                      Add first row
-                    </Button>
-                  </Box>
-                ) : (
-                  <Table highlightOnHover withTableBorder withColumnBorders>
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th style={{ width: '60%' }}>Raw Material</Table.Th>
-                        <Table.Th style={{ width: '30%' }}>Percentage (%)</Table.Th>
-                        <Table.Th style={{ width: '10%' }}></Table.Th>
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {form.rmMappings.map(row => (
-                        <Table.Tr key={row.rowId}>
+                      <Text size="sm" c="dimmed">
+                        Packing material mapping will be configured here
+                      </Text>
+                    </Box>
 
-                          {/* Raw Material dropdown — value=rmId, label=rmName from options */}
-                          <Table.Td>
-                            <FormSelect
-                              label=""
-                              value={row.rmId}
-                              onChange={val => updateRmRow(row.rowId, 'rmId', val)}
-                              data={rmOptions}
-                              placeholder="Select raw material"
-                              searchable
-                            />
-                          </Table.Td>
+                  </Paper>
+                </Grid.Col>
 
-                          {/* Percentage */}
-                          <Table.Td>
-                            <FormTextInput
-                              label=""
-                              value={row.percentage}
-                              onChange={e =>
-                                updateRmRow(row.rowId, 'percentage', e.target.value)
-                              }
-                              placeholder="0.00"
-                            />
-                          </Table.Td>
-
-                          {/* Delete */}
-                          <Table.Td>
-                            <ActionIcon
-                              size="sm"
-                              color="red"
-                              variant="subtle"
-                              onClick={() => removeRmRow(row.rowId)}
-                            >
-                              <IconTrash size={14} />
-                            </ActionIcon>
-                          </Table.Td>
-
-                        </Table.Tr>
-                      ))}
-                    </Table.Tbody>
-                  </Table>
-                )}
-
-                {form.rmMappings.length > 0 && (
-                  <Text size="xs" c="dimmed" mt="xs">
-                    Percentages represent the mix ratio for this product.
-                    {Math.abs(totalPct - 100) < 0.01
-                      ? ' ✓ Total is 100%'
-                      : ` Total is ${totalPct.toFixed(2)}% — does not need to equal 100%.`}
-                  </Text>
-                )}
-
-              </Paper>
-
-              {/* ── Section 3: PM Details (placeholder for future) ── */}
-              <Paper withBorder p="md" radius="sm"
-                style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
-
-                <Group justify="space-between" mb="sm">
-                  <Group gap="sm">
-                    <Text size="xs" fw={600} c="dimmed" tt="uppercase">
-                      Packing Material Details
-                    </Text>
-                    <Badge size="xs" variant="light" color="gray">Coming soon</Badge>
-                  </Group>
-                  <Button size="xs" variant="light" leftSection={<IconPlus size={12} />} disabled>
-                    Add Row
-                  </Button>
-                </Group>
-
-                <Box
-                  py="xl"
-                  style={{
-                    textAlign: 'center',
-                    border: '1.5px dashed var(--mantine-color-gray-3)',
-                    borderRadius: 8,
-                  }}
-                >
-                  <Text size="sm" c="dimmed">
-                    Packing material mapping will be configured here
-                  </Text>
-                </Box>
-
-              </Paper>
+              </Grid>
 
             </Box>
           )}

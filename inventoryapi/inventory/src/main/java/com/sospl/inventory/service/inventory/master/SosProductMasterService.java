@@ -3,6 +3,7 @@ package com.sospl.inventory.service.inventory.master;
 import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosProductMasterResponse;
+import com.sospl.inventory.dto.master.SosProductMasterRequest;
 import com.sospl.inventory.model.inventory.master.SosProductMaster;
 
 import java.util.List;
@@ -10,9 +11,9 @@ import java.util.Optional;
 
 public interface SosProductMasterService {
 
-    SosProductMaster save(SosProductMaster entity);
+    SosProductMaster save(SosProductMasterRequest entity);
 
-    SosProductMaster update(Long id, SosProductMaster entity);
+    SosProductMaster update(Long id, SosProductMasterRequest entity);
 
     Optional<SosProductMaster> findById(Long id);
 

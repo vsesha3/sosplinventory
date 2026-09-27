@@ -160,10 +160,11 @@ const ProductPage: React.FC = () => {
         testCode:          formData.testCode          ? Number(formData.testCode)          : null,
         conversionCost:    formData.conversionCost    ? Number(formData.conversionCost)    : null,
         // RM mappings
-        rmMappings: formData.rmMappings.map(r => ({
+        rmDetails: formData.rmMappings.map(r => ({
+          pmRmDetslId: r.pmRmDetslId ? Number(r.pmRmDetslId):null,
           rmId:       r.rmId       ? Number(r.rmId)  : null,
           rmCode:     r.rmCode     ? Number(r.rmCode): null,
-          percentage: r.percentage ? Number(r.percentage) : null,
+          mixPercentage: r.mixPercentage ? Number(r.mixPercentage) : null,
         })),
       };
 

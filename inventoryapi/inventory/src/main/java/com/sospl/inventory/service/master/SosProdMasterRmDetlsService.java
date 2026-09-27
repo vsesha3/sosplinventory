@@ -23,4 +23,9 @@ public interface SosProdMasterRmDetlsService
 
     // ── Soft Delete ───────────────────────────────────────────────────────
     void softDelete(Long id, String deletedBy);
+    
+    void saveOrUpdateRMDetails(
+            Long productId,
+            List<SosProdMasterRmDetls> rmDetails
+    );
 }
