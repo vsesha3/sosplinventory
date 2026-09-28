@@ -27,6 +27,7 @@ public class SosRmMasterMapper {
         entity.setPackSize(request.getPackSize());
         entity.setCapacity(request.getCapacity());
         entity.setPackUom(request.getPackUom());
+        entity.setMaterialType(request.getMaterialType());
 
         return entity;
     }

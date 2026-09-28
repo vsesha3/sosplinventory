@@ -19,7 +19,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,20 +30,17 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     public SosRmMasterServiceImpl(
             SosRmMasterRepository repository,
             SosRmGroupMasterRepository rmGroupRepository) {
-        this.repository       = repository;
+        this.repository        = repository;
         this.rmGroupRepository = rmGroupRepository;
     }
 
     @Override
     public SosRmMaster create(SosRmMasterRequest request) {
         SosRmMaster entity = SosRmMasterMapper.toEntity(request);
-
-        // ── Auto generate rmCode if not provided ─────────────────────────
         if (entity.getRmCode() == null) {
             Integer nextCode = repository.getNextRmCode();
             entity.setRmCode(nextCode);
         }
-
         SosRmMaster saved = repository.save(entity);
         return findById(saved.getRmId());
     }
@@ -70,13 +66,11 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
         return findById(id);
     }
 
-    // ── Fix 1 — findAll returns List<SosRmMasterResponse> ────────────────
     @Override
     public List<SosRmMasterResponse> findAll() {
         return findAllWithDetails();
     }
 
-    // ── Fix 2 — findById returns SosRmMasterResponse ─────────────────────
     @Override
     public SosRmMaster findById(Integer id) {
         return repository.findById(id)
@@ -84,27 +78,32 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
                         "RM not found: " + id));
     }
 
-    // ── Fix 3 — findAllWithDetails uses Object[] mapping ─────────────────
+    // ── Helper — map Object[] to SosRmMasterResponse ─────────────────────
+    private SosRmMasterResponse mapRow(Object[] row) {
+        return new SosRmMasterResponse(
+                ParseUtil.toInteger(row[0]),            // rmId
+                ParseUtil.toInteger(row[1]) != null
+                        ? ParseUtil.toInteger(row[1])
+                                .longValue()
+                        : null,                          // rmCode
+                ParseUtil.toString(row[2]),              // rmName
+                ParseUtil.toString(row[3]),              // uomName
+                ParseUtil.toString(row[4]),              // rmGroupName
+                ParseUtil.toString(row[5]),              // testName
+                ParseUtil.toBigDecimal(row[6]),          // avgRate
+                ParseUtil.toInteger(row[7]) != null
+                        ? ParseUtil.toInteger(row[7])
+                        : 0,                             // rmGroupId
+                ParseUtil.toString(row[8])               // materialType
+        );
+    }
+
     @Override
     public List<SosRmMasterResponse> findAllWithDetails() {
         return repository.findAllWithDetails()
                 .stream()
                 .filter(row -> row != null && row[0] != null)
-                .map(row -> new SosRmMasterResponse(
-                        ParseUtil.toInteger(row[0]),
-                        ParseUtil.toInteger(row[1]) != null
-                                ? ParseUtil.toInteger(row[1])
-                                        .longValue()
-                                : null,
-                        ParseUtil.toString(row[2]),
-                        ParseUtil.toString(row[3]),
-                        ParseUtil.toString(row[4]),
-                        ParseUtil.toString(row[5]),
-                        ParseUtil.toBigDecimal(row[6]),
-                        ParseUtil.toInteger(row[7]) != null
-                                ? ParseUtil.toInteger(row[7])
-                                : 0
-                ))
+                .map(this::mapRow)
                 .collect(Collectors.toList());
     }
 
@@ -126,9 +125,22 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
             int page, int size,
             String sortBy, String sortDir) {
         Pageable pageable = buildPageable(page, size, sortBy, sortDir);
-        Page<SosRmMasterResponse> result =
-                repository.findAllWithDetailsPaginated(pageable);
-        return buildPagedResponse(result);
+        Page<Object[]> pageData = repository
+                .findAllWithDetailsPaginated(pageable);
+        List<SosRmMasterResponse> content = pageData
+                .getContent()
+                .stream()
+                .filter(row -> row != null && row[0] != null)
+                .map(this::mapRow)
+                .collect(Collectors.toList());
+        return new PagedResponse<>(
+                content,
+                pageData.getNumber(),
+                pageData.getSize(),
+                pageData.getTotalElements(),
+                pageData.getTotalPages(),
+                pageData.isFirst(),
+                pageData.isLast());
     }
 
     @Override
@@ -136,12 +148,23 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
             String keyword, int page, int size,
             String sortBy, String sortDir) {
         Pageable pageable = buildPageable(page, size, sortBy, sortDir);
-        Page<SosRmMasterResponse> result =
-                repository.searchWithDetailsPaginated(keyword, pageable);
-        return buildPagedResponse(result);
+        Page<Object[]> pageData = repository
+                .searchWithDetailsPaginated(keyword, pageable);
+        List<SosRmMasterResponse> content = pageData
+                .getContent()
+                .stream()
+                .filter(row -> row != null && row[0] != null)
+                .map(this::mapRow)
+                .collect(Collectors.toList());
+        return new PagedResponse<>(
+                content,
+                pageData.getNumber(),
+                pageData.getSize(),
+                pageData.getTotalElements(),
+                pageData.getTotalPages(),
+                pageData.isFirst(),
+                pageData.isLast());
     }
-
-    // ── Native response methods ───────────────────────────────────────────
 
     @Override
     public List<SosRmMasterNativeResponse> findAllActiveWithDetails() {
@@ -170,8 +193,6 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
                         keyword, pageable);
         return buildNativePagedResponse(result);
     }
-
-    // ── Dropdown methods ──────────────────────────────────────────────────
 
     @Override
     public List<DropDownResponse> findAllForDropDown() {
@@ -219,42 +240,7 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
                 .collect(Collectors.toList());
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────
-
-    private Pageable buildPageable(int page, int size,
-            String sortBy, String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
-        return PageRequest.of(page, size, sort);
-    }
-
-    private PagedResponse<SosRmMasterResponse> buildPagedResponse(
-            Page<SosRmMasterResponse> page) {
-        return new PagedResponse<>(
-                page.getContent(),
-                page.getNumber(),
-                page.getSize(),
-                page.getTotalElements(),
-                page.getTotalPages(),
-                page.isFirst(),
-                page.isLast());
-    }
-
-    private PagedResponse<SosRmMasterNativeResponse>
-            buildNativePagedResponse(
-                    Page<SosRmMasterNativeResponse> page) {
-        return new PagedResponse<>(
-                page.getContent(),
-                page.getNumber(),
-                page.getSize(),
-                page.getTotalElements(),
-                page.getTotalPages(),
-                page.isFirst(),
-                page.isLast());
-    }
-    
- // ── RM Group methods ──────────────────────────────────────────────────────
+    // ── RM Group methods ──────────────────────────────────────────────────
 
     @Override
     public SosRmGroupMaster createRmGroup(SosRmGroupMaster request) {
@@ -288,5 +274,28 @@ public class SosRmMasterServiceImpl implements SosRmMasterService {
     @Override
     public void deleteRmGroup(Long id) {
         rmGroupRepository.deleteById(id);
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────
+
+    private Pageable buildPageable(int page, int size,
+            String sortBy, String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        return PageRequest.of(page, size, sort);
+    }
+
+    private PagedResponse<SosRmMasterNativeResponse>
+            buildNativePagedResponse(
+                    Page<SosRmMasterNativeResponse> page) {
+        return new PagedResponse<>(
+                page.getContent(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.isFirst(),
+                page.isLast());
     }
 }

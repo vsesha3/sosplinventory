@@ -70,10 +70,6 @@ const defaultForm: RawMaterialFormData = {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-const toNum = (val: string): number => {
-  const n = parseFloat(val);
-  return isNaN(n) ? 0 : n;
-};
 
 const validateForm = (form: RawMaterialFormData): string[] => {
   const errors: string[] = [];
@@ -84,22 +80,10 @@ const validateForm = (form: RawMaterialFormData): string[] => {
   if (!form.uomId)
     errors.push('UOM is required');
 
-  if (!form.avgRate || toNum(form.avgRate) <= 0)
-    errors.push('Avg Rate is required and must be greater than 0');
 
-  if (!form.testId)
-    errors.push('Test Name is required');
 
-  if (form.gstRate && isNaN(parseFloat(form.gstRate)))
-    errors.push('GST % must be a valid number');
-  {/*}
-  if (form.packSize && isNaN(parseFloat(form.packSize)))
-    errors.push('Pack Size must be a valid number');
-
-  if (form.capacity && isNaN(parseFloat(form.capacity)))
-    errors.push('Capacity must be a valid number');
-*/}
-
+ 
+ 
   if (!form.materialType)
     errors.push('Material Type is required');
 

@@ -19,6 +19,7 @@ interface RawMaterial {
   rmGroupName: string;
   testName: string | null;
   avgRate: number | null;
+  materialType:string | null;
 }
 
 interface ApiResponse {
@@ -45,6 +46,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'rmGroupName', label: 'Group' },
   { key: 'testName',    label: 'Test Name' },
   { key: 'avgRate',     label: 'Avg Rate', align: 'right' },
+  {key: 'materialType',label:'Material Type' }
 ];
 
 const RawMaterialPage: React.FC = () => {
@@ -178,12 +180,14 @@ const RawMaterialPage: React.FC = () => {
         <Badge variant="light" color="blue" size="sm">{item.uomName}</Badge>
       </Table.Td>
       <Table.Td>{item.rmGroupName}</Table.Td>
+     
       <Table.Td>{item.testName ?? <Text c="dimmed" size="sm">—</Text>}</Table.Td>
       <Table.Td ta="right">
         {item.avgRate != null
           ? <Text size="sm" ta="right">{Number(item.avgRate).toFixed(2)}</Text>
           : <Text c="dimmed" size="sm" ta="right">—</Text>}
       </Table.Td>
+       <Table.Td>{item.materialType}</Table.Td>
     </Table.Tr>
   );
 });

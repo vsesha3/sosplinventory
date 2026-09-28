@@ -26,8 +26,17 @@ public class SosRmMasterResponse {
     private Long packUom;
     private String packUomName;
     private BigDecimal packSize;
+    private String materialType;
 
-    // ── Constructor 1a — Integer rmId, Long rmCode (7 fields) ────────────
+    public String getMaterialType() {
+		return materialType;
+	}
+
+	public void setMaterialType(String materialType) {
+		this.materialType = materialType;
+	}
+
+	// ── Constructor 1a — Integer rmId, Long rmCode (7 fields) ────────────
     public SosRmMasterResponse(
             Integer rmId,
             Long rmCode,
@@ -45,6 +54,29 @@ public class SosRmMasterResponse {
         this.testName    = testName != null ? testName : "-";
         this.avgRate     = avgRate;
         this.rmGroupId = rmGroupId;
+       
+    }
+    
+    public SosRmMasterResponse(
+            Integer rmId,
+            Long rmCode,
+            String rmName,
+            String uomName,
+            String rmGroupName,
+            String testName,
+            BigDecimal avgRate,
+            Integer rmGroupId,
+            String materialType
+    ) {
+        this.rmId = rmId;
+        this.rmCode = rmCode;
+        this.rmName = rmName != null ? rmName : "-";
+        this.uomName = uomName != null ? uomName : "-";
+        this.rmGroupName = rmGroupName != null ? rmGroupName : "-";
+        this.testName = testName != null ? testName : "-";
+        this.avgRate = avgRate;
+        this.rmGroupId = rmGroupId != null ? rmGroupId : 0;
+        this.materialType = materialType;
     }
     
 
