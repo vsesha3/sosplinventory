@@ -3,15 +3,15 @@ import React, { useState, useEffect } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
   Grid, Stack, Loader, Center, Table, ActionIcon,
-  Badge,
+  Badge, Tooltip
 } from '@mantine/core';
 import { IconPackage, IconPlus, IconTrash } from '@tabler/icons-react';
 import { FormTextInput } from '../../../components/common/FormTextInput';
-import { FormSelect }    from '../../../components/common/FormSelect';
+import { FormSelect } from '../../../components/common/FormSelect';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
-import FormHeader        from '../../common/Formheader';
+import FormHeader from '../../common/Formheader';
 import api from '../../../services/api';
-
+import QuickAddModal from '../../../components/common/QuickAddModal';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface DropDownOption {
@@ -20,69 +20,69 @@ interface DropDownOption {
 }
 
 export interface RmMappingRow {
-  pmRmDetslId:  number | null;
-  rowId:       string;        // local key for React
-  rmId:        string | null;
-  rmCode:      string;
-  mixPercentage:  string;
+  pmRmDetslId: number | null;
+  rowId: string;        // local key for React
+  rmId: string | null;
+  rmCode: string;
+  mixPercentage: string;
 }
 
 export interface ProductMasterFormData {
-  id?:              number | null;
-  productCode:      string;
-  sapCode:          string;
-  productCodePrefix:string;
-  productName:      string;
-  brandName:        string;
-  uomId:            string | null;
-  fgLotCode:        string;
-  productGroupId:   string | null;
-  capacity:         string;
-  packingType:      string;
-  rate:             string;
-  gstRate:          string;
-  testId:           string | null;
-  testCode:         string | null;
-  conversionCost:   string;
-  rmMappings:       RmMappingRow[];   // RM section
-  pmMappings:       RmMappingRow[];   // PM section (future)
+  id?: number | null;
+  productCode: string;
+  sapCode: string;
+  productCodePrefix: string;
+  productName: string;
+  brandName: string;
+  uomId: string | null;
+  fgLotCode: string;
+  productGroupId: string | null;
+  capacity: string;
+  packingType: string;
+  rate: string;
+  gstRate: string;
+  testId: string | null;
+  testCode: string | null;
+  conversionCost: string;
+  rmMappings: RmMappingRow[];   // RM section
+  pmMappings: RmMappingRow[];   // PM section (future)
 }
 
 export interface ProductMasterFormProps {
-  opened:   boolean;
-  onClose:  () => void;
-  onSave?:  (data: ProductMasterFormData) => void;
+  opened: boolean;
+  onClose: () => void;
+  onSave?: (data: ProductMasterFormData) => void;
   productId?: number | null;
-  mode?:    'create' | 'update';
+  mode?: 'create' | 'update';
 }
 
 // ── Default form ──────────────────────────────────────────────────────────────
 
 const defaultForm: ProductMasterFormData = {
-  id:               null,
-  productCode:      '',
-  sapCode:          '',
-  productCodePrefix:'',
-  productName:      '',
-  brandName:        '',
-  uomId:            null,
-  fgLotCode:        '',
-  productGroupId:   null,
-  capacity:         '',
-  packingType:      '',
-  rate:             '',
-  gstRate:          '',
-  testId:           null,
-  testCode:         null,
-  conversionCost:   '',
-  rmMappings:       [],
-  pmMappings:       [],
+  id: null,
+  productCode: '',
+  sapCode: '',
+  productCodePrefix: '',
+  productName: '',
+  brandName: '',
+  uomId: null,
+  fgLotCode: '',
+  productGroupId: null,
+  capacity: '',
+  packingType: '',
+  rate: '',
+  gstRate: '',
+  testId: null,
+  testCode: null,
+  conversionCost: '',
+  rmMappings: [],
+  pmMappings: [],
 };
 
 const newRow = (): RmMappingRow => ({
-  rowId:      crypto.randomUUID(),
-  rmId:       null,
-  rmCode:     '',
+  rowId: crypto.randomUUID(),
+  rmId: null,
+  rmCode: '',
   mixPercentage: '',
   pmRmDetslId: null
 });
@@ -136,22 +136,27 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
   onClose,
   onSave,
   productId = null,
-  mode      = 'create',
+  mode = 'create',
 }) => {
 
-  const [form,        setForm]        = useState<ProductMasterFormData>({ ...defaultForm });
-  const [loading,     setLoading]     = useState(false);
-  const [fetchError,  setFetchError]  = useState<string | null>(null);
+  const [form, setForm] = useState<ProductMasterFormData>({ ...defaultForm });
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Dropdowns
-  const [uomOptions,     setUomOptions]     = useState<DropDownOption[]>([]);
-  const [groupOptions,   setGroupOptions]   = useState<DropDownOption[]>([]);
-  const [testOptions,    setTestOptions]    = useState<DropDownOption[]>([]);
-  const [testCodeOpts,   setTestCodeOpts]   = useState<DropDownOption[]>([]);
-  const [rmOptions,      setRmOptions]      = useState<DropDownOption[]>([]);
+  const [uomOptions, setUomOptions] = useState<DropDownOption[]>([]);
+  const [groupOptions, setGroupOptions] = useState<DropDownOption[]>([]);
+  const [testOptions, setTestOptions] = useState<DropDownOption[]>([]);
+  const [testCodeOpts, setTestCodeOpts] = useState<DropDownOption[]>([]);
+  const [rmOptions, setRmOptions] = useState<DropDownOption[]>([]);
+  const [quickSaving, setQuickSaving] = useState(false);
 
+  const [addGroupOpen, setAddGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newTestName, setNewTestName] = useState('');
+  const [addTestNameOpen, setAddTestNameOpen] = useState(false);
   // ── Filter helper ─────────────────────────────────────────────────────────
 
   // Same clean function used across all master forms
@@ -176,101 +181,102 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
       return;
     }
 
-  const load = async () => {
-    setLoading(true);
-    try {
+    const load = async () => {
+      setLoading(true);
+      try {
         const [uomRes, groupRes, testRes, rmRes] = await Promise.all([
-            api.get('/api/dropdown/uom')
-                .catch(() => ({ data: { data: [] } })),
-            api.get('/api/dropdown/product-group')
-                .catch(() => ({ data: { data: [] } })),
-            api.get('/api/dropdown/test-master')
-                .catch(() => ({ data: { data: [] } })),
-            api.get('/api/dropdown/rm')
-                .catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/uom')
+            .catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/product-group')
+            .catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/test-master')
+            .catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/rm')
+            .catch(() => ({ data: { data: [] } })),
         ]);
 
         setUomOptions(clean(uomRes.data.data));
         setGroupOptions(clean(groupRes.data.data));
         setTestOptions(clean(testRes.data.data));
+        setTestCodeOpts([]);
         setRmOptions(clean(rmRes.data.data));
 
         if (mode === 'update' && productId) {
 
-            // ── Fetch product and RM mappings in parallel ─────────────
-            const [productRes, rmMappingRes] = await Promise.all([
-                api.get(`/api/product/${productId}`),
-                api.get(`/api/product/rm-details/${productId}`)
-                    .catch(() => ({ data: { data: [] } })),
-            ]);
+          // ── Fetch product and RM mappings in parallel ─────────────
+          const [productRes, rmMappingRes] = await Promise.all([
+            api.get(`/api/product/${productId}`),
+            api.get(`/api/product/rm-details/${productId}`)
+              .catch(() => ({ data: { data: [] } })),
+          ]);
 
-            const d = productRes.data.data ?? productRes.data;
+          const d = productRes.data.data ?? productRes.data;
 
-            // ── Map RM mappings from new endpoint ─────────────────────
-            const extractPct = (v: any): string => {
-              if (v == null) return '';
-              if (typeof v === 'object') return String(v.parsedValue ?? v.source ?? '');
-              return String(v);
+          // ── Map RM mappings from new endpoint ─────────────────────
+          const extractPct = (v: any): string => {
+            if (v == null) return '';
+            if (typeof v === 'object') return String(v.parsedValue ?? v.source ?? '');
+            return String(v);
+          };
+
+          const rmMappings: RmMappingRow[] = (
+            rmMappingRes.data.data ?? []
+          ).map((m: any) => {
+            const rmIdStr = m.rmId != null ? String(m.rmId) : null;
+            return {
+              pmRmDetslId: m.pmRmDetslId ?? null,
+              rowId: crypto.randomUUID(),
+              rmId: rmIdStr,     // matches rmOptions value — enables auto-select
+              rmCode: rmIdStr ?? '',
+              mixPercentage: extractPct(m.mixPercentage),
             };
-
-            const rmMappings: RmMappingRow[] = (
-                rmMappingRes.data.data ?? []
-            ).map((m: any) => {
-              const rmIdStr = m.rmId != null ? String(m.rmId) : null;
-              return {
-                pmRmDetslId:  m.pmRmDetslId ?? null,
-                rowId:      crypto.randomUUID(),
-                rmId:       rmIdStr,     // matches rmOptions value — enables auto-select
-                rmCode:     rmIdStr ?? '',
-                mixPercentage: extractPct(m.mixPercentage),
-              };
-            });
-            setForm({
-                id:                d.productId         ?? null,
-                productCode:       d.productCode       != null
-                                        ? String(d.productCode)       : '',
-                sapCode:           d.sapCode           ?? '',
-                productCodePrefix: d.productCodePrefix ?? '',
-                productName:       d.productName       ?? '',
-                brandName:         d.brandName         ?? '',
-                uomId:             d.uomId             != null
-                                        ? String(d.uomId)             : null,
-                fgLotCode:         d.fgLotCode         != null
-                                        ? String(d.fgLotCode)         : '',
-                productGroupId:    d.productGroupId    != null
-                                        ? String(d.productGroupId)    : null,
-                capacity:          d.capacity          != null
-                                        ? String(d.capacity)          : '',
-                packingType:       d.packingType       ?? '',
-                rate:              d.rate              != null
-                                        ? String(typeof d.rate === 'object'
-                                            ? (d.rate.parsedValue
-                                                ?? d.rate.source ?? '')
-                                            : d.rate)
-                                        : '',
-                gstRate:           d.gstRate           != null
-                                        ? String(d.gstRate)           : '',
-                testId:            d.testId            != null
-                                        ? String(d.testId)            : null,
-                testCode:          d.testCode          != null
-                                        ? String(d.testCode)          : null,
-                conversionCost:    d.conversionCost    != null
-                                        ? String(d.conversionCost)    : '',
-                rmMappings,
-                pmMappings: [],         // ← PM section future
-            });
+          });
+          setForm({
+            id: d.productId ?? null,
+            productCode: d.productCode != null
+              ? String(d.productCode) : '',
+            sapCode: d.sapCode ?? '',
+            productCodePrefix: d.productCodePrefix ?? '',
+            productName: d.productName ?? '',
+            brandName: d.brandName ?? '',
+            uomId: d.uomId != null
+              ? String(d.uomId) : null,
+            fgLotCode: d.fgLotCode != null
+              ? String(d.fgLotCode) : '',
+            productGroupId: d.productGroupId != null
+              ? String(d.productGroupId) : null,
+            capacity: d.capacity != null
+              ? String(d.capacity) : '',
+            packingType: d.packingType ?? '',
+            rate: d.rate != null
+              ? String(typeof d.rate === 'object'
+                ? (d.rate.parsedValue
+                  ?? d.rate.source ?? '')
+                : d.rate)
+              : '',
+            gstRate: d.gstRate != null
+              ? String(d.gstRate) : '',
+            testId: d.testId != null
+              ? String(d.testId) : null,
+            testCode: d.testCode != null
+              ? String(d.testCode) : null,
+            conversionCost: d.conversionCost != null
+              ? String(d.conversionCost) : '',
+            rmMappings,
+            pmMappings: [],         // ← PM section future
+          });
         }
-    } catch {
+      } catch {
         setFetchError(
-            'Failed to load form data. Please close and try again.');
-    } finally {
+          'Failed to load form data. Please close and try again.');
+      } finally {
         setLoading(false);
-    }
-};
+      }
+    };
 
-load();
+    load();
 
-   
+
   }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Form helpers ──────────────────────────────────────────────────────────
@@ -307,7 +313,7 @@ load();
         if (r.rowId !== rowId) return r;
         if (field === 'rmId') {
           // value = rm_id (e.g. "54"), label = rm_name (e.g. "Acrylic Acid")
-          const opt = rmOptions.find(o => o.value === value);
+          //const opt = rmOptions.find(o => o.value === value);
           return { ...r, rmId: value, rmCode: value ?? '' };
         }
         return { ...r, [field]: value ?? '' };
@@ -324,7 +330,7 @@ load();
   };
 
   const confirmLabel = mode === 'update' ? 'Update' : 'Submit';
-  const headerTitle  = mode === 'update' && form.id
+  const headerTitle = mode === 'update' && form.id
     ? `Edit Product — ${form.productName || `#${productId}`}`
     : 'New Product';
 
@@ -332,6 +338,67 @@ load();
   const totalPct = form.rmMappings.reduce(
     (s, r) => s + (parseFloat(r.mixPercentage) || 0), 0
   );
+
+  const handleAddGroup = async () => {
+    if (!newGroupName.trim()) return;
+    setQuickSaving(true);
+    try {
+      const res = await api.post('/api/productgroup', { groupName: newGroupName.trim() });
+      const created = res.data?.data ?? res.data;
+      // Refresh group dropdown
+      const groupRes = await api.get('/api/dropdown/product-group');
+      const updated = clean(groupRes.data.data);
+      setGroupOptions(updated);
+      // Auto-select the new group
+      if (created?.productGroupId != null) {
+        setForm(prev => ({ ...prev, productGroupId: String(created.productGroupId) }));
+      } else {
+        // fallback: find by name
+        const match = updated.find(o => o.label === newGroupName.trim());
+        if (match) setForm(prev => ({ ...prev, productGroupId: match.value }));
+      }
+      setNewGroupName('');
+      setAddGroupOpen(false);
+    } catch (err: any) {
+
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add RM Group. Please try again.'
+      );
+
+      // silently fail — user can still select manually
+    } finally {
+      setQuickSaving(false);
+    }
+  };
+
+  const handleAddTestName = async () => {
+    if (!newTestName.trim()) return;
+    setQuickSaving(true);
+    try {
+      const res = await api.post('/api/inventory/test-master', { testName: newTestName.trim() });
+      const created = res.data?.data ?? res.data;
+      // Refresh UOM dropdown (used for both UOM and Pack UOM)
+      const uomRes = await api.get('/api/dropdown/test-master');
+      const updated = clean(uomRes.data.data);
+      setTestOptions(updated);
+      // Auto-select the new UOM
+      if (created?.testId != null) {
+        setForm(prev => ({ ...prev, testId: String(created.testId) }));
+      } else {
+        const match = updated.find(o => o.label === newTestName.trim());
+        if (match) setForm(prev => ({ ...prev, testId: match.value }));
+      }
+      setNewTestName('');
+      setAddTestNameOpen(false);
+    } catch (err: any) {
+      console.error('[handleAddUom] Failed:', err?.response?.data ?? err);
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add UOM. Please try again.'
+      );
+    } finally {
+      setQuickSaving(false);
+    }
+  };
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -460,14 +527,29 @@ load();
                     />
                   </Grid.Col>
                   <Grid.Col span={4}>
-                    <FormSelect
-                      label="Product Group Name"
-                      value={form.productGroupId}
-                      onChange={setSelect('productGroupId')}
-                      data={groupOptions}
-                      placeholder="--SELECT--"
-                      searchable
-                    />
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+                        <FormSelect
+                          label="Product Group Name"
+                          value={form.productGroupId}
+                          onChange={setSelect('productGroupId')}
+                          data={groupOptions}
+                          placeholder="--SELECT--"
+                          searchable
+                        />
+                      </Box>
+                      <Tooltip label="Add new RM Group" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewGroupName(''); setAddGroupOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Grid.Col>
 
                   {/* Row 4: Capacity | Packing Type */}
@@ -518,17 +600,34 @@ load();
 
                   {/* Row 6: Test Name | Test Code */}
                   <Grid.Col span={6}>
-                    <FormSelect
-                      label="* Test Name"
-                      value={form.testId}
-                      onChange={setSelect('testId')}
-                      data={testOptions}
-                      placeholder="--SELECT--"
-                      required
-                      searchable
-                    />
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+                        <FormSelect
+                          label="* Test Name"
+                          value={form.testId}
+                          onChange={setSelect('testId')}
+                          data={testOptions}
+                          placeholder="--SELECT--"
+                          required
+                          searchable
+                        />
+                      </Box>
+
+                      <Tooltip label="Add new Lab Test" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewTestName(''); setAddTestNameOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Grid.Col>
                   <Grid.Col span={6}>
+
                     <FormSelect
                       label="Test Code"
                       value={form.testCode}
@@ -537,6 +636,7 @@ load();
                       placeholder=""
                       searchable
                     />
+
                   </Grid.Col>
 
                 </Grid>
@@ -720,6 +820,28 @@ load();
         errors={validationErrors}
         zIndex={250}
       />
+      <QuickAddModal
+        opened={addGroupOpen}
+        onClose={() => setAddGroupOpen(false)}
+        title="Add RM Group"
+        label="Group Name"
+        value={newGroupName}
+        onChange={setNewGroupName}
+        onSave={handleAddGroup}
+        saving={quickSaving}
+      />
+
+      <QuickAddModal
+        opened={addTestNameOpen}
+        onClose={() => setAddTestNameOpen(false)}
+        title="Add Lab Test Name"
+        label="Lab Test Name"
+        value={newTestName}
+        onChange={setNewTestName}
+        onSave={handleAddTestName}
+        saving={quickSaving}
+      />
+
     </>
   );
 };

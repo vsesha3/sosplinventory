@@ -53,13 +53,14 @@ public class DropDownRepository {
     // ── Test Master ───────────────────────────────────────────────────────
     public List<DropDownResponse> getTestMasterDropdown() {
         return query("""
-                SELECT
-                    test_id   AS id,
-                    concat(test_name,"~",test_code) AS name,test_code as testCode
-                FROM sos_test_master_t
-                WHERE is_active = 1
-                AND is_deleted = 0
-                ORDER BY test_name ASC
+               SELECT
+    test_id AS id,
+    CONCAT(test_name, '~', COALESCE(NULLIF(test_code, '-'), '-')) AS name,
+    COALESCE(NULLIF(test_code, ''), '-') AS testCode
+FROM sos_test_master_t
+WHERE is_active = 1
+  AND is_deleted = 0
+ORDER BY test_id DESC;
                 """);
     }
 
@@ -183,21 +184,20 @@ public class DropDownRepository {
                         rs.getString("quantity")));
     }
     
-    public List<DropDownResponse> getProductGroupDropDown() {
-        return jdbcTemplate.query("""
-                SELECT
-                    product_group_id AS id,
-                    group_name       AS name
-                FROM sos_product_group_master_t
-                WHERE is_active = 1
-                AND is_deleted = 0
-                ORDER BY group_name ASC
-                """,
-                (rs, rowNum) -> new DropDownResponse(
-                        rs.getLong("id"),
-                        rs.getString("name")));
-    }
-    
+	public List<DropDownResponse> getProductGroupDropDown() {
+		return jdbcTemplate.query("""
+				               SELECT
+    MIN(product_group_id) AS id,
+    group_name as name
+FROM sos_product_group_master_t
+WHERE is_active = 1
+  AND is_deleted = 0
+GROUP BY group_name
+ORDER BY group_name ASC;
+
+				                """, (rs, rowNum) -> new DropDownResponse(rs.getLong("id"), rs.getString("name")));
+	}
+
     public List<DropDownResponse> getSupplierTypeDropDown() {
         return jdbcTemplate.query("""
                 SELECT

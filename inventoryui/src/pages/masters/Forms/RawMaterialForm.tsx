@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
-  Grid, Stack, Loader, Center, Tooltip, ActionIcon, TextInput,
+  Grid, Stack, Loader, Center, Tooltip, ActionIcon, 
 } from '@mantine/core';
 import { IconPackage, IconPlus } from '@tabler/icons-react';
 import { FormTextInput } from '../../../components/common/FormTextInput';
@@ -141,8 +141,9 @@ const RawMaterialForm: React.FC<RawMaterialFormProps> = ({
   //const [testCodeOptions, setTestCodeOptions] = useState<DropDownOption[]>([]);
 
   // QuickAdd state
-  const [addGroupOpen, setAddGroupOpen] = useState(false);
+
   const [addUomOpen, setAddUomOpen] = useState(false);
+  const [addGroupOpen, setAddGroupOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newUomName, setNewUomName] = useState('');
   const [newTestName, setNewTestName] = useState('');
