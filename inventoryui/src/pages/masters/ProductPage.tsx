@@ -166,6 +166,11 @@ const ProductPage: React.FC = () => {
           rmCode:     r.rmCode     ? Number(r.rmCode): null,
           mixPercentage: r.mixPercentage ? Number(r.mixPercentage) : null,
         })),
+        // PM mappings
+        pmDetails: formData.pmMappings.map(p => ({
+          pmPackingDetslId: p.pmPackingDetslId ? Number(p.pmPackingDetslId) : null,
+          pmId:             p.pmId             ? Number(p.pmId)             : null,
+        })),
       };
 
       if (formMode === 'update' && formData.id) {

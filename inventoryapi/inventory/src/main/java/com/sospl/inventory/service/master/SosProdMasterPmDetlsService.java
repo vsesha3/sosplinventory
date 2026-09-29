@@ -4,6 +4,7 @@ import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.model.master.SosProdMasterPmDetls;
 import com.sospl.inventory.service.common.BaseMasterService;
 
+
 import java.util.List;
 
 public interface SosProdMasterPmDetlsService
@@ -21,4 +22,7 @@ public interface SosProdMasterPmDetlsService
     void softDelete(Long id, String deletedBy);
     
     List<DropDownResponse> findAllForDropDown();
+    public void saveOrUpdatePMDetails(
+            Long productId,
+            List<SosProdMasterPmDetls> pmDetails);
 }

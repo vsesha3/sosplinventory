@@ -161,18 +161,6 @@ const COLUMNS: ColumnDef[] = [
     label: 'GST Number',
     width: 150,
   },
-
-  {
-    key: 'iTNo',
-    label: 'IT No',
-    width: 90,
-  },
-
-  {
-    key: 'rCNo',
-    label: 'RC No',
-    width: 90,
-  }
 ];
 
 
@@ -601,8 +589,9 @@ const SupplierPage: React.FC = () => {
           </Table.Td>
 
 
+          {/* Supplier Code = supplierId */}
           <Table.Td>
-            {item.supplierCode}
+            {item.supplierId}
           </Table.Td>
 
 
@@ -703,16 +692,6 @@ const SupplierPage: React.FC = () => {
 
           <Table.Td>
             {val(item.gstNo)}
-          </Table.Td>
-
-
-          <Table.Td>
-            {val(item.iTNo)}
-          </Table.Td>
-
-
-          <Table.Td>
-            {val(item.rCNo)}
           </Table.Td>
 
 

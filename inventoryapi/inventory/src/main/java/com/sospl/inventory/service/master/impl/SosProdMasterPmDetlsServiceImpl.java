@@ -2,6 +2,7 @@ package com.sospl.inventory.service.master.impl;
 
 import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.model.master.SosProdMasterPmDetls;
+
 import com.sospl.inventory.repository.master.SosProdMasterPmDetlsRepository;
 import com.sospl.inventory.service.common.impl.BaseMasterServiceImpl;
 import com.sospl.inventory.service.master.SosProdMasterPmDetlsService;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,6 +22,8 @@ public class SosProdMasterPmDetlsServiceImpl
         implements SosProdMasterPmDetlsService {
 
     private final SosProdMasterPmDetlsRepository detlsRepository;
+    
+    
 
     public SosProdMasterPmDetlsServiceImpl(
             SosProdMasterPmDetlsRepository repository) {
@@ -77,4 +82,58 @@ public class SosProdMasterPmDetlsServiceImpl
                                 : "-"))                                                 // pmName
                 .collect(Collectors.toList());
     }
+    
+    @Override
+    public void saveOrUpdatePMDetails(
+            Long productId,
+            List<SosProdMasterPmDetls> pmDetails) {
+
+        // null = caller didn't send PM details → leave existing rows untouched
+        if (pmDetails == null) {
+            System.out.println("pm details are empty");
+            return;
+        }
+
+        // ── Soft delete rows removed in the UI ────────────────────────────
+        Set<Long> incomingIds = pmDetails.stream()
+                .map(SosProdMasterPmDetls::getPmPackingDetslId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        for (SosProdMasterPmDetls existing :
+                detlsRepository.findAllByProductIdAndIsDeletedFalse(productId)) {
+            if (!incomingIds.contains(existing.getPmPackingDetslId())) {
+                softDelete(existing.getPmPackingDetslId(), "system");
+            }
+        }
+
+        // ── Insert / update ───────────────────────────────────────────────
+        for (SosProdMasterPmDetls pmDetail : pmDetails) {
+
+            if (pmDetail.getPmPackingDetslId() != null) {
+
+                // Existing record - UPDATE
+                SosProdMasterPmDetls existing =
+                        detlsRepository
+                                .findById(pmDetail.getPmPackingDetslId())
+                                .orElseThrow(() ->
+                                        new RuntimeException(
+                                                "PM Detail not found: "
+                                                        + pmDetail.getPmPackingDetslId()));
+
+                existing.setProductId(productId);
+                existing.setPmId(pmDetail.getPmId());
+
+                detlsRepository.save(existing);
+
+            } else {
+
+                // New record - INSERT
+                pmDetail.setProductId(productId);
+
+                detlsRepository.save(pmDetail);
+            }
+        }
+    }
+
 }

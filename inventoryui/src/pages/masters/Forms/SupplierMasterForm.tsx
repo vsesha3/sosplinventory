@@ -259,26 +259,17 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
 
                 <Grid columns={12} gutter="sm">
 
-                  {/* Row 1: Supplier ID | Supplier Code | Supplier Name */}
+                  {/* Row 1: Supplier Code (= supplierId from API) | Supplier Name */}
                   <Grid.Col span={4}>
                     <FormTextInput
-                      label="Supplier ID"
+                      label="Supplier Code"
                       value={form.supplierId != null ? String(form.supplierId) : ''}
                       onChange={() => { }}
                       placeholder="Auto-generated"
                       readOnly
                     />
                   </Grid.Col>
-                  <Grid.Col span={4}>
-                    <FormTextInput
-                      label="* Supplier Code"
-                      value={form.supplierCode}
-                      onChange={setStr('supplierCode')}
-                      placeholder="Supplier Code"
-
-                    />
-                  </Grid.Col>
-                  <Grid.Col span={4}>
+                  <Grid.Col span={8}>
                     <FormTextInput
                       label="* Supplier Name"
                       value={form.supplierName}
@@ -368,7 +359,7 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
 
                 <Grid columns={12} gutter="sm">
 
-                  {/* Row 1: GST | PAN | IT No */}
+                  {/* Row 1: GST | PAN */}
                   <Grid.Col span={6}>
                     <FormTextInput
                       label="GST Number"

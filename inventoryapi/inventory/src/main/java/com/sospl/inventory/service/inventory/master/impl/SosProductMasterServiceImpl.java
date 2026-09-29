@@ -5,9 +5,11 @@ import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.inventory.master.SosProductMasterResponse;
 import com.sospl.inventory.dto.master.SosProductMasterRequest;
 import com.sospl.inventory.model.inventory.master.SosProductMaster;
+import com.sospl.inventory.model.master.SosProdMasterPmDetls;
 import com.sospl.inventory.model.master.SosProdMasterRmDetls;
 import com.sospl.inventory.repository.inventory.master.SosProductMasterRepository;
 import com.sospl.inventory.service.inventory.master.SosProductMasterService;
+import com.sospl.inventory.service.master.SosProdMasterPmDetlsService;
 import com.sospl.inventory.service.master.SosProdMasterRmDetlsService;
 
 import org.springframework.data.domain.Page;
@@ -26,11 +28,13 @@ public class SosProductMasterServiceImpl implements SosProductMasterService {
 
     private final SosProductMasterRepository repository;
     private final SosProdMasterRmDetlsService rmDetlsService;
+    private final SosProdMasterPmDetlsService pmDetlsService;
 
 
-    public SosProductMasterServiceImpl(SosProductMasterRepository repository,SosProdMasterRmDetlsService rmDetlsService) {
+    public SosProductMasterServiceImpl(SosProductMasterRepository repository,SosProdMasterRmDetlsService rmDetlsService,SosProdMasterPmDetlsService pmDetlsService) {
         this.repository = repository;
         this.rmDetlsService = rmDetlsService;
+        this.pmDetlsService = pmDetlsService;
     }
 
     @Override
@@ -46,6 +50,7 @@ public class SosProductMasterServiceImpl implements SosProductMasterService {
         entity.setProductGroupId(request.getProductGroupId());
         entity.setTestId(request.getTestId());
         entity.setRate(request.getRate());
+        
 
         // Add other fields if required
        
@@ -68,6 +73,8 @@ public class SosProductMasterServiceImpl implements SosProductMasterService {
                 productId,
                 request.getRmDetails()
         );
+        
+        pmDetlsService.saveOrUpdatePMDetails(productId, request.getPmDetails());
 
         return saved;
     }
@@ -86,6 +93,7 @@ public class SosProductMasterServiceImpl implements SosProductMasterService {
         existing.setProductGroupId(entity.getProductGroupId());
         existing.setTestId(entity.getTestId());
         existing.setRate(entity.getRate());
+        existing.setBrandName(entity.getBrandName());
 
         // RM details
         List<SosProdMasterRmDetls> rmDetails =
@@ -95,6 +103,8 @@ public class SosProductMasterServiceImpl implements SosProductMasterService {
                 id,
                 rmDetails
         );
+        List<SosProdMasterPmDetls> pmDetails = entity.getPmDetails();
+        pmDetlsService.saveOrUpdatePMDetails(id, pmDetails);
 
         return repository.save(existing);
     }

@@ -27,6 +27,12 @@ export interface RmMappingRow {
   mixPercentage: string;
 }
 
+export interface PmMappingRow {
+  pmPackingDetslId: number | null;
+  rowId: string;        // local key for React
+  pmId: string | null;
+}
+
 export interface ProductMasterFormData {
   id?: number | null;
   productCode: string;
@@ -45,7 +51,7 @@ export interface ProductMasterFormData {
   testCode: string | null;
   conversionCost: string;
   rmMappings: RmMappingRow[];   // RM section
-  pmMappings: RmMappingRow[];   // PM section (future)
+  pmMappings: PmMappingRow[];   // PM section
 }
 
 export interface ProductMasterFormProps {
@@ -87,6 +93,12 @@ const newRow = (): RmMappingRow => ({
   pmRmDetslId: null
 });
 
+const newPmRow = (): PmMappingRow => ({
+  rowId: crypto.randomUUID(),
+  pmId: null,
+  pmPackingDetslId: null,
+});
+
 // ── Validation ────────────────────────────────────────────────────────────────
 
 const validateForm = (form: ProductMasterFormData): string[] => {
@@ -126,6 +138,10 @@ const validateForm = (form: ProductMasterFormData): string[] => {
       errors.push('RM Percentage must be greater than 0');
   }
 
+  // PM mapping validation
+  if (form.pmMappings.some(row => !row.pmId))
+    errors.push('All Packing Material rows must have a Packing Material selected');
+
   return errors;
 };
 
@@ -151,12 +167,18 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
   const [testOptions, setTestOptions] = useState<DropDownOption[]>([]);
   const [testCodeOpts, setTestCodeOpts] = useState<DropDownOption[]>([]);
   const [rmOptions, setRmOptions] = useState<DropDownOption[]>([]);
+  const [pmOptions,setPmOptions] = useState<DropDownOption[]>([]);
+  const [brandOptions, setBrandOptions] = useState<DropDownOption[]>([]);
   const [quickSaving, setQuickSaving] = useState(false);
 
   const [addGroupOpen, setAddGroupOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newTestName, setNewTestName] = useState('');
   const [addTestNameOpen, setAddTestNameOpen] = useState(false);
+  const [newBrandName, setNewBrandName] = useState('');
+  const [addBrandOpen, setAddBrandOpen] = useState(false);
+  const [newUomName, setNewUomName] = useState('');
+  const [addUomOpen, setAddUomOpen] = useState(false);
   // ── Filter helper ─────────────────────────────────────────────────────────
 
   // Same clean function used across all master forms
@@ -184,7 +206,7 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
     const load = async () => {
       setLoading(true);
       try {
-        const [uomRes, groupRes, testRes, rmRes] = await Promise.all([
+        const [uomRes, groupRes, testRes, rmRes, pmRes, brandRes] = await Promise.all([
           api.get('/api/dropdown/uom')
             .catch(() => ({ data: { data: [] } })),
           api.get('/api/dropdown/product-group')
@@ -193,6 +215,10 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
             .catch(() => ({ data: { data: [] } })),
           api.get('/api/dropdown/rm')
             .catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/packing-master')
+            .catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/brand-name')
+            .catch(() => ({ data: { data: [] } })),
         ]);
 
         setUomOptions(clean(uomRes.data.data));
@@ -200,13 +226,17 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
         setTestOptions(clean(testRes.data.data));
         setTestCodeOpts([]);
         setRmOptions(clean(rmRes.data.data));
+        setPmOptions(clean(pmRes.data.data));
+        setBrandOptions(clean(brandRes.data.data));
 
         if (mode === 'update' && productId) {
 
-          // ── Fetch product and RM mappings in parallel ─────────────
-          const [productRes, rmMappingRes] = await Promise.all([
+          // ── Fetch product, RM and PM mappings in parallel ─────────
+          const [productRes, rmMappingRes, pmMappingRes] = await Promise.all([
             api.get(`/api/product/${productId}`),
             api.get(`/api/product/rm-details/${productId}`)
+              .catch(() => ({ data: { data: [] } })),
+            api.get(`/api/inventory/work-order/pm-details/product/${productId}`)
               .catch(() => ({ data: { data: [] } })),
           ]);
 
@@ -231,10 +261,19 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
               mixPercentage: extractPct(m.mixPercentage),
             };
           });
+
+          const pmMappings: PmMappingRow[] = (
+            pmMappingRes.data.data ?? []
+          ).map((m: any) => ({
+            pmPackingDetslId: m.pmPackingDetslId ?? null,
+            rowId: crypto.randomUUID(),
+            pmId: m.pmId != null ? String(m.pmId) : null,   // matches pmOptions value
+          }));
           setForm({
             id: d.productId ?? null,
-            productCode: d.productCode != null
-              ? String(d.productCode) : '',
+            // Product Code = productId from API
+            productCode: d.productId != null
+              ? String(d.productId) : '',
             sapCode: d.sapCode ?? '',
             productCodePrefix: d.productCodePrefix ?? '',
             productName: d.productName ?? '',
@@ -263,7 +302,7 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
             conversionCost: d.conversionCost != null
               ? String(d.conversionCost) : '',
             rmMappings,
-            pmMappings: [],         // ← PM section future
+            pmMappings,
           });
         }
       } catch {
@@ -321,6 +360,28 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
     }));
   };
 
+  // ── PM mapping helpers ────────────────────────────────────────────────────
+
+  const addPmRow = () => {
+    setForm(prev => ({ ...prev, pmMappings: [...prev.pmMappings, newPmRow()] }));
+  };
+
+  const removePmRow = (rowId: string) => {
+    setForm(prev => ({
+      ...prev,
+      pmMappings: prev.pmMappings.filter(r => r.rowId !== rowId),
+    }));
+  };
+
+  const updatePmRow = (rowId: string, value: string | null) => {
+    setForm(prev => ({
+      ...prev,
+      pmMappings: prev.pmMappings.map(r =>
+        r.rowId === rowId ? { ...r, pmId: value } : r),
+    }));
+    if (validationErrors.length > 0) setValidationErrors([]);
+  };
+
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmitClick = () => {
@@ -347,6 +408,7 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
       const created = res.data?.data ?? res.data;
       // Refresh group dropdown
       const groupRes = await api.get('/api/dropdown/product-group');
+      
       const updated = clean(groupRes.data.data);
       setGroupOptions(updated);
       // Auto-select the new group
@@ -398,6 +460,68 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
     } finally {
       setQuickSaving(false);
     }
+  };
+
+  const handleAddUom = async () => {
+    if (!newUomName.trim()) return;
+    setQuickSaving(true);
+    try {
+      const res = await api.post('/api/uom', { uomName: newUomName.trim() });
+      const created = res.data?.data ?? res.data;
+      // Refresh UOM dropdown
+      const uomRes = await api.get('/api/dropdown/uom');
+      const updated = clean(uomRes.data.data);
+      setUomOptions(updated);
+      // Auto-select the new UOM
+      if (created?.id != null) {
+        setForm(prev => ({ ...prev, uomId: String(created.id) }));
+      } else {
+        const match = updated.find(o => o.label === newUomName.trim());
+        if (match) setForm(prev => ({ ...prev, uomId: match.value }));
+      }
+      setNewUomName('');
+      setAddUomOpen(false);
+    } catch (err: any) {
+      console.error('[handleAddUom] Failed:', err?.response?.data ?? err);
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add UOM. Please try again.'
+      );
+    } finally {
+      setQuickSaving(false);
+    }
+  };
+
+  const handleAddBrand = async () => {
+    const name = newBrandName.trim();
+    if (!name) return;
+    setQuickSaving(true);
+    try {
+      await api.post('/api/brand', { brandName: name, activeFlag: true });
+      // Refresh brand dropdown
+      const brandRes = await api.get('/api/dropdown/brand-name');
+      setBrandOptions(clean(brandRes.data.data));
+      // Product stores brand by name — auto-select the new brand
+      setForm(prev => ({ ...prev, brandName: name }));
+      setNewBrandName('');
+      setAddBrandOpen(false);
+    } catch (err: any) {
+      console.error('[handleAddBrand] Failed:', err?.response?.data ?? err);
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add Brand. Please try again.'
+      );
+    } finally {
+      setQuickSaving(false);
+    }
+  };
+
+  // Product stores brand_name (text), so map the name to/from the dropdown option
+  const selectedBrandValue =
+    brandOptions.find(o => o.label === form.brandName)?.value ?? null;
+
+  const handleBrandChange = (value: string | null) => {
+    const opt = brandOptions.find(o => o.value === value);
+    setForm(prev => ({ ...prev, brandName: opt?.label ?? '' }));
+    if (validationErrors.length > 0) setValidationErrors([]);
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -464,9 +588,9 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
                     <FormTextInput
                       label="Product Code"
                       value={form.productCode}
-                      onChange={setStr('productCode')}
+                      onChange={() => { }}
                       placeholder="Auto-generated"
-                      readOnly={mode === 'update'}
+                      readOnly
                     />
                   </Grid.Col>
                   <Grid.Col span={4}>
@@ -497,25 +621,57 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
                     />
                   </Grid.Col>
                   <Grid.Col span={4}>
-                    <FormTextInput
-                      label="Brand Name"
-                      value={form.brandName}
-                      onChange={setStr('brandName')}
-                      placeholder="Brand name"
-                    />
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+                        <FormSelect
+                          label="Brand Name"
+                          value={selectedBrandValue}
+                          onChange={handleBrandChange}
+                          data={brandOptions}
+                          placeholder="--SELECT--"
+                          searchable
+                        />
+                      </Box>
+                      <Tooltip label="Add new Brand" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewBrandName(''); setAddBrandOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Grid.Col>
 
                   {/* Row 3: UOM | FG Lot Code | Product Group */}
                   <Grid.Col span={4}>
-                    <FormSelect
-                      label="* UOM"
-                      value={form.uomId}
-                      onChange={setSelect('uomId')}
-                      data={uomOptions}
-                      placeholder="----Select----"
-                      required
-                      searchable
-                    />
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+                        <FormSelect
+                          label="* UOM"
+                          value={form.uomId}
+                          onChange={setSelect('uomId')}
+                          data={uomOptions}
+                          placeholder="----Select----"
+                          required
+                          searchable
+                        />
+                      </Box>
+                      <Tooltip label="Add new UOM" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewUomName(''); setAddUomOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Grid.Col>
                   <Grid.Col span={4}>
                     <FormTextInput
@@ -751,7 +907,7 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
                   </Paper>
                 </Grid.Col>
 
-                {/* ── Right: PM Details (placeholder) ── */}
+                {/* ── Right: PM Mapping ── */}
                 <Grid.Col span={6}>
                   <Paper withBorder p="md" radius="sm" h="100%"
                     style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
@@ -761,25 +917,71 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
                         <Text size="xs" fw={600} c="dimmed" tt="uppercase">
                           Packing Material Details
                         </Text>
-                        <Badge size="xs" variant="light" color="gray">Coming soon</Badge>
+                        {form.pmMappings.length > 0 && (
+                          <Badge size="xs" variant="light" color="blue">
+                            {form.pmMappings.length} row{form.pmMappings.length !== 1 ? 's' : ''}
+                          </Badge>
+                        )}
                       </Group>
-                      <Button size="xs" variant="light"
-                        leftSection={<IconPlus size={12} />} disabled>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        leftSection={<IconPlus size={12} />}
+                        onClick={addPmRow}
+                      >
                         Add Row
                       </Button>
                     </Group>
 
-                    <Box py="xl"
-                      style={{
-                        textAlign: 'center',
-                        border: '1.5px dashed var(--mantine-color-gray-3)',
-                        borderRadius: 8,
-                      }}
-                    >
-                      <Text size="sm" c="dimmed">
-                        Packing material mapping will be configured here
-                      </Text>
-                    </Box>
+                    {form.pmMappings.length === 0 ? (
+                      <Box py="xl"
+                        style={{
+                          textAlign: 'center',
+                          border: '1.5px dashed var(--mantine-color-gray-3)',
+                          borderRadius: 8,
+                        }}
+                      >
+                        <Text size="sm" c="dimmed">No packing materials added yet</Text>
+                        <Button
+                          size="xs" variant="subtle"
+                          leftSection={<IconPlus size={12} />}
+                          mt="xs" onClick={addPmRow}
+                        >
+                          Add first row
+                        </Button>
+                      </Box>
+                    ) : (
+                      <Table highlightOnHover withTableBorder withColumnBorders>
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th style={{ width: '90%' }}>Packing Material Name</Table.Th>
+                            <Table.Th style={{ width: '10%' }}></Table.Th>
+                          </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          {form.pmMappings.map(row => (
+                            <Table.Tr key={row.rowId}>
+                              <Table.Td>
+                                <FormSelect
+                                  label=""
+                                  value={row.pmId}
+                                  onChange={val => updatePmRow(row.rowId, val)}
+                                  data={pmOptions}
+                                  placeholder="Select packing material"
+                                  searchable
+                                />
+                              </Table.Td>
+                              <Table.Td>
+                                <ActionIcon size="sm" color="red" variant="subtle"
+                                  onClick={() => removePmRow(row.rowId)}>
+                                  <IconTrash size={14} />
+                                </ActionIcon>
+                              </Table.Td>
+                            </Table.Tr>
+                          ))}
+                        </Table.Tbody>
+                      </Table>
+                    )}
 
                   </Paper>
                 </Grid.Col>
@@ -839,6 +1041,28 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
         value={newTestName}
         onChange={setNewTestName}
         onSave={handleAddTestName}
+        saving={quickSaving}
+      />
+
+      <QuickAddModal
+        opened={addUomOpen}
+        onClose={() => setAddUomOpen(false)}
+        title="Add UOM"
+        label="UOM Name"
+        value={newUomName}
+        onChange={setNewUomName}
+        onSave={handleAddUom}
+        saving={quickSaving}
+      />
+
+      <QuickAddModal
+        opened={addBrandOpen}
+        onClose={() => setAddBrandOpen(false)}
+        title="Add Brand"
+        label="Brand Name"
+        value={newBrandName}
+        onChange={setNewBrandName}
+        onSave={handleAddBrand}
         saving={quickSaving}
       />
 

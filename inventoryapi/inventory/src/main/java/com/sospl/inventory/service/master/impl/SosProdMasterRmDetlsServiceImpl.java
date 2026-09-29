@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -89,6 +91,19 @@ public class SosProdMasterRmDetlsServiceImpl
         if (rmDetails == null || rmDetails.isEmpty()) {
             System.out.println("rm details are empty");
             return;
+        }
+        
+     // ── Soft delete rows removed in the UI ────────────────────────────
+        Set<Long> incomingIds = rmDetails.stream()
+                .map(SosProdMasterRmDetls::getPmRmDetslId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        for (SosProdMasterRmDetls existing :
+                rmDetlsRepository.findAllByProductIdAndIsDeletedFalse(productId)) {
+            if (!incomingIds.contains(existing.getPmRmDetslId())) {
+                softDelete(existing.getPmRmDetslId(), "system");
+            }
         }
 
         for (SosProdMasterRmDetls rmDetail : rmDetails) {

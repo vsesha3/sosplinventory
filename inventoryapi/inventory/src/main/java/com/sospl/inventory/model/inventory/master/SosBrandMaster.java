@@ -10,6 +10,7 @@ import com.sospl.inventory.model.common.BaseAuditEntity;
 public class SosBrandMaster extends BaseAuditEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "brand_id", nullable = false, unique = true)
     private Integer brandId;
 

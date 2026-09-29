@@ -261,4 +261,24 @@ ORDER BY group_name ASC;
                         rs.getLong("id"),
                         rs.getString("name")));
     }
+    
+	public List<DropDownResponse> getPackingMasterForDropDown() {
+
+		return jdbcTemplate.query(
+				"""
+						select rm_id as id,rm_name as name  from sos_rm_master_t where sos_rm_master_t.material_type = 'PM' AND is_deleted=0 and is_active=1;
+						""",
+				(rs, rowNum) -> new DropDownResponse(rs.getLong("id"), rs.getString("name")));
+
+	}
+	
+	public List<DropDownResponse> getBrandNameForDropdown() {
+
+		return jdbcTemplate.query(
+				"""
+						select brand_id as id ,brand_name as name  from sos_brand_master_t;
+						""",
+				(rs, rowNum) -> new DropDownResponse(rs.getLong("id"), rs.getString("name")));
+
+	}
 }
