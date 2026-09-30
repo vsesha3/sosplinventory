@@ -6,10 +6,19 @@ public class SosProductMasterResponse {
 
     private Integer productId;
     private Integer productCode;
+    
     private String productName;
     private String uomName;
     private Integer productGroupId;
-    private String testName;
+    private String productGroupName;
+    public String getProductGroupName() {
+		return productGroupName;
+	}
+
+	public void setProductGroupName(String productGroupName) {
+		this.productGroupName = productGroupName;
+	}
+	private String testName;
     private BigDecimal rate;
 
     // Constructor for JPQL
@@ -19,6 +28,7 @@ public class SosProductMasterResponse {
             String productName,
             String uomName,
             Integer productGroupId,
+            String productGroupName,
             String testName,
             BigDecimal rate
     ) {
@@ -27,6 +37,7 @@ public class SosProductMasterResponse {
         this.productName = productName;
         this.uomName = uomName;
         this.productGroupId = productGroupId;
+        this.productGroupName = productGroupName;
         this.testName = testName;
         this.rate = rate;
     }

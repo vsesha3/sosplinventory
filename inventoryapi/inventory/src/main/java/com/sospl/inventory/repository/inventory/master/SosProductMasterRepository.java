@@ -37,11 +37,13 @@ public interface SosProductMasterRepository
                 p.productName,
                 u.uomName,
                 p.productGroupId,
+                g.groupName,
                 t.testName,
                 p.rate
            )
            FROM SosProductMaster p
            LEFT JOIN SosUomMaster u ON p.uomId = u.uomId
+           LEFT JOIN SosProductGroupMaster g ON p.productGroupId = g.productGroupId
            LEFT JOIN SosTestMaster t ON p.testId = t.testId
            """)
     List<SosProductMasterResponse> findAllWithDetails();
@@ -54,11 +56,13 @@ public interface SosProductMasterRepository
                 p.productName,
                 u.uomName,
                 p.productGroupId,
+                g.groupName,
                 t.testName,
                 p.rate
            )
            FROM SosProductMaster p
            LEFT JOIN SosUomMaster u ON p.uomId = u.uomId
+           LEFT JOIN SosProductGroupMaster g ON p.productGroupId = g.productGroupId
            LEFT JOIN SosTestMaster t ON p.testId = t.testId
            """)
     Page<SosProductMasterResponse> findAllWithDetailsPaginated(Pageable pageable);
@@ -71,14 +75,17 @@ public interface SosProductMasterRepository
                 p.productName,
                 u.uomName,
                 p.productGroupId,
+                g.groupName,
                 t.testName,
                 p.rate
            )
            FROM SosProductMaster p
            LEFT JOIN SosUomMaster u ON p.uomId = u.uomId
+           LEFT JOIN SosProductGroupMaster g ON p.productGroupId = g.productGroupId
            LEFT JOIN SosTestMaster t ON p.testId = t.testId
            WHERE LOWER(p.productName) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(u.uomName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR LOWER(g.groupName) LIKE LOWER(CONCAT('%', :keyword, '%'))
            """)
     Page<SosProductMasterResponse> searchWithDetailsPaginated(
             @Param("keyword") String keyword, Pageable pageable);
