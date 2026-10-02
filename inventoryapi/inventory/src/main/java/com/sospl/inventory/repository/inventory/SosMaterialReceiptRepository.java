@@ -60,6 +60,22 @@ public interface SosMaterialReceiptRepository
 	Optional<SosMaterialReceiptDet> findByReceiptDetIdAndIsDeletedFalse(Long receiptDetId);
 
 	List<SosMaterialReceipt> findAllByReceiptMainIdAndIsDeletedFalse(Long receiptDetId);
-	
-	
+
+    // ── Name + UOM for a job-inward line (material_id = rm_id / pm_id) ───
+    @Query(value = """
+           SELECT r.rm_name, u.uom_name
+           FROM sos_rm_master_t r
+           LEFT JOIN sos_uom_master_t u ON r.uom_id = u.uom_id
+           WHERE r.rm_id = :id
+           """, nativeQuery = true)
+    List<Object[]> findRmNameAndUom(@Param("id") Long id);
+
+    @Query(value = """
+           SELECT p.pm_name, u.uom_name
+           FROM sos_pm_master_t p
+           LEFT JOIN sos_uom_master_t u ON p.uom_id = u.uom_id
+           WHERE p.pm_id = :id
+           """, nativeQuery = true)
+    List<Object[]> findPmNameAndUom(@Param("id") Long id);
+
 }

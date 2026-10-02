@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//f/projects/sosplinventory/inventoryapi/inventory/src/main/java/com/sospl/inventory/service/impl/**)",
+      "Read(//f/projects/sosplinventory/inventoryapi/inventory/src/main/java/com/sospl/inventory/model/**)"
+    ]
+  }
+}

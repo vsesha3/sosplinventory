@@ -79,6 +79,9 @@ public class SosMaterialReceiptDet extends BaseAuditEntity {
 
     @Column(name = "grn_no", length = 250)
     private String grnNo;
+    
+    @Column(name = "job_grn_no")
+    private Integer jobGrnNo;
 
     @Column(name = "irc_no", length = 250)
     private String ircNo;
@@ -191,10 +194,22 @@ public class SosMaterialReceiptDet extends BaseAuditEntity {
     @Column(name="freight_gst",length=250)
     private String freightGst;
     
+    @Column(name = "inward_type", length = 20)
+    private String inwardType = "BYPO";
+    
+    
+
+    
    
     // ── Getters ───────────────────────────────────────────────────────────
 
-    public Long getReceiptDetId() { return receiptDetId; }
+    public String getInwardType() {
+		return inwardType;
+	}
+	public void setInwardType(String inwardType) {
+		this.inwardType = inwardType;
+	}
+	public Long getReceiptDetId() { return receiptDetId; }
     public String getMaterialType() { return materialType; }
     public String getInvoiceNo() { return invoiceNo; }
     public String getWarehouse() { return warehouse; }
@@ -324,4 +339,7 @@ public class SosMaterialReceiptDet extends BaseAuditEntity {
     public void setFromRecord(Boolean fromRecord) { this.fromRecord = fromRecord; }
     public void setExciseComplete(Boolean exciseComplete) { this.exciseComplete = exciseComplete; }
     public void setRemark(String remark) { this.remark = remark; }
+    
+    public Integer getJobGrnNo() { return jobGrnNo; }
+    public void setJobGrnNo(Integer jobGrnNo) { this.jobGrnNo = jobGrnNo; }
 }

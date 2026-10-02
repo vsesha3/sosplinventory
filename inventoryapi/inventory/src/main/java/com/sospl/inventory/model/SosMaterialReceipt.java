@@ -91,6 +91,23 @@ public class SosMaterialReceipt extends BaseAuditEntity {
     @Column(name = "receipt_det_id")
     private Long receiptDetId;
 
+    // GST % per line — either IGST or SGST + CGST
+    @Column(name = "sgst", precision = 5, scale = 2)
+    private BigDecimal sgst;
+
+    @Column(name = "cgst", precision = 5, scale = 2)
+    private BigDecimal cgst;
+
+    @Column(name = "igst", precision = 5, scale = 2)
+    private BigDecimal igst;
+
+    public BigDecimal getSgst() { return sgst; }
+    public void setSgst(BigDecimal sgst) { this.sgst = sgst; }
+    public BigDecimal getCgst() { return cgst; }
+    public void setCgst(BigDecimal cgst) { this.cgst = cgst; }
+    public BigDecimal getIgst() { return igst; }
+    public void setIgst(BigDecimal igst) { this.igst = igst; }
+
     // ── Getters ───────────────────────────────────────────────────────────
 
     public Long getReceiptDetId() {

@@ -88,7 +88,12 @@ export const PO_TYPE_LABELS: Record<string, string> = Object.fromEntries(
 );
 
 
+// BYPO = inward against a PO (Purchase Orders module)
+// JOBINWARD = job work inward without a PO (Procurement → Material Inward)
+export type InwardType = 'BYPO' | 'JOBINWARD';
+
 export interface MaterialReceiptLineRequest {
+  receiptId?: string;   // sos_material_receipt_t id — identifies job-inward lines on update
   poDetId: string;
   poRmCode: string;
   poRmName: string;
@@ -125,4 +130,5 @@ export interface MaterialReceiptRequest {
   freight: string;
   freightGst: string;
   receiptDetId?: number | null;
+  inwardType: InwardType;
 }

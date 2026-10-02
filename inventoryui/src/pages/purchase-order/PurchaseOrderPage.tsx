@@ -27,7 +27,7 @@ import  {numVal} from '../../types/api.types';
 
 import type {InwardReceiptFormData } from '../raw-material/Rawmaterialinwardreceipt';
 
-import type { MaterialReceiptRequest} from '../../types/api.types';
+import { saveInwardReceipt } from '../raw-material/saveInwardReceipt';
 import type { SaveStatus } from '../common/Savestatusbanner';
 import SaveStatusBanner from '../common/Savestatusbanner';
 
@@ -331,7 +331,7 @@ const getSelectedPoNo = (): string | null => {
           <>
             <Table.Td fw={500} c="blue" style={{ cursor: 'pointer' }}>
               
-              {item.poLegacyRefNo ?? item.poNo}
+              {item.poLegacyRefNo?.trim() || item.poNo}
             </Table.Td>
             <Table.Td>{fmtDate(item.poDate)}</Table.Td>
           
@@ -399,81 +399,23 @@ const extraActions = (
   </Group>
 );
 
-// ── Material Receipt Save ─────────────────────────────────────────────────────
-
-const formatDate = (val: any): string => {
-  if (!val) return '';
-  try { return new Date(val).toISOString(); } catch { return ''; }
-};
+// ── Material Receipt Save (shared with Procurement → Material Inward) ────────
 
 const handleInwardReceiptSave = async (data: InwardReceiptFormData) => {
   setSaveStatus('saving');
-
-  
   try {
-    const payload: MaterialReceiptRequest = {
-      actualDateTimeOfReceipt: formatDate(data.actualDateTimeOfReceipt),
-      dateTimeOfReceipt:       formatDate(data.dateTimeOfReceipt),
-      grnNo:                   data.grnNo          ?? '',
-      ircNo:                   data.ircNo          ?? '',
-      supplierId:              data.supplierId     ?? '',
-      transporterId:           data.transporterId  ?? null,
-      stnCommercialInvoiceNo:  data.stnCommercialInvoiceNo ?? '',
-      invoiceDate:             formatDate(data.invoiceDate),
-      modvatCopyNo:            data.modvatCopyNo   ?? '',
-      sapPo:                   data.sapPo          ?? '',
-      lrNumber:                data.lrNumber       ?? '',
-      poRefNo:                 data.poRefNo        ?? '',
-      poDate:                  data.poDate         ?? '',
-      poType:                  data.poType         ?? '',
-      freight:                 data.freight        ?? '',
-      freightGst:              data.freightTaxPct    ?? '',
-      receiptDetId:                data.receiptDetId     ?? null,
-      lines: data.lines
-  .filter(line => line.rmReceivedQty && parseFloat(line.rmReceivedQty) > 0)  // ← only received lines
-  .map(line => ({
-    poDetId:              String(line.poDetId),
-    poRmCode:             line.poRmCode        ?? '',
-    poRmName:             line.poRmName        ?? '',
-    poUom:                line.poUom           ?? '',
-    rmOrderQty:           String(line.rmOrderQty),
-    rmReceivedQty:        line.rmReceivedQty   ?? '',
-    sgst:                 line.sgst            ?? '',
-    cgst:                 line.cgst            ?? '',
-    igst:                 line.igst            ?? '',
-    receivedRate:         line.receivedRate    ?? '',
-    expectedDeliveryDate: formatDate(line.expectedDeliveryDate),
-    actualDeliveryDate:   formatDate(line.actualDeliveryDate),
-    inspectedBy:          line.inspectedBy     ?? '',
-    approvedBy:           line.approvedBy      ?? '',
-    lotNumber:            line.lotNumber       ?? '',
-  })),
-    };
-
-    const filteredLines = data.lines.filter(
-  line => line.rmReceivedQty && parseFloat(line.rmReceivedQty) > 0
-);
-
-if (filteredLines.length === 0) {
-  setSaveStatus('error');
-  setSaveMessage('No line items with received quantity. Please enter received qty for at least one item.');
-  return;
-}
-
-   await api.post('/api/inventory/material-receipt/save', payload);
+    await saveInwardReceipt(data);
 
     setSaveStatus('success');
     setSaveMessage('Inward Receipt saved successfully!');
-   
+
     setInwardPoRefNo(null);
     setInwardPoNo(null);
     fetchData(page, keyword, fromDate, toDate);
-    console.log(saveMessage);
   } catch (err: any) {
     setSaveStatus('error');
-    
-    setSaveMessage(err?.response?.data?.message || 'Failed to save Inward Receipt.');
-    console.error('Failed to save inward receipt', err?.response?.data?.message || err);
+    setSaveMessage(err?.message || 'Failed to save Inward Receipt.');
+    console.error('Failed to save inward receipt', err);
   }
 };
 
@@ -596,8 +538,8 @@ if (filteredLines.length === 0) {
 
 <SaveStatusBanner
   status={saveStatus}
-  successMessage="Saved!"
-  errorMessage="Failed to save."
+  successMessage={saveMessage || 'Saved!'}
+  errorMessage={saveMessage || 'Failed to save.'}
   onDismiss={() => setSaveStatus('idle')}
 />
 

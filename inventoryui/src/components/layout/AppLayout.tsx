@@ -30,8 +30,8 @@ import {
   IconAtom, 
   IconShoppingCart, IconClipboardList,IconBriefcase,IconFileInvoice,
   IconCalendarStats,
-  IconClipboardData,IconFileText 
-  
+  IconClipboardData,IconFileText,IconPackageImport
+
 } from '@tabler/icons-react';
 
 // ── Nav Structure ─────────────────────────────────────────────────────────────
@@ -58,6 +58,7 @@ const navGroups = [
     icon: <IconShoppingCart size={17} />,
     items: [
       { label: 'Purchase Orders', path: '/procurement/purchase-orders', icon: <IconClipboardList size={17} /> },
+      { label: 'Material Inward', path: '/procurement/material-inward', icon: <IconPackageImport size={17} /> },
       { label: 'RM Request', path: '/procurement/rm-request', icon: <IconFileText size={17} /> },
       // Uncomment as you build each:
       // { label: 'RM Request',    path: '/procurement/rm-request',    icon: <IconFileText size={17} /> },

@@ -21,21 +21,14 @@ public class SosMaterialReceiptDetRequest {
     private String poType;
     private String freight;
     private String freightGst;
-    
-    
-    public String getFreightGst() {
-		return freightGst;
-	}
-	public void setFreightGst(String freightGst) {
-		this.freightGst = freightGst;
-	}
-	public String getFreight() {
-		return freight;
-	}
-	public void setFreight(String freight) {
-		this.freight = freight;
-	}
-	// ── Line items → sos_material_receipt_t ──────────────────────────────
+
+    // ── BYPO = against a PO, JOBINWARD = job work without a PO ───────────
+    private String inwardType;
+
+    // ── Set when editing an existing receipt ─────────────────────────────
+    private Long receiptDetId;
+
+    // ── Line items → sos_material_receipt_t ──────────────────────────────
     private List<SosMaterialReceiptLineRequest> lines;
 
     // ── Getters and Setters ───────────────────────────────────────────────
@@ -80,6 +73,18 @@ public class SosMaterialReceiptDetRequest {
 
     public String getPoType() { return poType; }
     public void setPoType(String poType) { this.poType = poType; }
+
+    public String getFreight() { return freight; }
+    public void setFreight(String freight) { this.freight = freight; }
+
+    public String getFreightGst() { return freightGst; }
+    public void setFreightGst(String freightGst) { this.freightGst = freightGst; }
+
+    public String getInwardType() { return inwardType; }
+    public void setInwardType(String inwardType) { this.inwardType = inwardType; }
+
+    public Long getReceiptDetId() { return receiptDetId; }
+    public void setReceiptDetId(Long receiptDetId) { this.receiptDetId = receiptDetId; }
 
     public List<SosMaterialReceiptLineRequest> getLines() { return lines; }
     public void setLines(List<SosMaterialReceiptLineRequest> lines) { this.lines = lines; }

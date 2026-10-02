@@ -11,14 +11,25 @@ export interface MaterialReceiptSummary {
   noOfReceived:  number | null;
   netAmount:     number | null;
   totalAmount:   number | null;
+  inwardType:    'BYPO' | 'JOBINWARD';
+  supplierName:  string | null;
 }
 
-export const mapMaterialReceiptSummary = (raw: any): MaterialReceiptSummary => ({
+// "2026-10-01" (or "2026-10-01T..." ) → "01-10-2026"; anything else is returned as-is
+export const fmtDdMmYyyy = (val: string | null | undefined): string => {
+  if (!val) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(val);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : val;
+};
+
+export const mapMaterialReceiptSummary =(raw: any): MaterialReceiptSummary => ({
+  inwardType:    raw.inwardType === 'JOBINWARD' ? 'JOBINWARD' : 'BYPO',
   receiptDetId:  raw.receiptDetId  ?? 0,
   poRefNo:       raw.poRefNo       ?? 0,
   materialType:  raw.materialType  ?? '',
   invoiceNo:     raw.invoiceNo     ?? '',
   supplierId:    raw.supplierId    ?? 0,
+  supplierName:  raw.supplierName  ?? null,
   invoiceDate:   raw.invoiceDate   ?? '',
   sgstValue:     raw.sgstValue  != null ? Number(raw.sgstValue)  : null,
   cgstValue:     raw.cgstValue  != null ? Number(raw.cgstValue)  : null,

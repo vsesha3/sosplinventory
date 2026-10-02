@@ -10,11 +10,11 @@ import {
   Alert,
   Box,
   Stack,
-  Group,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconAlertCircle, IconPackage, IconLock, IconUser } from '@tabler/icons-react';
 import { authService } from '../../services/authService';
+import { APP_VERSION, RELEASE_DATE } from '../../config/version';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -271,11 +271,14 @@ const handleSubmit = async (values: { usernameOrEmail: string; password: string 
           </form>
 
           {/* Footer */}
-          <Group justify="center" mt="xl">
+          <Stack align="center" gap={2} mt="xl">
+            <Text size="xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              Version {APP_VERSION} · Released {RELEASE_DATE}
+            </Text>
             <Text size="xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
               © {new Date().getFullYear()} SOSPL · All rights reserved
             </Text>
-          </Group>
+          </Stack>
         </Box>
       </Paper>
     </Box>

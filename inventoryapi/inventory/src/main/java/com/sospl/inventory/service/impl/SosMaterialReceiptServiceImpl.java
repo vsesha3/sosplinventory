@@ -21,9 +21,14 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
 
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
@@ -107,8 +112,14 @@ public class SosMaterialReceiptServiceImpl
     @Override
     @Transactional
     public Long saveReceipt(SosMaterialReceiptDetRequest request) {
+    	
+    	
+    	 if ("JOBINWARD".equalsIgnoreCase(request.getInwardType())) {
+             return saveJobInward(request);
+         }
 
         Long poRefNo = ParseUtil.parseLong(request.getPoRefNo());
+        
 
         // ── Step 1 — Save or Update header ───────────────────────────────────
         SosMaterialReceiptDet det = detRepository
@@ -204,6 +215,9 @@ public class SosMaterialReceiptServiceImpl
                         line.getRmReceivedQty()));
                 receipt.setDom(ParseUtil.parseDate(
                         line.getExpectedDeliveryDate()));
+                receipt.setSgst(ParseUtil.parseBigDecimal(line.getSgst()));
+                receipt.setCgst(ParseUtil.parseBigDecimal(line.getCgst()));
+                receipt.setIgst(ParseUtil.parseBigDecimal(line.getIgst()));
                 receipt.setIsActive(true);
                 receipt.setIsDeleted(false);
 
@@ -284,6 +298,112 @@ public class SosMaterialReceiptServiceImpl
         return receiptDetId;
     }
     
+    
+    // ── Job work inward: header + lines only — no PO / PO receipt / PO detail rows ──
+    private Long saveJobInward(SosMaterialReceiptDetRequest request) {
+
+        // Header — existing receipt on edit, new otherwise
+        SosMaterialReceiptDet det = request.getReceiptDetId() != null
+                ? detRepository.findById(request.getReceiptDetId())
+                        .orElseThrow(() -> new RuntimeException(
+                                "Receipt not found: " + request.getReceiptDetId()))
+                : new SosMaterialReceiptDet();
+
+        boolean isNew = det.getReceiptDetId() == null;
+
+        det.setInwardType("JOBINWARD");
+        det.setPoRefNo(0);                        // no PO (column is a primitive int)
+        det.setMaterialType(request.getPoType());
+        det.setIrcNo(request.getIrcNo());
+        det.setInvoiceNo(request.getStnCommercialInvoiceNo());
+        det.setModvatCopyNo(request.getModvatCopyNo());
+        det.setSapPo(request.getSapPo());
+        det.setLrNumber(request.getLrNumber());
+        det.setIsActive(true);
+        det.setIsDeleted(false);
+        det.setSupplierId(ParseUtil.parseLong(request.getSupplierId()));
+        det.setTransporterId(ParseUtil.parseLong(request.getTransporterId()));
+        det.setInvoiceDate(ParseUtil.parseDate(request.getInvoiceDate()));
+        det.setReceiptDateTime(ParseUtil.parseDateTime(request.getDateTimeOfReceipt()));
+        det.setActualReceiptDateTime(ParseUtil.parseDate(request.getActualDateTimeOfReceipt()));
+        det.setFreightRs(ParseUtil.parseBigDecimal(request.getFreight()));
+        det.setFreightGst(request.getFreightGst());
+
+        if (isNew) {
+            det.setCreatedAt(LocalDateTime.now());
+            
+            det.setJobGrnNo(detRepository.getNextJobGrnNo());
+        } else {
+            det.setUpdatedAt(LocalDateTime.now());
+        }
+
+        Long receiptDetId = detRepository.save(det).getReceiptDetId();
+        log.info("Job inward header saved — receiptDetId: {}", receiptDetId);
+
+        // Existing lines of this receipt, keyed by receipt_id
+        Map<Long, SosMaterialReceipt> existing = receiptRepository
+                .findAllByReceiptMainIdAndIsDeletedFalse(receiptDetId)
+                .stream()
+                .collect(Collectors.toMap(SosMaterialReceipt::getReceiptId, Function.identity()));
+
+        Set<Long> kept = new HashSet<>();
+
+        if (request.getLines() != null) {
+            for (SosMaterialReceiptLineRequest line : request.getLines()) {
+
+                Long receiptId = ParseUtil.parseLong(line.getReceiptId());
+                SosMaterialReceipt receipt = (receiptId != null && existing.containsKey(receiptId))
+                        ? existing.get(receiptId)
+                        : new SosMaterialReceipt();
+
+                boolean isNewLine = receipt.getReceiptId() == null;
+
+                String lotNo = line.getLotNumber();
+                if (lotNo == null || lotNo.isBlank()) {
+                    String materialId = line.getPoRmCode() != null ? line.getPoRmCode() : "JW";
+                    lotNo = materialId + "-" + LocalDateTime.now()
+                            .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+                    log.info("Generated lot number: {}", lotNo);
+                }
+
+                receipt.setLotNo(lotNo);
+                receipt.setMaterialType(request.getPoType());
+                receipt.setReceiptDetId(receiptDetId);
+                receipt.setReceiptMainId(receiptDetId);
+                receipt.setMaterialId(ParseUtil.parseLong(line.getPoRmCode()));
+                receipt.setPoRefNo(null);
+                receipt.setPoDetId(null);
+                receipt.setQty(ParseUtil.parseBigDecimal(line.getRmReceivedQty()));
+                receipt.setPerUnitRate(ParseUtil.parseBigDecimal(line.getReceivedRate()));
+                receipt.setNoOfReceived(ParseUtil.parseInteger(line.getRmReceivedQty()));
+                receipt.setDom(ParseUtil.parseDate(line.getExpectedDeliveryDate()));
+                receipt.setSgst(ParseUtil.parseBigDecimal(line.getSgst()));
+                receipt.setCgst(ParseUtil.parseBigDecimal(line.getCgst()));
+                receipt.setIgst(ParseUtil.parseBigDecimal(line.getIgst()));
+                receipt.setIsActive(true);
+                receipt.setIsDeleted(false);
+
+                if (isNewLine) receipt.setCreatedAt(LocalDateTime.now());
+                else           receipt.setUpdatedAt(LocalDateTime.now());
+
+                kept.add(receiptRepository.save(receipt).getReceiptId());
+            }
+        }
+
+        // Lines removed in the UI → soft delete
+        existing.values().stream()
+                .filter(r -> !kept.contains(r.getReceiptId()))
+                .forEach(r -> {
+                    r.setIsDeleted(true);
+                    r.setIsActive(false);
+                    r.setDeletedAt(LocalDateTime.now());
+                    receiptRepository.save(r);
+                });
+
+        return receiptDetId;
+    }
+
+    
     @Override
     public Optional<SosMaterialReceiptDet> findHeaderByPoRefNoAndMaterialType(
             Long poRefNo) {
@@ -339,6 +459,12 @@ public class SosMaterialReceiptServiceImpl
                     res.setNoOfReceived(ParseUtil.toBigDecimal(row[9]));
                     res.setNetAmount(ParseUtil.toBigDecimal(row[10]));
                     res.setTotalAmount(ParseUtil.toBigDecimal(row[11]));
+                    // Only findAllReceiptSummary returns inward_type (column 12)
+                    res.setInwardType(row.length > 12 && row[12] != null
+                            ? ParseUtil.toString(row[12]) : "BYPO");
+                    // ...and supplier_name (column 13)
+                    res.setSupplierName(row.length > 13
+                            ? ParseUtil.toString(row[13]) : null);
                     return res;
                 })
                 .collect(Collectors.toList());
@@ -370,6 +496,12 @@ public class SosMaterialReceiptServiceImpl
                 ? String.valueOf(det.getPoRefNo()) : null);
         request.setPoType(det.getMaterialType());
         request.setGrnNo(det.getGrnNo());
+        
+     // Job inwards keep their number in job_grn_no; the form shows both as "GRN No."
+        request.setGrnNo("JOBINWARD".equals(det.getInwardType())
+                ? (det.getJobGrnNo() != null ? String.valueOf(det.getJobGrnNo()) : null)
+                : det.getGrnNo());
+        
         request.setIrcNo(det.getIrcNo());
         request.setStnCommercialInvoiceNo(det.getInvoiceNo());
         request.setInvoiceDate(det.getInvoiceDate() != null
@@ -389,6 +521,13 @@ public class SosMaterialReceiptServiceImpl
         request.setActualDateTimeOfReceipt(
                 det.getActualReceiptDateTime() != null
                 ? det.getActualReceiptDateTime().toString() : null);
+        
+        request.setActualDateTimeOfReceipt(
+                det.getActualReceiptDateTime() != null
+                ? det.getActualReceiptDateTime().toString() : null);
+        request.setInwardType(det.getInwardType() != null ? det.getInwardType() : "BYPO");
+        request.setReceiptDetId(det.getReceiptDetId());
+
 
         // ── Lines — from sos_material_receipt_t ──────────────────────────────
         List<SosMaterialReceipt> receiptLines = receiptRepository
@@ -397,8 +536,24 @@ public class SosMaterialReceiptServiceImpl
 
         List<SosMaterialReceiptLineRequest> lines = receiptLines.stream()
                 .map(line -> {
+                	
                     SosMaterialReceiptLineRequest lineReq =
                             new SosMaterialReceiptLineRequest();
+                    lineReq.setReceiptId(line.getReceiptId() != null
+                            ? String.valueOf(line.getReceiptId()) : null);
+
+                    // Job-inward lines have no PO line — material comes from the receipt row
+                    if (line.getPoDetId() == null && line.getMaterialId() != null) {
+                        lineReq.setPoRmCode(String.valueOf(line.getMaterialId()));
+                        List<Object[]> nameUom = "PACKING_MATERIAL".equals(line.getMaterialType())
+                                ? receiptRepository.findPmNameAndUom(line.getMaterialId())
+                                : receiptRepository.findRmNameAndUom(line.getMaterialId());
+                        if (!nameUom.isEmpty()) {
+                            lineReq.setPoRmName(ParseUtil.toString(nameUom.get(0)[0]));
+                            lineReq.setPoUom(ParseUtil.toString(nameUom.get(0)[1]));
+                        }
+                    }
+
                     lineReq.setPoDetId(line.getPoDetId() != null
                             ? String.valueOf(line.getPoDetId()) : null);
                     lineReq.setRmReceivedQty(line.getQty() != null
@@ -406,6 +561,10 @@ public class SosMaterialReceiptServiceImpl
                     lineReq.setReceivedRate(line.getPerUnitRate() != null
                             ? line.getPerUnitRate().toPlainString() : null);
                     lineReq.setLotNumber(line.getLotNo());
+                    // Line-level GST (job inward); PO lines are overridden from the PO line below
+                    lineReq.setSgst(line.getSgst() != null ? line.getSgst().toPlainString() : null);
+                    lineReq.setCgst(line.getCgst() != null ? line.getCgst().toPlainString() : null);
+                    lineReq.setIgst(line.getIgst() != null ? line.getIgst().toPlainString() : null);
                     lineReq.setExpectedDeliveryDate(line.getDom() != null
                             ? line.getDom().toString() : null);
                    

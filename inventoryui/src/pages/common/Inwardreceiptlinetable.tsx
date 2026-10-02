@@ -17,6 +17,9 @@ export interface InwardReceiptLineTableProps {
   onChange:  (lines: InwardReceiptLine[]) => void;
   loading?:  boolean;
   readOnly?: boolean;
+  // Job inward (no PO): lines are added manually by picking a material
+  jobMode?:         boolean;
+  materialOptions?: { value: string; label: string }[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -58,6 +61,8 @@ const InwardReceiptLineTable: React.FC<InwardReceiptLineTableProps> = ({
   onChange,
   loading  = false,
   readOnly = false,
+  jobMode  = false,
+  materialOptions = [],
 }) => {
   const [selectedLines, setSelectedLines] = useState<number[]>([]);
   const [editorOpen, setEditorOpen]       = useState(false);
@@ -130,12 +135,28 @@ const handleEdit = () => {
   setErrorMessages([]);
 };
 
-const handleAddNewEntry = () =>{
-
-
-    console.log(lines);
-    
-
+const handleAddNewEntry = () => {
+  if (!jobMode) return;   // PO lines come from the PO — nothing to add manually
+  setEditingLine({
+    poDetId:              -Date.now(),   // local key only — sent to API as no PO line
+    receiptId:            null,
+    poRmCode:             '',
+    poRmName:             '',
+    poUom:                null,
+    rmOrderQty:           0,
+    rmReceivedQty:        '',
+    receivedRate:         '',
+    sgst:                 '',
+    cgst:                 '',
+    igst:                 '',
+    lotNumber:            '',
+    expectedDeliveryDate: null,
+    actualDeliveryDate:   null,
+    inspectedBy:          '',
+    approvedBy:           '',
+  });
+  setEditorMode('create');
+  setEditorOpen(true);
 }
 
   const handleDelete = () => {
@@ -144,7 +165,10 @@ const handleAddNewEntry = () =>{
   };
 
   const handleLineSave = (updated: InwardReceiptLine) => {
-    onChange(lines.map(l => l.poDetId === updated.poDetId ? updated : l));
+    const exists = lines.some(l => l.poDetId === updated.poDetId);
+    onChange(exists
+      ? lines.map(l => l.poDetId === updated.poDetId ? updated : l)
+      : [...lines, updated]);
     setEditorOpen(false);
     setSelectedLines([]);
   };
@@ -178,7 +202,11 @@ const handleAddNewEntry = () =>{
         <Table.Td>{line.poRmName}</Table.Td>
 
         {/* Order Qty */}
-        <Table.Td ta="right">{line.rmOrderQty.toFixed(3)} {dash(line.poUom)}</Table.Td>
+        <Table.Td ta="right">
+          {jobMode
+            ? <Text size="sm" c="dimmed">—</Text>
+            : <>{line.rmOrderQty.toFixed(3)} {dash(line.poUom)}</>}
+        </Table.Td>
 
         {/* Received Qty */}
         <Table.Td ta="right">
@@ -329,7 +357,7 @@ const handleAddNewEntry = () =>{
         onToggleSelectAll={toggleAll}
         selectedCount={selectedLines.length}
         footer={footer}
-        onAdd={handleAddNewEntry}
+        onAdd={readOnly ? undefined : handleAddNewEntry}
         onEdit={readOnly ? undefined : handleEdit}
         onDelete={readOnly ? undefined : handleDelete}
         onRefresh={undefined}
@@ -341,6 +369,8 @@ const handleAddNewEntry = () =>{
         onSave={handleLineSave}
         line={editingLine}
         mode={editorMode}
+        jobMode={jobMode}
+        materialOptions={materialOptions}
       />
       <ConfirmDialog
   opened={errorDialogOpen}

@@ -23,6 +23,14 @@ public class SosMaterialReceiptSummaryResponse {
     // ── Total = sgstValue + cgstValue + igstValue + netAmount ─────────────
     private BigDecimal totalAmount;
 
+    // ── BYPO | JOBINWARD ──────────────────────────────────────────────────
+    private String inwardType;
+
+    private String supplierName;
+
+    public String getSupplierName() { return supplierName; }
+    public void setSupplierName(String supplierName) { this.supplierName = supplierName; }
+
     // ── Getters ───────────────────────────────────────────────────────────
     public Long getReceiptDetId() { return receiptDetId; }
     public Long getPoRefNo() { return poRefNo; }
@@ -36,6 +44,7 @@ public class SosMaterialReceiptSummaryResponse {
     public BigDecimal getNoOfReceived() { return noOfReceived; }
     public BigDecimal getNetAmount() { return netAmount; }
     public BigDecimal getTotalAmount() { return totalAmount; }
+    public String getInwardType() { return inwardType; }
 
     // ── Setters ───────────────────────────────────────────────────────────
     public void setReceiptDetId(Long receiptDetId) { this.receiptDetId = receiptDetId; }
@@ -50,4 +59,5 @@ public class SosMaterialReceiptSummaryResponse {
     public void setNoOfReceived(BigDecimal noOfReceived) { this.noOfReceived = noOfReceived; }
     public void setNetAmount(BigDecimal netAmount) { this.netAmount = netAmount; }
     public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+    public void setInwardType(String inwardType) { this.inwardType = inwardType; }
 }

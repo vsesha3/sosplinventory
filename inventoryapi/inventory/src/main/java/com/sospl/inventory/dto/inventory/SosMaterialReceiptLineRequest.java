@@ -2,6 +2,9 @@ package com.sospl.inventory.dto.inventory;
 
 public class SosMaterialReceiptLineRequest {
 
+    // sos_material_receipt_t.receipt_id — identifies job-inward lines on edit
+    private String receiptId;
+
     private String poDetId;
     private String poRmCode;
     private String poRmName;
@@ -19,6 +22,9 @@ public class SosMaterialReceiptLineRequest {
     private String lotNumber;
 
     // ── Getters and Setters ───────────────────────────────────────────────
+    public String getReceiptId() { return receiptId; }
+    public void setReceiptId(String receiptId) { this.receiptId = receiptId; }
+
     public String getPoDetId() { return poDetId; }
     public void setPoDetId(String poDetId) { this.poDetId = poDetId; }
 

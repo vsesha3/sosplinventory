@@ -15,6 +15,7 @@ import InwardReceiptLineTable from '../common/Inwardreceiptlinetable';
 import type { InwardReceiptLine } from '../common/Inwardreceiptlinetable';
 import api from '../../services/api';
 import { PO_TYPE_LABELS } from '../../types/api.types';
+import type { InwardType } from '../../types/api.types';
 import {  IconPlus } from '@tabler/icons-react';
 import QuickAddModal from '../../components/common/QuickAddModal';
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -74,7 +75,17 @@ export interface InwardReceiptFormData {
   freight:                 string;
   freightTaxPct:           string;
   receiptDetId?:            number | null;
+  inwardType?:             InwardType;
 }
+
+// Material types allowed for a job-work inward and the dropdown that lists them
+const JOB_MATERIAL_TYPES: DropDownOption[] = [
+  { value: 'RAW_MATERIAL',     label: 'Raw Material' },
+  { value: 'PACKING_MATERIAL', label: 'Packing Material' },
+];
+
+const materialDropdownUrl = (materialType: string | null) =>
+  materialType === 'PACKING_MATERIAL' ? '/api/dropdown/pm' : '/api/dropdown/rm';
 
 export interface RawMaterialInwardReceiptProps {
   opened:        boolean;
@@ -84,6 +95,8 @@ export interface RawMaterialInwardReceiptProps {
   poNo?:         string | null;
   receiptDetId?: number | null;
   poDate?:       string | null;
+  // BYPO (default) = against a PO; JOBINWARD = job work, no PO
+  inwardType?:   InwardType;
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
@@ -134,9 +147,12 @@ const RawMaterialInwardReceipt: React.FC<RawMaterialInwardReceiptProps> = ({
   poNo:         initialPoNo         = null,
   poDate:       initialPoDate       = null,
   receiptDetId: initialReceiptDetId = null,
+  inwardType = 'BYPO',
 }) => {
 
   const isEditMode = !!initialReceiptDetId;
+  const jobMode    = inwardType === 'JOBINWARD';
+  const [materialOptions, setMaterialOptions] = useState<DropDownOption[]>([]);
 
   const [form, setForm]           = useState({ ...defaultForm });
   const [lines, setLines]         = useState<InwardReceiptLine[]>([]);
@@ -168,6 +184,18 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
     ]);
     setSupplierOptions(supplierRes.data.data ?? []);
     setTransporterOptions(transporterRes.data.data ?? []);
+  };
+
+  // ── JOB INWARD: materials for the selected material type ──────────────────
+
+  const loadMaterialOptions = async (materialType: string | null): Promise<DropDownOption[]> => {
+    const res = await api.get(materialDropdownUrl(materialType))
+      .catch(() => ({ data: { data: [] } }));
+    const opts: DropDownOption[] = (res.data.data ?? [])
+      .filter((o: any) => o?.value != null)
+      .map((o: any) => ({ value: String(o.value), label: o.label ?? '-' }));
+    setMaterialOptions(opts);
+    return opts;
   };
 
   // ── ADD MODE: load PO header + fresh PO lines (empty received fields) ─────
@@ -271,10 +299,19 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
 
     const lineItems = Array.isArray(receipt.lines) ? receipt.lines : [];
 
-    setLines(lineItems.map((item: any) => ({
-      poDetId:              Number(item.poDetId)    || 0,
+    // Job-inward lines have no PO line — resolve material names from the dropdown
+    const jobMaterials = jobMode
+      ? await loadMaterialOptions(receipt.poType ?? 'RAW_MATERIAL')
+      : [];
+
+    setLines(lineItems.map((item: any, idx: number) => ({
+      // Job lines have no po_det_id — give each a unique local key
+      poDetId:              Number(item.poDetId) || -(idx + 1),
+      receiptId:            item.receiptId != null ? Number(item.receiptId) : null,
       poRmCode:             item.poRmCode           ?? '',
-      poRmName:             item.poRmName           ?? '',
+      poRmName:             item.poRmName
+        ?? jobMaterials.find(o => o.value === String(item.poRmCode))?.label
+        ?? '',
       poUom:                item.poUom              ?? '',
       rmOrderQty:           Number(item.rmOrderQty) || 0,
       rmReceivedQty:        item.rmReceivedQty      ?? '',
@@ -317,6 +354,11 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
         if (isEditMode && initialReceiptDetId) {
       // Debug log to check ref vs prop
           await loadForEdit(initialReceiptDetId, currentPoDate); // ← pass ref value
+        } else if (jobMode) {
+          // New job-work inward — no PO, lines are added manually
+          setForm({ ...defaultForm, poType: 'RAW_MATERIAL' });
+          setLines([]);
+          await loadMaterialOptions('RAW_MATERIAL');
         } else if (initialPoRefNo) {
           await loadForAdd(initialPoRefNo, currentPoDate);       // ← pass ref value
         }
@@ -363,8 +405,9 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
     if (!form.dateTimeOfReceipt)             errors.push('Date & Time of Receipt is required');
     if (!form.supplierId)                    errors.push('Supplier Name is required');
     if (!form.stnCommercialInvoiceNo.trim()) errors.push('STN Commercial Invoice No. is required');
-    if (!form.poRefNo)                       errors.push('PO Number is required');
-    if (lines.length === 0)                  errors.push('No line items found');
+    if (!jobMode && !form.poRefNo)           errors.push('PO Number is required');
+    if (jobMode && !form.poType)             errors.push('Material Type is required');
+    if (lines.length === 0)                  errors.push(jobMode ? 'Add at least one item' : 'No line items found');
     const hasReceived = lines.some(l => l.rmReceivedQty && parseFloat(l.rmReceivedQty) > 0);
     if (!hasReceived) errors.push('At least one line item must have Received Quantity > 0');
     return errors;
@@ -413,9 +456,19 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
   // ── Title ─────────────────────────────────────────────────────────────────
 
   const poLabel      = initialPoNo ?? `Ref #${initialPoRefNo}`;
-  const headerTitle  = `${PO_TYPE_LABELS[form.poType ?? ''] ?? ''} ${
-    isEditMode ? `Edit Receipt #${initialReceiptDetId}` : 'New Inward Receipt'
-  } — PO: ${poLabel}${form.poDate ? ` | ${fmtDate(form.poDate)}` : ''}`;
+  const headerTitle  = jobMode
+    ? `${PO_TYPE_LABELS[form.poType ?? ''] ?? ''} ${
+        isEditMode ? `Edit Job Inward #${initialReceiptDetId}` : 'New Job Work Inward'}`
+    : `${PO_TYPE_LABELS[form.poType ?? ''] ?? ''} ${
+        isEditMode ? `Edit Receipt #${initialReceiptDetId}` : 'New Inward Receipt'
+      } — PO: ${poLabel}${form.poDate ? ` | ${fmtDate(form.poDate)}` : ''}`;
+
+  // Changing material type reloads the material list; existing items would no longer match
+  const handleMaterialTypeChange = (value: string | null) => {
+    setForm(prev => ({ ...prev, poType: value }));
+    setLines([]);
+    loadMaterialOptions(value);
+  };
 
   const handleTransporterAdd = async () => {
 
@@ -627,13 +680,26 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
                     />
                   </Grid.Col>
                   <Grid.Col span={3}>
-                    {/* ── PO Date: read from ref so it always reflects latest prop ── */}
-                    <FormTextInput
-                      label="PO Date"
-                      value={initialPoDate ? fmtDate(initialPoDate) : ''}
-                      onChange={() => {}}
-                      readOnly
-                    />
+                    {jobMode ? (
+                      // Job inward: no PO — choose what kind of material is coming in
+                      <FormSelect
+                        label="* Material Type"
+                        value={form.poType}
+                        onChange={handleMaterialTypeChange}
+                        data={JOB_MATERIAL_TYPES}
+                        placeholder="--Select--"
+                        required
+                        disabled={isEditMode}
+                      />
+                    ) : (
+                      /* ── PO Date: read from ref so it always reflects latest prop ── */
+                      <FormTextInput
+                        label="PO Date"
+                        value={initialPoDate ? fmtDate(initialPoDate) : ''}
+                        onChange={() => {}}
+                        readOnly
+                      />
+                    )}
                   </Grid.Col>
 
                   {/* ── Row 4 ── */}
@@ -680,7 +746,7 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
               <Divider
                 label={
                   <Group gap="xs">
-                    <Text size="sm" fw={500}>PO Receipt</Text>
+                    <Text size="sm" fw={500}>{jobMode ? 'Job Work Items' : 'PO Receipt'}</Text>
                     {lines.length > 0 && (
                       <Badge size="xs" variant="light" color="blue">
                         {lines.length} item{lines.length !== 1 ? 's' : ''}
@@ -704,12 +770,14 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
                   lines={lines}
                   onChange={setLines}
                   loading={false}
+                  jobMode={jobMode}
+                  materialOptions={materialOptions}
                 />
               )}
 
               {lines.length === 0 && !linesLoading && (
                 <Text size="sm" c="dimmed" ta="center" py="xl">
-                  No line items found.
+                  {jobMode ? 'No items yet — use Add to enter received materials.' : 'No line items found.'}
                 </Text>
               )}
 
@@ -744,11 +812,13 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
                 <Button variant="light" size="sm" color="red" onClick={onClose}>
                   Cancel
                 </Button>
+                {!jobMode && (
                 <Button variant="light" size="sm"
                   disabled={lines.length === 0}
                   onClick={() => { setValidationErrors(validateForm()); setConfirmOpen(true); }}>
                   Close PO
                 </Button>
+                )}
                 <Button size="sm" color="blue"
                   disabled={lines.length === 0}
                   onClick={() => { setValidationErrors(validateForm()); setConfirmOpen(true); }}>
@@ -766,7 +836,7 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
         opened={confirmOpen}
         onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
         onConfirm={() => {
-          onSave?.({ ...form, lines });
+          onSave?.({ ...form, lines, inwardType, receiptDetId: initialReceiptDetId });
           setConfirmOpen(false);
           onClose();
         }}
