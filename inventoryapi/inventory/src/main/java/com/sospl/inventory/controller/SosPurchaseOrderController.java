@@ -126,7 +126,7 @@ public class SosPurchaseOrderController {
     public ResponseEntity<ApiResponse<SosPurchaseOrder>> update(
             @PathVariable Long id,
             @RequestBody SosPurchaseOrder request) {
-    	request.setCompanyId((long) 1);
+    	
         SosPurchaseOrder updated = service.update(id, request);
         return ResponseEntity.ok(
                 ApiResponse.success(

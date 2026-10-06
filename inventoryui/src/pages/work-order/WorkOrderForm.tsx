@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
-  Grid,  Stack, Loader, Center
+  Grid,  Stack, Loader, Center, Tooltip, ActionIcon, MultiSelect
 } from '@mantine/core';
-import { IconClipboardList } from '@tabler/icons-react';
+import { IconClipboardList, IconPlus } from '@tabler/icons-react';
 import { FormTextInput }  from '../../components/common/FormTextInput';
 import { FormSelect }     from '../../components/common/FormSelect';
 import { ConfirmDialog }  from '../../components/common/ConfirmDialog';
 import FormHeader         from '../common/Formheader';
+import QuickAddModal      from '../../components/common/QuickAddModal';
 import api from '../../services/api';
 import type { WorkOrderApiData } from '../../types/workorder.types';
 
@@ -30,6 +31,7 @@ export interface WorkOrderFormData {
   poId:        number | null;
   plant:       string | null;
   productId:   string | null;   // string for Select
+  uomId:       string | null;   // from product master
   qty:         string;
   perUnitRate: string;
   woCode:      string;
@@ -53,6 +55,7 @@ const defaultForm: WorkOrderFormData = {
   poId:        null,
   plant:       null,
   productId:   null,
+  uomId:       null,
   qty:         '',
   perUnitRate: '',
   woCode:      '',
@@ -62,27 +65,17 @@ const defaultForm: WorkOrderFormData = {
 
 // ── Mapper: API → Form ────────────────────────────────────────────────────────
 
-// ── Mapper: API → Form ────────────────────────────────────────────────────────
-
-const mapApiToForm = (raw: WorkOrderApiData, pmOptions: DropDownOption[]): WorkOrderFormData => {
-  // Find the matching pmOption value using both pmId and productId
-  const matchedPm = pmOptions.find(option => {
-    const [pmPart, productPart] = option.value.split('_');
-    return (
-      pmPart      === String(raw.pmId)      &&
-      productPart === String(raw.productId)
-    );
-  });
-
+const mapApiToForm = (raw: WorkOrderApiData): WorkOrderFormData => {
   return {
     woId:        raw.woId,
     poId:        raw.poId,
     plant:       raw.plant       ?? null,
     productId:   raw.productId   != null ? String(raw.productId)   : null,
-    qty:         raw.qty         != null ? String(raw.qty)         : '',
+    uomId:       raw.uomId       != null ? String(raw.uomId)       : null,
+    qty:        raw.qty         != null ? String(raw.qty)         : '',
     perUnitRate: raw.perUnitRate != null ? String(raw.perUnitRate) : '',
     woCode:      raw.woCode      ?? '',
-    pmId:        matchedPm?.value ?? null,   // "421_983" instead of just "421"
+    pmId:        raw.pmId        != null ? String(raw.pmId)        : null,
     lineItem:    raw.lineItem    ?? '',
   };
 };
@@ -113,8 +106,67 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
 
   // ── Dropdowns ─────────────────────────────────────────────────────────────
   const [productOptions, setProductOptions] = useState<DropDownOption[]>([]);
-  const [pmOptions, setPmOptions]           = useState<DropDownOption[]>([]);
+  const [uomOptions, setUomOptions]         = useState<DropDownOption[]>([]);
   const [plantOptions, setPlantOptions]     = useState<DropDownOption[]>([]);
+
+  // ── QuickAdd: Plant ───────────────────────────────────────────────────────
+  const [addPlantOpen, setAddPlantOpen] = useState(false);
+  const [newPlantName, setNewPlantName] = useState('');
+  const [quickSaving, setQuickSaving]   = useState(false);
+
+  // PM list associated with the selected product (null = no product selected)
+  const [productPmOptions, setProductPmOptions] = useState<DropDownOption[] | null>(null);
+  const [pmLoading, setPmLoading]               = useState(false);
+
+  // Latest selected product — ignores stale responses
+  const latestProductRef = useRef<string | null>(null);
+
+  // ── Product details: uomId (/api/product) + PM list (product-pm-list_{id}) ──
+  // PM and UOM are not editable — both follow the selected product.
+  // pmId saved = the WO's existing PM if still associated (edit), else the first PM.
+  // setUom=false keeps the WO's own uomId (edit mode).
+  const loadProductDetails = async (
+    productId: string | null,
+    keepPmId: number | string | null = null,
+    setUom = true,
+  ) => {
+    latestProductRef.current = productId;
+    if (!productId) {
+      setProductPmOptions(null);
+      setPmLoading(false);
+      return;
+    }
+
+    setPmLoading(true);
+    try {
+      const [productRes, pmRes] = await Promise.all([
+        api.get(`/api/product/${productId}`).catch(() => null),
+        api.get<DropDownApiResponse>(`/api/dropdown/product-pm-list_${productId}`)
+          .catch(() => ({ data: { data: [] as DropDownOption[] } })),
+      ]);
+      if (latestProductRef.current !== productId) return;   // product changed meanwhile
+
+      const product = productRes ? (productRes.data?.data ?? productRes.data) : null;
+      const options: DropDownOption[] = (pmRes.data.data ?? [])
+        .filter(o => o != null && o.value != null)
+        .map(o => ({ value: String(o.value), label: o.label ?? '-' }));
+
+      const kept = keepPmId != null
+        ? options.find(o => o.value === String(keepPmId))
+        : undefined;
+
+      const productUomId = product?.uomId != null ? String(product.uomId) : null;
+
+      setProductPmOptions(options);
+      setForm(prev => ({
+        ...prev,
+        uomId: setUom ? productUomId : (prev.uomId ?? productUomId),
+        pmId:  kept?.value ?? options[0]?.value ?? null,
+      }));
+    } finally {
+      if (latestProductRef.current === productId) setPmLoading(false);
+    }
+  };
 
   // ── Computed ──────────────────────────────────────────────────────────────
   const qty         = safe(form.qty);
@@ -125,6 +177,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
 
   useEffect(() => {
     if (!opened) {
+      latestProductRef.current = null;
+      setProductPmOptions(null);
+      setPmLoading(false);
       setForm({ ...defaultForm });
       setFetchError(null);
       setValidationErrors([]);
@@ -135,25 +190,32 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
       setLoading(true);
       try {
         // Load all dropdowns in parallel
-        const [productRes, pmRes, plantRes] = await Promise.all([
-          api.get<DropDownApiResponse>('/api/product/dropdown')
+        const [productRes, uomRes, plantRes] = await Promise.all([
+          api.get<DropDownApiResponse>('/api/dropdown/product')
             .catch(() => ({ data: { data: [] } })),
-          api.get<DropDownApiResponse>('/api/inventory/work-order/pm-details/dropdown')
+          api.get<DropDownApiResponse>('/api/dropdown/uom')
             .catch(() => ({ data: { data: [] } })),
-          api.get<DropDownApiResponse>('/api/inventory/plant/dropdown')
+          api.get<DropDownApiResponse>('/api/dropdown/plant-name')
             .catch(() => ({ data: { data: [] } })),
         ]);
 
         setProductOptions(productRes.data.data ?? []);
-        setPmOptions(pmRes.data.data ?? []);
+        setUomOptions(
+          (uomRes.data.data ?? []).map(o => ({
+            value: String(o.value),
+            label: String(o.label ?? '').split('~')[0].trim(),
+          }))
+        );
         setPlantOptions(plantRes.data.data ?? []);
 
         // Load existing record in update mode
         if (mode === 'update' && woId) {
           const res = await api.get(`/api/inventory/work-order/${woId}`);
           const data: WorkOrderApiData = res.data.data;
-          const fetchedPmOptions = pmRes.data.data ?? [];
-          setForm(mapApiToForm(data, fetchedPmOptions));
+          setForm(mapApiToForm(data));
+          if (data.productId != null) {
+            await loadProductDetails(String(data.productId), data.pmId, false);
+          }
         } else if (poId) {
           // Pre-fill poId for create mode
           setForm(prev => ({ ...prev, poId }));
@@ -167,6 +229,54 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
 
     load();
   }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── QuickAdd handlers ─────────────────────────────────────────────────────
+
+  const handleAddPlant = async () => {
+    const name = newPlantName.trim();
+    if (!name) return;
+    setQuickSaving(true);
+    try {
+      const res = await api.post('/api/inventory/misc-master', {
+        miscCode: 'PLANT',
+        miscName: name,
+        isActive: true,
+      });
+      const created = res.data?.data ?? res.data;
+      const createdId = created?.miscId ?? created?.id ?? null;
+
+      // Refresh plant dropdown
+      const plantRes = await api.get<DropDownApiResponse>('/api/dropdown/plant-name')
+        .catch(() => ({ data: { data: [] as DropDownOption[] } }));
+      let updated: DropDownOption[] = (plantRes.data.data ?? [])
+        .map(o => ({ value: String(o.value), label: String(o.label ?? '-') }));
+
+      // Auto-select the new plant — by returned id first, then by name
+      let match = (createdId != null ? updated.find(o => o.value === String(createdId)) : undefined)
+        ?? updated.find(o => o.label.trim().toLowerCase() === name.toLowerCase());
+
+      // Not in the refreshed list yet — add it so the Select can show it
+      if (!match && createdId != null) {
+        match = { value: String(createdId), label: created?.miscName ?? name };
+        updated = [...updated, match];
+      }
+
+      setPlantOptions(updated);
+      if (match) {
+        const plant = match.value;
+        setForm(prev => ({ ...prev, plant }));
+      }
+      setNewPlantName('');
+      setAddPlantOpen(false);
+    } catch (err: any) {
+      console.error('[handleAddPlant] Failed:', err?.response?.data ?? err);
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add Plant. Please try again.'
+      );
+    } finally {
+      setQuickSaving(false);
+    }
+  };
 
   // ── Form helpers ──────────────────────────────────────────────────────────
 
@@ -184,8 +294,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
     const errors: string[] = [];
     if (!form.productId)                    errors.push('Product is required');
     if (!form.qty || safe(form.qty) <= 0)   errors.push('Quantity must be greater than 0');
-    if (!form.perUnitRate || safe(form.perUnitRate) <= 0)
-                                            errors.push('Rate must be greater than 0');
+    if (form.perUnitRate.trim() && (isNaN(Number(form.perUnitRate)) || Number(form.perUnitRate) < 0))
+                                            errors.push('Average Rate must be a valid number');
     return errors;
   };
 
@@ -197,22 +307,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
     ? `Edit Work Order — WO ID: ${form.woId}`
     : `New Work Order${poId ? ` — PO: ${poId}` : ''}`;
 
-    // When productId changes, find matching pmOption and set pmId
-const handleProductChange = (value:any) => {
-    setForm(prev => ({ ...prev, productId: value }));
-
-    // Find the pmOption where product_id part (after '_') matches selected productId
-    const matchedPm = pmOptions.find(option => {
-        const productPart = option.value.split('_')[1]; // extract 983 from "421_983"
-        return productPart === String(value);
-    });
-
-    if (matchedPm) {
-        setForm(prev => ({ ...prev, pmId: matchedPm.value })); // sets "421_983"
-    } else {
-        setForm(prev => ({ ...prev, pmId: '' })); // reset if no match
-    }
-};
+  // When productId changes, fetch the product's uomId and its PM list
+  const handleProductChange = (value: string | null) => {
+    setForm(prev => ({ ...prev, productId: value, uomId: null, pmId: null }));
+    loadProductDetails(value);
+  };
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -270,53 +369,23 @@ const handleProductChange = (value:any) => {
                 <Text size="xs" c="red" mb="sm">{fetchError}</Text>
               )}
 
-              {/* ── Info panel ── */}
-              {(form.woId || form.poId) && (
-                <Paper withBorder p="sm" mb="md" radius="sm"
-                  style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
-                  <Group gap="xl">
-                    {form.woId && (
-                      <Stack gap={2}>
-                        <Text size="xs" c="dimmed">WO Id</Text>
-                        <Text size="sm" fw={600}>{form.woId}</Text>
-                      </Stack>
-                    )}
-                    {form.poId && (
-                      <Stack gap={2}>
-                        <Text size="xs" c="dimmed">PO Id</Text>
-                        <Text size="sm" fw={600}>{form.poId}</Text>
-                      </Stack>
-                    )}
-                  </Group>
-                </Paper>
-              )}
-
               <Paper withBorder p="md" radius="sm"
                 style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
                 <Grid columns={12} gutter="sm">
 
-                  {/* ── Row 1: WO Code | Line Item ── */}
+                  {/* ── Row 1: Work Order ID | Product ── */}
                   <Grid.Col span={6}>
                     <FormTextInput
-                      label="WO Code"
-                      value={form.woCode}
-                      onChange={setStr('woCode')}
-                      placeholder="Enter WO code"
+                      label="Work Order ID"
+                      value={form.woId != null ? String(form.woId) : ''}
+                      onChange={() => {}}
+                      placeholder="Auto generated"
+                      readOnly
                     />
                   </Grid.Col>
-                  <Grid.Col span={6}>
-                    <FormTextInput
-                      label="Line Item"
-                      value={form.lineItem}
-                      onChange={setStr('lineItem')}
-                      placeholder="Enter line item"
-                    />
-                  </Grid.Col>
-
-                  {/* ── Row 2: Product | Plant ── */}
                   <Grid.Col span={6}>
                     <FormSelect
-                      label="* Product"
+                      label="Product"
                       value={form.productId}
                       onChange={handleProductChange}
                       data={productOptions}
@@ -325,34 +394,92 @@ const handleProductChange = (value:any) => {
                       searchable
                     />
                   </Grid.Col>
+
+                  {/* ── Row 2: Plant | WO Code ── */}
                   <Grid.Col span={6}>
-                    <FormSelect
-                      label="Plant"
-                      value={form.plant}
-                      onChange={setSelect('plant')}
-                      data={plantOptions}
-                      placeholder="--------Select----------"
-                      searchable
-                    />
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+                        <FormSelect
+                          label="Plant"
+                          value={form.plant}
+                          onChange={setSelect('plant')}
+                          data={plantOptions}
+                          placeholder="--------Select----------"
+                          searchable
+                        />
+                      </Box>
+                      <Tooltip label="Add new Plant" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewPlantName(''); setAddPlantOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Grid.Col>
 
-                  {/* ── Row 3: PM | empty ── */}
-                  <Grid.Col span={6}>
-                    <FormSelect
-                      label="PM"
-                      value={form.pmId}
-                      onChange={setSelect('pmId')}
-                      data={pmOptions}
-                      placeholder="--------Select----------"
-                      searchable
-                    />
-                  </Grid.Col>
-                  <Grid.Col span={6} />
-
-                  {/* ── Row 4: Qty | Rate ── */}
                   <Grid.Col span={6}>
                     <FormTextInput
-                      label="* Quantity"
+                      label="WO Code"
+                      value={form.woCode}
+                      onChange={setStr('woCode')}
+                      placeholder="Enter WO code"
+                    />
+                  </Grid.Col>
+
+                  {/* ── Row 3: Line Item | UOM (from product, not editable) ── */}
+                  <Grid.Col span={6}>
+                    <FormTextInput
+                      label="Line Item"
+                      value={form.lineItem}
+                      onChange={setStr('lineItem')}
+                      placeholder="Enter line item"
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={6}>
+                    <FormSelect
+                      label="UOM"
+                      value={form.uomId}
+                      onChange={() => {}}
+                      data={uomOptions}
+                      placeholder={
+                        pmLoading          ? 'Loading...'
+                        : !form.productId  ? 'Select a product first'
+                        : 'No UOM for this product'
+                      }
+                      disabled
+                    />
+                  </Grid.Col>
+
+                  {/* ── Row 4: PM — all packing materials of the product, not editable ── */}
+                  <Grid.Col span={12}>
+                    <MultiSelect
+                      label={
+                        (productPmOptions?.length ?? 0) > 1
+                          ? `PM (Packing Material) — ${productPmOptions!.length} items`
+                          : 'PM (Packing Material)'
+                      }
+                      data={productPmOptions ?? []}
+                      value={(productPmOptions ?? []).map(o => o.value)}
+                      placeholder={
+                        pmLoading                         ? 'Loading...'
+                        : !form.productId                 ? 'Select a product first'
+                        : productPmOptions?.length === 0  ? 'No PM associated with this product'
+                        : undefined
+                      }
+                      size="sm"
+                      disabled
+                    />
+                  </Grid.Col>
+
+                  {/* ── Row 5: Qty | Average Rate ── */}
+                  <Grid.Col span={6}>
+                    <FormTextInput
+                      label="Quantity"
                       value={form.qty}
                       onChange={setStr('qty')}
                       placeholder="0.00"
@@ -361,11 +488,10 @@ const handleProductChange = (value:any) => {
                   </Grid.Col>
                   <Grid.Col span={6}>
                     <FormTextInput
-                      label="* Per Unit Rate"
+                      label="Average Rate"
                       value={form.perUnitRate}
                       onChange={setStr('perUnitRate')}
                       placeholder="0.00"
-                      required
                     />
                   </Grid.Col>
 
@@ -426,6 +552,18 @@ const handleProductChange = (value:any) => {
         confirmLabel={confirmLabel}
         errors={validationErrors}
         zIndex={350}
+      />
+
+      {/* ── QuickAdd: Plant ── */}
+      <QuickAddModal
+        opened={addPlantOpen}
+        onClose={() => setAddPlantOpen(false)}
+        title="Add Plant"
+        label="Plant Name"
+        value={newPlantName}
+        onChange={setNewPlantName}
+        onSave={handleAddPlant}
+        saving={quickSaving}
       />
     </>
   );

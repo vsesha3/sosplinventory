@@ -18,6 +18,30 @@ public class DropDownServiceImpl implements DropDownService {
 
     @Override
     public List<DropDownResponse> getDropdown(String type) {
+    	
+    	type = type.toLowerCase().trim();
+    	Long productId = null;
+    	
+    	
+    	 if (type.startsWith("product-pm-list_")) {
+
+    	        String productIdStr = type.substring("product-pm-list_".length());
+    	       
+
+    	        try {
+    	            
+    	        	productId = Long.parseLong(productIdStr);
+    	            return repository.getPoductPmListDropDown(productId);
+
+    	        } catch (NumberFormatException e) {
+    	            throw new RuntimeException(
+    	                "Invalid product ID in dropdown type: " + type
+    	            );
+    	        }
+	     }
+
+    	
+    	 
         return switch (type.toLowerCase().trim()) {
 
             // ── Master tables ─────────────────────────────────────────────
@@ -40,6 +64,11 @@ public class DropDownServiceImpl implements DropDownService {
             case "transporter_list" ->repository.getTransporterListForDropDown();
             case "packing-master"->repository.getPackingMasterForDropDown();
             case "brand-name"->repository.getBrandNameForDropdown();
+            case "plant-name"->repository.getMiscNameForDropdown("plant");
+            case "company-list"->repository.getMiscNameForDropdown("company");
+            case "user-list"->repository.getUserListForDropdown();
+            case "vessel-list"->repository.getMiscNameForDropdown("vessel");
+            case "wo-list"->repository.getWorkOrderListForDropDown();
 
             // ── Unknown type ──────────────────────────────────────────────
             default -> throw new RuntimeException(

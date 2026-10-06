@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
-  Grid, Badge, Stack, Loader, Center, Divider, Table,
+  Grid, Badge, Stack, Loader, Center, Divider, Table, Tooltip, ActionIcon,
 } from '@mantine/core';
-import { IconFileInvoice } from '@tabler/icons-react';
+import { IconFileInvoice, IconPlus } from '@tabler/icons-react';
+import QuickAddModal from '../../components/common/QuickAddModal';
 import { FormTextInput } from '../../components/common/FormTextInput';
 import { FormSelect } from '../../components/common/FormSelect';
 import { FormDatePicker } from '../../components/common/FormDatePicker';
@@ -53,11 +54,6 @@ const WO_COLUMNS: ColumnDef[] = [
 ];
 
 
-const COMPANY_OPTIONS: DropDownOption[] = [
-  { value: '1',  label: 'AMN AMARO'  },
-  { value: '2',     label: 'SWATHI'      },
-  { value: '3',   label: 'HUNTSMAN'    },
-];
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const fmt = (v: number | null, d = 2) =>
@@ -81,7 +77,19 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
- const [companyOptions] = useState<DropDownOption[]>(COMPANY_OPTIONS);
+  const [companyOptions, setCompanyOptions] = useState<DropDownOption[]>([]);
+  const [userOptions, setUserOptions] = useState<DropDownOption[]>([]);
+
+  // ── QuickAdd: Company ─────────────────────────────────────────────────────
+  const [addCompanyOpen, setAddCompanyOpen] = useState(false);
+  const [newCompanyName, setNewCompanyName] = useState('');
+  const [quickSaving, setQuickSaving]       = useState(false);
+
+  // Standard dropdown { value, label } → string values for Select
+  const toOptions = (data: any): DropDownOption[] =>
+    (Array.isArray(data) ? data : [])
+      .filter((o: any) => o != null && o.value != null)
+      .map((o: any) => ({ value: String(o.value), label: String(o.label ?? '-') }));
   const [woLines, setWoLines] = useState<WorkOrderDetailData[]>([]);
   const [woLoading, setWoLoading] = useState(false);
   const [woFormOpen, setWoFormOpen] = useState(false);
@@ -104,10 +112,15 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
     const load = async () => {
       setLoading(true);
       try {
-       /*  const companyRes = await api.get('/api/company/dropdown')
-          .catch(() => ({ data: { data: [] } }));
-        setCompanyOptions(companyRes.data.data ?? []);
- */
+        const [companyRes, userRes] = await Promise.all([
+          api.get('/api/dropdown/company-list')
+            .catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/user-list')
+            .catch(() => ({ data: { data: [] } })),
+        ]);
+        setCompanyOptions(toOptions(companyRes.data.data));
+        setUserOptions(toOptions(userRes.data.data));
+
         if (mode === 'update' && poId) {
           const [soRes] = await Promise.all([
             api.get(`/api/inventory/sales-orders/${poId}`),
@@ -136,6 +149,53 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
     load();
   }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── QuickAdd handlers ─────────────────────────────────────────────────────
+
+  const handleAddCompany = async () => {
+    const name = newCompanyName.trim();
+    if (!name) return;
+    setQuickSaving(true);
+    try {
+      const res = await api.post('/api/inventory/misc-master', {
+        miscCode: 'COMPANY',
+        miscName: name,
+        isActive: true,
+      });
+      const created = res.data?.data ?? res.data;
+      const createdId = created?.miscId ?? created?.companyId ?? created?.id ?? null;
+
+      // Refresh company dropdown
+      const companyRes = await api.get('/api/dropdown/company-list')
+        .catch(() => ({ data: { data: [] } }));
+      let updated = toOptions(companyRes.data.data);
+
+      // Auto-select the new company — by returned id first, then by name
+      let match = (createdId != null ? updated.find(o => o.value === String(createdId)) : undefined)
+        ?? updated.find(o => o.label.trim().toLowerCase() === name.toLowerCase());
+
+      // Not in the refreshed list yet — add it so the Select can show it
+      if (!match && createdId != null) {
+        match = { value: String(createdId), label: created?.miscName ?? name };
+        updated = [...updated, match];
+      }
+
+      setCompanyOptions(updated);
+      if (match) {
+        const companyId = match.value;
+        setForm(prev => ({ ...prev, companyId }));
+      }
+      setNewCompanyName('');
+      setAddCompanyOpen(false);
+    } catch (err: any) {
+      console.error('[handleAddCompany] Failed:', err?.response?.data ?? err);
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add Company. Please try again.'
+      );
+    } finally {
+      setQuickSaving(false);
+    }
+  };
+
   // ── Form helpers ──────────────────────────────────────────────────────────
 
   const setStr = (field: keyof SalesOrderFormData) =>
@@ -158,6 +218,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
     if (!form.ordDate) errors.push('Order Date is required');
     if (!form.ordDeliveryDate) errors.push('Delivery Date is required');
     if (!form.partialPoFlag) errors.push('Partial PO is required');
+    if (!form.requestedBy) errors.push('Requested By is required');
     return errors;
   };
 
@@ -297,15 +358,30 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
 
                   {/* Company */}
                   <Grid.Col span={12}>
-                  <FormSelect
-  label="* Company"
-  value={form.companyId}
-  onChange={setSelect('companyId')}   // ← same pattern as other selects
-  data={companyOptions}
-  placeholder="--------Select----------"
-  required
-  searchable
-/>
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+                        <FormSelect
+                          label="Company"
+                          value={form.companyId}
+                          onChange={setSelect('companyId')}
+                          data={companyOptions}
+                          placeholder="--------Select----------"
+                          required
+                          searchable
+                        />
+                      </Box>
+                      <Tooltip label="Add new Company" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewCompanyName(''); setAddCompanyOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Grid.Col>
 
                   {/* Order Date | Delivery Date */}
@@ -326,7 +402,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                     />
                   </Grid.Col>
 
-                  {/* Partial PO */}
+                  {/* Partial PO | Requested By */}
                   <Grid.Col span={6}>
                     <FormSelect
                       label="* Partial PO"
@@ -337,7 +413,17 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                       required
                     />
                   </Grid.Col>
-                  <Grid.Col span={6} />
+                  <Grid.Col span={6}>
+                    <FormSelect
+                      label="Requested By"
+                      value={form.requestedBy}
+                      onChange={setSelect('requestedBy')}
+                      data={userOptions}
+                      placeholder="Select user"
+                      required
+                      searchable
+                    />
+                  </Grid.Col>
 
                 </Grid>
               </Paper>
@@ -449,6 +535,8 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
               ...data,
               pmId: pmIdRaw ? Number(pmIdRaw) : null,
               productId: data.productId ? Number(data.productId) : null,
+              uomId: data.uomId ? Number(data.uomId) : null,
+              perUnitRate: data.perUnitRate.trim() ? Number(data.perUnitRate) : null,
             };
 
             if (woFormMode === 'update' && data.woId) {
@@ -482,6 +570,18 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
         confirmLabel={confirmLabel}
         errors={validationErrors}
         zIndex={250}
+      />
+
+      {/* ── QuickAdd: Company ── */}
+      <QuickAddModal
+        opened={addCompanyOpen}
+        onClose={() => setAddCompanyOpen(false)}
+        title="Add Company"
+        label="Company Name"
+        value={newCompanyName}
+        onChange={setNewCompanyName}
+        onSave={handleAddCompany}
+        saving={quickSaving}
       />
     </>
   );

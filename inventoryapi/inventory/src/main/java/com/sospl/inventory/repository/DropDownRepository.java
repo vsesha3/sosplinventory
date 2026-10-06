@@ -2,15 +2,22 @@ package com.sospl.inventory.repository;
 
 import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.util.ParseUtil;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+
+
+
 @Repository
 public class DropDownRepository {
 
     private final JdbcTemplate jdbcTemplate;
+    @Value("${app.schema.attendance}")
+    private String attendanceSchema;
 
     public DropDownRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -280,5 +287,74 @@ ORDER BY group_name ASC;
 						""",
 				(rs, rowNum) -> new DropDownResponse(rs.getLong("id"), rs.getString("name")));
 
+	}
+	
+	public List<DropDownResponse> getMiscNameForDropdown(String miscCode) {
+
+	    return jdbcTemplate.query(
+	            """
+	            SELECT misc_id AS id,
+	                   misc_name AS name
+	            FROM sos_misc_master_t
+	            WHERE misc_code = ?
+	            """,
+	            (rs, rowNum) -> new DropDownResponse(
+	                    rs.getLong("id"),
+	                    rs.getString("name")
+	            ),
+	            miscCode.toUpperCase()
+	    );
+	}
+	
+	public List<DropDownResponse> getPoductPmListDropDown(Long productId) {
+
+	    return jdbcTemplate.query(
+	        """
+	        SELECT ppm.pm_id AS id,
+	               rm.rm_name AS name
+	        FROM sos_prod_master_pm_detls_t ppm
+	        LEFT JOIN sos_rm_master_t rm
+	               ON ppm.pm_id = rm.rm_id
+	        WHERE ppm.product_id = ?
+	        """,
+	        (rs, rowNum) -> new DropDownResponse(
+	                rs.getLong("id"),
+	                rs.getString("name")
+	        ),
+	        productId
+	    );
+	}
+	
+	public List<DropDownResponse> getUserListForDropdown() {
+
+	    return jdbcTemplate.query(
+	        """
+	        SELECT employee_id AS id,
+	               employee_name AS name
+	        FROM %s.sospl_employee_data
+	        ORDER BY employee_name ASC
+	        """.formatted(attendanceSchema),
+	        (rs, rowNum) -> new DropDownResponse(
+	            rs.getString("id"),
+	            rs.getString("name")
+	        )
+	    );
+	}
+	
+	
+	
+	
+	public List<DropDownResponse> getWorkOrderListForDropDown() {
+
+	    return jdbcTemplate.query(
+	        """
+	    		SELECT wo_id as id,wo_code as name FROM sos_work_order_t 
+	        
+	        """.formatted(attendanceSchema),
+	        (rs, rowNum) -> new DropDownResponse(
+	            rs.getString("id"),
+	            rs.getString("name")
+	        )
+	    );
 	}
 }

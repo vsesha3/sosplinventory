@@ -47,6 +47,7 @@ export interface WorkOrderApiData {
   poId:        number;
   plant:       string | null;
   productId:   number | null;
+  uomId?:      number | null;
   qty:         number | null;
   perUnitRate: number | null;
   woCode:      string | null;
@@ -59,7 +60,8 @@ export const mapWorkOrder = (raw: any): WorkOrderApiData => ({
   poId:        raw.poId        ?? 0,
   plant:       raw.plant       ?? null,
   productId:   raw.productId   != null ? Number(raw.productId)   : null,
-  qty:         raw.qty         != null ? Number(raw.qty)         : null,
+  uomId:       raw.uomId       != null ? Number(raw.uomId)       : null,
+  qty:        raw.qty         != null ? Number(raw.qty)         : null,
   perUnitRate: raw.perUnitRate != null ? Number(raw.perUnitRate) : null,
   woCode:      raw.woCode      ?? null,
   pmId:        raw.pmId        != null ? Number(raw.pmId)        : null,

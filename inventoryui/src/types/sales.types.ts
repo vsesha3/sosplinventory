@@ -12,6 +12,7 @@ export interface SalesOrderApiData {
   ordDate:        string | null;
   ordDeliveryDate: string | null;
   partialPoFlag:  boolean | null;
+  requestedBy?:   number | string | null;
   createdBy?:     string | null;
   createdAt?:     string | null;
   updatedBy?:     string | null;
@@ -26,7 +27,8 @@ export interface SalesOrderFormData {
   companyId:       string | null;   // string for Select component
   ordDate:         DateValue;
   ordDeliveryDate: DateValue;
-  partialPoFlag:   string;   
+  partialPoFlag:   string;
+  requestedBy:     string | null;  // user id as string for Select component
   createdBy:       string | null;  // 'true' | 'false' for Select component
 }
 
@@ -42,6 +44,7 @@ export const defaultSalesOrderForm: SalesOrderFormData = {
   ordDate:         null,
   ordDeliveryDate: null,
   partialPoFlag:   'false',
+  requestedBy:     null,
   createdBy:       null,
 };
 
@@ -56,6 +59,7 @@ export const mapApiToSalesOrderForm = (
   ordDate:         raw.ordDate         ? new Date(raw.ordDate)         : null,
   ordDeliveryDate: raw.ordDeliveryDate ? new Date(raw.ordDeliveryDate) : null,
   partialPoFlag:   raw.partialPoFlag   ? 'true' : 'false',
+  requestedBy:     raw.requestedBy     != null ? String(raw.requestedBy) : null,
   createdBy:       raw.createdBy       ?? null,
 });
 
@@ -67,7 +71,11 @@ export const mapSalesOrderFormToPayload = (form: SalesOrderFormData) => ({
   ordDate:         form.ordDate        ? new Date(form.ordDate as Date).toISOString() : null,
   ordDeliveryDate: form.ordDeliveryDate ? new Date(form.ordDeliveryDate as Date).toISOString() : null,
   partialPoFlag:   form.partialPoFlag  === 'true',
-  createdBy:       form.createdBy      || null,
+  // user-list value may be an id or a name — Number('abc') is NaN, which JSON sends as null
+  requestedBy:     form.requestedBy
+    ? (isNaN(Number(form.requestedBy)) ? form.requestedBy : Number(form.requestedBy))
+    : null,
+  createdBy:     form.createdBy      || null,
   poId:form.poId || null,
 });
 

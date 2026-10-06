@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "sos_purchase_order_t")
+
 public class SosPurchaseOrder extends BaseAuditEntity {
 
     @Id
@@ -33,8 +34,17 @@ public class SosPurchaseOrder extends BaseAuditEntity {
     @Column(name = "partial_po_flag",
             columnDefinition = "TINYINT(1) DEFAULT 0")
     private Boolean partialPoFlag;
+    
+    @Column(name = "requested_by", length = 25)
+    private String requestedBy;
 
-    // ── Getters ───────────────────────────────────────────────────────────
+    public String getRequestedBy() {
+		return requestedBy;
+	}
+	public void setRequestedBy(String requestedBy) {
+		this.requestedBy = requestedBy;
+	}
+	// ── Getters ───────────────────────────────────────────────────────────
     public Long getPoId() { return poId; }
     public String getPoNumber() { return poNumber; }
     public Long getCompanyId() { return companyId; }

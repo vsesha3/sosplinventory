@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Paper, Box, Text, Group, Button,
-  Grid,  Stack, Loader, Center,
+  Grid,  Stack, Loader, Center, Tooltip, ActionIcon,
 } from '@mantine/core';
-import { IconCalendarStats } from '@tabler/icons-react';
+import { IconCalendarStats, IconPlus } from '@tabler/icons-react';
+import QuickAddModal      from '../../components/common/QuickAddModal';
 import { FormTextInput }  from '../../components/common/FormTextInput';
 import { FormSelect }     from '../../components/common/FormSelect';
 import { FormDatePicker } from '../../components/common/FormDatePicker';
@@ -55,6 +56,17 @@ const ProductionPlanForm: React.FC<ProductionPlanFormProps> = ({
   const [vesselOptions, setVesselOptions] = useState<DropDownOption[]>([]);
   const [woOptions, setWoOptions]         = useState<DropDownOption[]>([]);
 
+  // ── QuickAdd: Vessel ──────────────────────────────────────────────────────
+  const [addVesselOpen, setAddVesselOpen] = useState(false);
+  const [newVesselName, setNewVesselName] = useState('');
+  const [quickSaving, setQuickSaving]     = useState(false);
+
+  // Standard dropdown { value, label } → string values for Select
+  const toOptions = (data: any): DropDownOption[] =>
+    (Array.isArray(data) ? data : [])
+      .filter((o: any) => o != null && o.value != null)
+      .map((o: any) => ({ value: String(o.value), label: String(o.label ?? '-') }));
+
   // Remaining qty options — 0 to 10
 
 
@@ -71,11 +83,18 @@ const ProductionPlanForm: React.FC<ProductionPlanFormProps> = ({
     const load = async () => {
       setLoading(true);
       try {
-        const [vesselRes] = await Promise.all([
-          api.get(' /api/misc/vessels/dropdown').catch(() => ({ data: { data: [] } })),
-         
+        const isEdit = mode === 'update' && !!productionPlanId;
+        const [vesselRes, woRes] = await Promise.all([
+          api.get('/api/dropdown/vessel-list')
+            .catch(() => ({ data: { data: [] } })),
+          // Edit mode: full WO list so the saved WO always shows its code
+          // (add mode loads WOs by From/To date instead — see effect below)
+          isEdit
+            ? api.get('/api/dropdown/wo-list').catch(() => ({ data: { data: [] } }))
+            : Promise.resolve(null),
         ]);
-        setVesselOptions(vesselRes.data.data ?? []);
+        setVesselOptions(toOptions(vesselRes.data.data));
+        if (woRes) setWoOptions(toOptions(woRes.data.data));
        
         if (mode === 'update' && productionPlanId) {
           const res = await api.get(`/api/inventory/production-plan/${productionPlanId}`);
@@ -95,6 +114,53 @@ const ProductionPlanForm: React.FC<ProductionPlanFormProps> = ({
 
     load();
   }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── QuickAdd handlers ─────────────────────────────────────────────────────
+
+  const handleAddVessel = async () => {
+    const name = newVesselName.trim();
+    if (!name) return;
+    setQuickSaving(true);
+    try {
+      const res = await api.post('/api/inventory/misc-master', {
+        miscCode: 'VESSEL',
+        miscName: name,
+        isActive: true,
+      });
+      const created = res.data?.data ?? res.data;
+      const createdId = created?.miscId ?? created?.id ?? null;
+
+      // Refresh vessel dropdown
+      const vesselRes = await api.get('/api/dropdown/vessel-list')
+        .catch(() => ({ data: { data: [] } }));
+      let updated = toOptions(vesselRes.data.data);
+
+      // Auto-select the new vessel — by returned id first, then by name
+      let match = (createdId != null ? updated.find(o => o.value === String(createdId)) : undefined)
+        ?? updated.find(o => o.label.trim().toLowerCase() === name.toLowerCase());
+
+      // Not in the refreshed list yet — add it so the Select can show it
+      if (!match && createdId != null) {
+        match = { value: String(createdId), label: created?.miscName ?? name };
+        updated = [...updated, match];
+      }
+
+      setVesselOptions(updated);
+      if (match) {
+        const vesselId = match.value;
+        setForm(prev => ({ ...prev, vesselId }));
+      }
+      setNewVesselName('');
+      setAddVesselOpen(false);
+    } catch (err: any) {
+      console.error('[handleAddVessel] Failed:', err?.response?.data ?? err);
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add Vessel. Please try again.'
+      );
+    } finally {
+      setQuickSaving(false);
+    }
+  };
 
   // ── Auto-fill product details when WO changes ─────────────────────────────
 
@@ -172,7 +238,7 @@ useEffect(() => {
       ...prev.filter(e => e !== 'From Date must be before To Date'),
       'From Date must be before To Date',
     ]);
-    setWoOptions([]);
+    if (mode !== 'update') setWoOptions([]);
     return;
   }
 
@@ -180,6 +246,9 @@ useEffect(() => {
   setValidationErrors(prev =>
     prev.filter(e => e !== 'From Date must be before To Date'),
   );
+
+  // Edit mode — WO is fixed and comes from /api/dropdown/wo-list
+  if (mode === 'update') return;
 
   // Populate WO dropdown
   const fromDate = new Date(form.productionFromDate).toISOString().split('T')[0];
@@ -205,7 +274,7 @@ useEffect(() => {
 
   return () => { cancelled = true; }; // cleanup on rapid date changes
 
-}, [form.productionFromDate, form.productionToDate]);
+}, [form.productionFromDate, form.productionToDate, mode]);
 
 
 
@@ -282,25 +351,41 @@ useEffect(() => {
 
                   {/* ── Row 2: Vessels | Work Order Code ── */}
                   <Grid.Col span={6}>
-                    <FormSelect
-                      label="* Vessels"
-                      value={form.vesselId}
-                      onChange={setSelect('vesselId')}
-                      data={vesselOptions}
-                      placeholder="--------Select----------"
-                      required
-                      searchable
-                    />
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+                        <FormSelect
+                          label="Vessels"
+                          value={form.vesselId}
+                          onChange={setSelect('vesselId')}
+                          data={vesselOptions}
+                          placeholder="--------Select----------"
+                          required
+                          searchable
+                        />
+                      </Box>
+                      <Tooltip label="Add new Vessel" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewVesselName(''); setAddVesselOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Grid.Col>
                   <Grid.Col span={6}>
                     <FormSelect
-                      label="* Work Order Code"
+                      label="Work Order Code"
                       value={form.woId}
                       onChange={handleWoChange}
                       data={woOptions}
                       placeholder="--------Select----------"
                       required
-                      searchable
+                      searchable={mode !== 'update'}
+                      readOnly={mode === 'update'}   // WO can't be changed once planned
                     />
                   </Grid.Col>
 
@@ -332,7 +417,14 @@ useEffect(() => {
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const qty = e.target.value;
                           const selected = woOptions.find(o => o.value === form.woId);
-                          const available = parseFloat(selected?.quantity ?? '0');
+
+                          // wo-list (edit mode) has no quantity — keep the loaded remaining qty
+                          if (selected?.quantity == null) {
+                            setForm(prev => ({ ...prev, qty }));
+                            return;
+                          }
+
+                          const available = parseFloat(selected.quantity);
                           const remaining = available - parseFloat(qty || '0');
 
                           setForm(prev => ({
@@ -408,6 +500,18 @@ useEffect(() => {
         confirmLabel={confirmLabel}
         errors={validationErrors}
         zIndex={250}
+      />
+
+      {/* ── QuickAdd: Vessel ── */}
+      <QuickAddModal
+        opened={addVesselOpen}
+        onClose={() => setAddVesselOpen(false)}
+        title="Add Vessel"
+        label="Vessel Name"
+        value={newVesselName}
+        onChange={setNewVesselName}
+        onSave={handleAddVessel}
+        saving={quickSaving}
       />
     </>
   );

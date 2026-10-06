@@ -1,5 +1,21 @@
 # Release Notes
 
+## Unreleased
+
+### Sales Order (new / edit)
+- New mandatory **Requested By** field (user dropdown), next to Partial PO.
+- **Company** list now comes from the company master instead of a fixed list, and a new company can be added with the **+** button next to it. The new company is selected automatically once saved.
+
+### Production Plan (new / edit)
+- **Vessels** list now comes from the vessel master, and a new vessel can be added with the **+** button next to it. The new vessel is selected automatically once saved.
+- When editing a plan, **Work Order Code** now shows the plan's work order and can't be changed. When adding a plan, the work order list is still based on the From / To dates.
+
+### Work Order (new / edit)
+- A new **Plant** can be added from the work order form using the **+** button next to the Plant dropdown. The new plant is selected automatically once saved.
+- Fields re-ordered: Work Order ID, Product, Plant, WO Code, Line Item, UOM, PM, Quantity, Average Rate.
+- **UOM** and **PM (Packing Material)** are now filled from the selected product and can't be edited. PM lists every packing material associated with the product. Both stay disabled until a product is chosen.
+- **Per Unit Rate** renamed to **Average Rate** and is no longer mandatory.
+
 ## Version 1.0.0 — 02-10-2026
 
 ### Material Inward — list page
