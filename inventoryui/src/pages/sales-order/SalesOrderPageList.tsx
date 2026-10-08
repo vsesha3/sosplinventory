@@ -15,7 +15,7 @@ import type { PagedApiResponse } from '../../types/api.types';
 import SalesOrderForm from './SalesOrderForm';
 
 import type { SalesOrderFormData, SalesOrderApiData } from '../../types/sales.types';
-import { mapSalesOrderFormToPayload } from '../../types/sales.types';
+import { mapSalesOrderFormToPayload, INWARD_TYPE_OPTIONS } from '../../types/sales.types';
 import type { SaveStatus } from '../common/Savestatusbanner';
 import SaveStatusBanner from '../common/Savestatusbanner';
 
@@ -36,6 +36,7 @@ const PAGE_SIZE = 10;
 const COLUMNS: ColumnDef[] = [
   { key: 'poId',           label: 'PO Id',           width: 90  },
   { key: 'poNumber',       label: 'Sales Order No',  width: 160 },
+  { key: 'inwardType',     label: 'Inward Type',     width: 120 },
   { key: 'companyName',    label: 'Company',         width: 180 },
   { key: 'ordDate',        label: 'Order Date',      width: 120 },
   { key: 'ordDeliveryDate',label: 'Delivery Date',   width: 120 },
@@ -245,6 +246,17 @@ const fetchWorkOrders = useCallback(
             {item.poId}
           </Table.Td>
           <Table.Td>{dash(item.poNumber)}</Table.Td>
+          <Table.Td>
+            {item.inwardType ? (
+              <Badge variant="light"
+                color={item.inwardType === 'JOBINWARD' ? 'violet' : 'blue'}
+                size="sm">
+                {INWARD_TYPE_OPTIONS.find(o => o.value === item.inwardType)?.label ?? item.inwardType}
+              </Badge>
+            ) : (
+              <Text c="dimmed" size="sm">—</Text>
+            )}
+          </Table.Td>
           <Table.Td>{dash(item.companyName)}</Table.Td>
           <Table.Td>{fmtDate(item.ordDate)}</Table.Td>
           <Table.Td>{fmtDate(item.ordDeliveryDate)}</Table.Td>

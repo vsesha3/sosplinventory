@@ -18,7 +18,9 @@ import {
   defaultSalesOrderForm,
   mapApiToSalesOrderForm,
   PARTIAL_PO_OPTIONS,
+  INWARD_TYPE_OPTIONS,
 } from '../../types/sales.types';
+import type { InwardType } from '../../types/api.types';
 import type { SalesOrderFormData, SalesOrderApiData } from '../../types/sales.types';
 import { fetchWorkOrdersByPo } from '../../types/workorder.types';
 import type { WorkOrderDetailData } from '../../types/workorder.types';
@@ -79,7 +81,6 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [companyOptions, setCompanyOptions] = useState<DropDownOption[]>([]);
   const [userOptions, setUserOptions] = useState<DropDownOption[]>([]);
-
   // ── QuickAdd: Company ─────────────────────────────────────────────────────
   const [addCompanyOpen, setAddCompanyOpen] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
@@ -101,6 +102,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
   useEffect(() => {
     if (!opened) {
       setForm({ ...defaultSalesOrderForm });
+
       setFetchError(null);
       setValidationErrors([]);
       setWoLines([]);
@@ -218,8 +220,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
     if (!form.ordDate) errors.push('Order Date is required');
     if (!form.ordDeliveryDate) errors.push('Delivery Date is required');
     if (!form.partialPoFlag) errors.push('Partial PO is required');
-    if (!form.requestedBy) errors.push('Requested By is required');
-    return errors;
+    if (!form.requestedBy) errors.push('Requested By is required');    return errors;
   };
 
   const confirmLabel = mode === 'update' ? 'Update' : 'Save';
@@ -338,8 +339,8 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                 style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
                 <Grid columns={12} gutter="sm">
 
-                  {/* PO Id | Sales Order No */}
-                  <Grid.Col span={6}>
+                  {/* PO Id | Inward Type | Sales Order No */}
+                  <Grid.Col span={4}>
                     <FormTextInput
                       label="PO Id"
                       value={form.poId ? String(form.poId) : '—'}
@@ -347,7 +348,20 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                       readOnly
                     />
                   </Grid.Col>
-                  <Grid.Col span={6}>
+                  <Grid.Col span={4}>
+                    {/* Job Order → JOBINWARD, By PO → BYPO. Optional and editable for now —
+                        to be locked once the WO reaches material issue (handled there later). */}
+                    <FormSelect
+                      label="Inward Type"
+                      value={form.inwardType}
+                      onChange={(value) =>
+                        setForm(prev => ({ ...prev, inwardType: value as InwardType | null }))}
+                      data={INWARD_TYPE_OPTIONS}
+                      placeholder="Select"
+                      clearable
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={4}>
                     <FormTextInput
                       label="Sales Order No"
                       value={form.poNumber}

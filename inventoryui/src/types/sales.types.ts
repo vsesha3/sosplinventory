@@ -1,6 +1,7 @@
 // ── sales.types.ts ────────────────────────────────────────────────────────────
 
 import type { DateValue } from '@mantine/dates';
+import type { InwardType } from './api.types';
 
 // ── API response shape (matches SosPurchaseOrder entity) ─────────────────────
 
@@ -13,6 +14,7 @@ export interface SalesOrderApiData {
   ordDeliveryDate: string | null;
   partialPoFlag:  boolean | null;
   requestedBy?:   number | string | null;
+  inwardType?:    InwardType | null;
   createdBy?:     string | null;
   createdAt?:     string | null;
   updatedBy?:     string | null;
@@ -29,7 +31,8 @@ export interface SalesOrderFormData {
   ordDeliveryDate: DateValue;
   partialPoFlag:   string;
   requestedBy:     string | null;  // user id as string for Select component
-  createdBy:       string | null;  // 'true' | 'false' for Select component
+  inwardType:      InwardType | null;  // Job Order → 'JOBINWARD', By PO → 'BYPO'
+  createdBy:    string | null;  // 'true' | 'false' for Select component
 }
 
 
@@ -45,6 +48,7 @@ export const defaultSalesOrderForm: SalesOrderFormData = {
   ordDeliveryDate: null,
   partialPoFlag:   'false',
   requestedBy:     null,
+  inwardType:      null,   // optional — "Select" (empty) by default
   createdBy:       null,
 };
 
@@ -60,6 +64,9 @@ export const mapApiToSalesOrderForm = (
   ordDeliveryDate: raw.ordDeliveryDate ? new Date(raw.ordDeliveryDate) : null,
   partialPoFlag:   raw.partialPoFlag   ? 'true' : 'false',
   requestedBy:     raw.requestedBy     != null ? String(raw.requestedBy) : null,
+  // null/empty = not chosen yet
+  inwardType:      raw.inwardType === 'JOBINWARD' || raw.inwardType === 'BYPO'
+                     ? raw.inwardType : null,
   createdBy:       raw.createdBy       ?? null,
 });
 
@@ -75,7 +82,8 @@ export const mapSalesOrderFormToPayload = (form: SalesOrderFormData) => ({
   requestedBy:     form.requestedBy
     ? (isNaN(Number(form.requestedBy)) ? form.requestedBy : Number(form.requestedBy))
     : null,
-  createdBy:     form.createdBy      || null,
+  inwardType:      form.inwardType || null,
+  createdBy:   form.createdBy      || null,
   poId:form.poId || null,
 });
 
@@ -84,6 +92,13 @@ export const mapSalesOrderFormToPayload = (form: SalesOrderFormData) => ({
 export const PARTIAL_PO_OPTIONS = [
   { value: 'true',  label: 'Yes' },
   { value: 'false', label: 'No'  },
+];
+
+// ── Inward Type options — stored as JOBINWARD / BYPO ──────────────────────────
+
+export const INWARD_TYPE_OPTIONS: { value: InwardType; label: string }[] = [
+  { value: 'JOBINWARD', label: 'Job Order' },
+  { value: 'BYPO',      label: 'By PO'     },
 ];
 
 

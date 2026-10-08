@@ -37,6 +37,9 @@ public class SosPurchaseOrder extends BaseAuditEntity {
     
     @Column(name = "requested_by", length = 25)
     private String requestedBy;
+    
+    @Column(name = "inward_type", length = 20)
+    private String inwardType;
 
     public String getRequestedBy() {
 		return requestedBy;
@@ -59,4 +62,7 @@ public class SosPurchaseOrder extends BaseAuditEntity {
     public void setOrdDate(LocalDateTime ordDate) { this.ordDate = ordDate; }
     public void setOrdDeliveryDate(LocalDateTime ordDeliveryDate) { this.ordDeliveryDate = ordDeliveryDate; }
     public void setPartialPoFlag(Boolean partialPoFlag) { this.partialPoFlag = partialPoFlag; }
+    
+    public String getInwardType() { return inwardType; }
+    public void setInwardType(String inwardType) { this.inwardType = inwardType; }
 }
