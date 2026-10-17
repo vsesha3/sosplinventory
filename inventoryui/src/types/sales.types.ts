@@ -13,8 +13,9 @@ export interface SalesOrderApiData {
   ordDate:        string | null;
   ordDeliveryDate: string | null;
   partialPoFlag:  boolean | null;
-  requestedBy?:   number | string | null;
-  inwardType?:    InwardType | null;
+  requestedBy?:   number | string | null;  inwardType?:    InwardType | null;
+  partnerCode?:   string | number | null;   // customer giving the sales order
+  partnerName?:   string | null;            // joined from customer master if available
   createdBy?:     string | null;
   createdAt?:     string | null;
   updatedBy?:     string | null;
@@ -32,6 +33,7 @@ export interface SalesOrderFormData {
   partialPoFlag:   string;
   requestedBy:     string | null;  // user id as string for Select component
   inwardType:      InwardType | null;  // Job Order → 'JOBINWARD', By PO → 'BYPO'
+  partnerCode:     string | null;  // customer — value from /api/dropdown/customer-list
   createdBy:    string | null;  // 'true' | 'false' for Select component
 }
 
@@ -49,6 +51,7 @@ export const defaultSalesOrderForm: SalesOrderFormData = {
   partialPoFlag:   'false',
   requestedBy:     null,
   inwardType:      null,   // optional — "Select" (empty) by default
+  partnerCode:     null,
   createdBy:       null,
 };
 
@@ -67,6 +70,7 @@ export const mapApiToSalesOrderForm = (
   // null/empty = not chosen yet
   inwardType:      raw.inwardType === 'JOBINWARD' || raw.inwardType === 'BYPO'
                      ? raw.inwardType : null,
+  partnerCode:     raw.partnerCode     != null ? String(raw.partnerCode) : null,
   createdBy:       raw.createdBy       ?? null,
 });
 
@@ -83,6 +87,7 @@ export const mapSalesOrderFormToPayload = (form: SalesOrderFormData) => ({
     ? (isNaN(Number(form.requestedBy)) ? form.requestedBy : Number(form.requestedBy))
     : null,
   inwardType:      form.inwardType || null,
+  partnerCode:     form.partnerCode || null,   // sent as the dropdown value, unchanged
   createdBy:   form.createdBy      || null,
   poId:form.poId || null,
 });
@@ -97,7 +102,7 @@ export const PARTIAL_PO_OPTIONS = [
 // ── Inward Type options — stored as JOBINWARD / BYPO ──────────────────────────
 
 export const INWARD_TYPE_OPTIONS: { value: InwardType; label: string }[] = [
-  { value: 'JOBINWARD', label: 'Job Order' },
+  { value: 'JOBINWARD', label: 'Job Order' },   // shown as "Sales Order Type"
   { value: 'BYPO',      label: 'By PO'     },
 ];
 

@@ -25,9 +25,21 @@ public class SosSupplierMaster extends BaseAuditEntity {
 
     @Column(name = "country_id")
     private Integer countryId;
+    
+    @Column(name = "partner_type")
+    private String  partnerType;
+    
 
     public Integer getSupplierId() {
 		return supplierId;
+	}
+
+	public String getPartnerType() {
+		return partnerType;
+	}
+
+	public void setPartnerType(String partnerType) {
+		this.partnerType = partnerType;
 	}
 
 	public void setSupplierId(Integer supplierId) {

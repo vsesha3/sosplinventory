@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box, Paper, Text, Group, Button,
   Grid, Badge, Stack, Loader, Center, Table, Checkbox,
@@ -144,6 +144,19 @@ export interface MaterialRequestFormProps {
   rmReqId?: number | null;
 }
 
+// ── Work order details (product / vessel / lot) — display only ───────────────
+
+interface WoDetails {
+  productName:         string;
+  productCode:         string;
+  vesselName:          string;
+  productionLotNumber: string;
+}
+
+const emptyWoDetails: WoDetails = {
+  productName: '', productCode: '', vesselName: '', productionLotNumber: '',
+};
+
 // ── Default form ──────────────────────────────────────────────────────────────
 
 const defaultForm: MaterialRequestFormData = {
@@ -190,6 +203,50 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
   const [pmRawResponse, setPmRawResponse] = useState<any>(null);
 
   const { set, setDate, setStr } = createFormSetters(setForm);
+
+  // ── Work order details ────────────────────────────────────────────────────
+  const [woDetails, setWoDetails]       = useState<WoDetails>({ ...emptyWoDetails });
+  const [woDetailsLoading, setWoDetailsLoading] = useState(false);
+  const latestWoRef = useRef<string | null>(null);   // ignores stale responses
+
+  // GET /api/misc/wo-details/{id} → product name/code, vessel, production lot number.
+  // id = productionPlanId in edit mode, woId on Work Order selection.
+  // Lot number fills the form only when it's empty (never overwrites a saved/typed one).
+  const loadWoDetails = async (woId: string | null) => {
+    latestWoRef.current = woId;
+    setWoDetails({ ...emptyWoDetails });
+    if (!woId) return;
+
+    setWoDetailsLoading(true);
+    try {
+      const res = await api.get(`/api/misc/wo-details/${woId}`);
+      if (latestWoRef.current !== woId) return;
+      // API may return the object directly, wrapped in { data }, or as a one-item array
+      const raw = res.data?.data ?? res.data;
+      const d = (Array.isArray(raw) ? raw[0] : raw) ?? {};
+      const details: WoDetails = {
+        productName:         d.productName         ?? '',
+        productCode:         d.productCode         ?? '',
+        vesselName:          d.vesselName          ?? '',
+        productionLotNumber: d.productionLotNumber ?? '',
+      };
+      setWoDetails(details);
+      if (details.productionLotNumber) {
+        setForm(prev => prev.productionLotNumber
+          ? prev
+          : { ...prev, productionLotNumber: details.productionLotNumber });
+      }
+    } catch (err: any) {
+      console.warn('[loadWoDetails] Failed:', err?.response?.data ?? err);
+    } finally {
+      if (latestWoRef.current === woId) setWoDetailsLoading(false);
+    }
+  };
+
+  const handleWoChange = (value: string | null) => {
+    setForm(prev => ({ ...prev, woId: value, productionLotNumber: '' }));
+    loadWoDetails(value);
+  };
 
 
   const [rmStock, setRmStock] = useState<RmStockLine[]>([]);
@@ -342,6 +399,8 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
         const apiData = results[2] as MaterialRequestApiData;
         const mapped = mapApiToForm(apiData);
         setForm(mapped);
+        // Edit mode: wo-details is keyed by the request's production plan id
+        if (apiData.woId != null) loadWoDetails(String(apiData.woId));
         // Auto-load RM mapping if we have woId and qty
         if (apiData.woId && apiData.planToProdQty) {
           loadRmMapping(String(apiData.woId), String(apiData.planToProdQty));
@@ -368,6 +427,9 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
       setRmStock([]);
       setSelectedRmId(null);
       setSelectedRmCode(null);
+      latestWoRef.current = null;
+      setWoDetails({ ...emptyWoDetails });
+      setWoDetailsLoading(false);
       return;
     }
     const cancelled = { value: false };
@@ -654,7 +716,7 @@ const handleStockEdit = () => {
                   <FormSelect
                     label="Work Order"
                     value={form.woId}
-                    onChange={set('woId')}
+                    onChange={handleWoChange}
                     data={dropdowns.workOrderOptions}
                     placeholder="Select work order"
                     required
@@ -696,6 +758,35 @@ const handleStockEdit = () => {
                     onChange={setStr('productionLotNumber')}
                     placeholder="e.g. 42032Z265C"
                     readOnly={readOnly}
+                  />
+                </Grid.Col>
+
+                {/* Row 3: Product | Product Code | Vessel — from the selected Work Order */}
+                <Grid.Col span={6}>
+                  <FormTextInput
+                    label="Product"
+                    value={woDetails.productName}
+                    onChange={() => { }}
+                    placeholder={woDetailsLoading ? 'Loading...' : 'Auto-filled from Work Order'}
+                    readOnly
+                  />
+                </Grid.Col>
+                <Grid.Col span={3}>
+                  <FormTextInput
+                    label="Product Code"
+                    value={woDetails.productCode}
+                    onChange={() => { }}
+                    placeholder={woDetailsLoading ? 'Loading...' : 'Auto-filled from Work Order'}
+                    readOnly
+                  />
+                </Grid.Col>
+                <Grid.Col span={3}>
+                  <FormTextInput
+                    label="Vessel"
+                    value={woDetails.vesselName}
+                    onChange={() => { }}
+                    placeholder={woDetailsLoading ? 'Loading...' : 'Auto-filled from Work Order'}
+                    readOnly
                   />
                 </Grid.Col>
 

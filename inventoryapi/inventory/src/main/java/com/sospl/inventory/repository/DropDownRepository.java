@@ -16,6 +16,7 @@ import java.util.List;
 public class DropDownRepository {
 
     private final JdbcTemplate jdbcTemplate;
+    
     @Value("${app.schema.attendance}")
     private String attendanceSchema;
 
@@ -237,19 +238,23 @@ ORDER BY group_name ASC;
     
     
     
-    public List<DropDownResponse> getSupplierListForDropDown() {
+    public List<DropDownResponse> getSupplierListForDropDown(String partnerType) {
         return jdbcTemplate.query("""
                 SELECT
                     supplier_id AS id,
-                    supplier_name       AS name
+                    supplier_name AS name
                 FROM sos_supplier_master_t
                 WHERE is_active = 1
-                AND is_deleted = 0
+                  AND is_deleted = 0
+                  AND partner_type = ?
                 ORDER BY supplier_name ASC
                 """,
                 (rs, rowNum) -> new DropDownResponse(
                         rs.getLong("id"),
-                        rs.getString("name")));
+                        rs.getString("name")
+                ),
+                partnerType
+        );
     }
     
    
@@ -325,22 +330,42 @@ ORDER BY group_name ASC;
 	    );
 	}
 	
-	public List<DropDownResponse> getUserListForDropdown() {
+	public List<DropDownResponse> getUserListForDropdown(String employeeCode) {
 
-	    return jdbcTemplate.query(
-	        """
+	    String sql = """
 	        SELECT employee_id AS id,
 	               employee_name AS name
 	        FROM %s.sospl_employee_data
-	        ORDER BY employee_name ASC
-	        """.formatted(attendanceSchema),
+	        """.formatted(attendanceSchema);
+
+	    boolean filterByEmployee =
+	            employeeCode != null && !employeeCode.isBlank();
+
+	    if (filterByEmployee) {
+	        sql += " WHERE employee_id = ?";
+	    }
+
+	    sql += " ORDER BY employee_name ASC";
+
+	    if (filterByEmployee) {
+	        return jdbcTemplate.query(
+	            sql,
+	            (rs, rowNum) -> new DropDownResponse(
+	                rs.getString("id"),
+	                rs.getString("name")
+	            ),
+	            employeeCode
+	        );
+	    }
+
+	    return jdbcTemplate.query(
+	        sql,
 	        (rs, rowNum) -> new DropDownResponse(
 	            rs.getString("id"),
 	            rs.getString("name")
 	        )
 	    );
 	}
-	
 	
 	
 	

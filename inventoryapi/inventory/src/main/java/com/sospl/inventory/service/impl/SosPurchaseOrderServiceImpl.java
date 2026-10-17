@@ -28,18 +28,42 @@ public class SosPurchaseOrderServiceImpl
         super(repository);
         this.purchaseOrderRepository = repository;
     }
-
     @Override
     public List<SosPurchaseOrder> findAllActive() {
-        return purchaseOrderRepository
-                .findAllByIsActiveTrueAndIsDeletedFalse();
-    }
 
+        List<SosPurchaseOrder> orders = purchaseOrderRepository
+                .findAllByIsActiveTrueAndIsDeletedFalse();
+
+        orders.forEach(po -> {
+            log.info(
+                    "PO ID: {} | PO Number: {} | Created At: {} | Updated At: {}",
+                    po.getPoId(),
+                    po.getPoNumber(),
+                    po.getCreatedAt(),
+                    po.getUpdatedAt()
+            );
+        });
+
+        return orders;
+    }
+   
     @Override
-    public Page<SosPurchaseOrder> findAllActivePaginated(
-            Pageable pageable) {
-        return purchaseOrderRepository
+    public Page<SosPurchaseOrder> findAllActivePaginated(Pageable pageable) {
+
+        Page<SosPurchaseOrder> orders = purchaseOrderRepository
                 .findAllByIsActiveTrueAndIsDeletedFalse(pageable);
+
+        orders.getContent().forEach(po -> {
+            log.info(
+                    "PO ID: {} | PO Number: {} | Created At: {} | Updated At: {}",
+                    po.getPoId(),
+                    po.getPoNumber(),
+                    po.getCreatedAt(),
+                    po.getUpdatedAt()
+            );
+        });
+
+        return orders;
     }
 
     @Override

@@ -17,6 +17,8 @@ public interface SosPurchaseOrderRepository
 
     // ── Find all active ───────────────────────────────────────────────────
     List<SosPurchaseOrder> findAllByIsActiveTrueAndIsDeletedFalse();
+    
+    
 
     // ── Find all active paginated ─────────────────────────────────────────
     Page<SosPurchaseOrder> findAllByIsActiveTrueAndIsDeletedFalse(

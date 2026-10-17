@@ -8,8 +8,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -50,7 +52,8 @@ public interface SosRmRequestRepository
     	           po.company_id                   AS companyId,
     	           rr.gin_no                       AS ginNo,
     	           spmt.product_code               AS productCode,
-    	           spmt.product_name               AS productName
+    	           spmt.product_name               AS productName,
+    	           rr.request_by                 AS requestedBy
     	       FROM sos_rm_request_t rr
     	       LEFT JOIN sos_work_order_t wo
     	           ON rr.wo_id = wo.wo_id
@@ -85,4 +88,17 @@ public interface SosRmRequestRepository
     		       WHERE is_deleted = 0
     		       """, nativeQuery = true)
     		Long getNextGinNo();
+    	
+    	
+    	@Query(value = """
+    		    SELECT sos_fg_lot_auto_incre_f(
+    		        NULL,
+    		        :schedule,
+    		        :productionPlan
+    		    )
+    		    """, nativeQuery = true)
+    		String generateFgLotNumber(
+    		        @Param("schedule") LocalDate schedule,
+    		        @Param("productionPlan") Long productionPlan
+    		);
 }

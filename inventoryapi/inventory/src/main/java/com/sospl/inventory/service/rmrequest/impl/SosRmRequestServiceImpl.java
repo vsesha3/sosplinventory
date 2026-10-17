@@ -1,11 +1,13 @@
 package com.sospl.inventory.service.rmrequest.impl;
 
+import com.sospl.inventory.dto.common.DropDownResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
 import com.sospl.inventory.dto.rmrequest.SosRmRequestDto;
 import com.sospl.inventory.dto.rmrequest.SosRmRequestLineDto;
 import com.sospl.inventory.dto.rmrequest.SosRmRequestViewResponse;
 import com.sospl.inventory.model.rmrequest.SosRmRequest;
 import com.sospl.inventory.model.rmrequest.SosRmRequestDetls;
+import com.sospl.inventory.repository.DropDownRepository;
 import com.sospl.inventory.repository.rmrequest.SosRmRequestDetlsRepository;
 import com.sospl.inventory.repository.rmrequest.SosRmRequestRepository;
 import com.sospl.inventory.service.common.impl.BaseMasterServiceImpl;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,13 +37,15 @@ public class SosRmRequestServiceImpl
 
     private final SosRmRequestRepository rmRequestRepository;
     private final SosRmRequestDetlsRepository rmRequestDetlsRepository;
+    private final DropDownRepository dropDownRepository;
 
     public SosRmRequestServiceImpl(
             SosRmRequestRepository repository,
-            SosRmRequestDetlsRepository rmRequestDetlsRepository) {
+            SosRmRequestDetlsRepository rmRequestDetlsRepository,DropDownRepository dropDownRepositor) {
         super(repository);
         this.rmRequestRepository      = repository;
         this.rmRequestDetlsRepository = rmRequestDetlsRepository;
+        this.dropDownRepository = dropDownRepositor;
     }
 
     // ── Save header + lines ───────────────────────────────────────────────
@@ -56,12 +61,29 @@ public class SosRmRequestServiceImpl
                 : new SosRmRequest();
 
         boolean isNew = header.getRmReqId() == null;
+        
+        
 
         // ── Generate gin_no for new records ──────────────────────────────
         if (isNew) {
             Long nextGinNo = rmRequestRepository.getNextGinNo();
             request.setGinNo(String.valueOf(nextGinNo));
             log.info("Generated gin_no: {}", nextGinNo);
+            
+            Long productionPlanId = ParseUtil.parseLong(
+                    request.getProductionPlanId()
+            );
+            LocalDate scheduleDate = ParseUtil.parseDateTime(
+                    request.getScheduleDate()
+            ).toLocalDate();
+
+            
+            String fgLotNumber = rmRequestRepository.generateFgLotNumber(
+                    scheduleDate,
+                    productionPlanId
+            );
+            request.setProductionLotNumber(fgLotNumber);
+
         }
 
         // ── Map header fields ─────────────────────────────────────────────
@@ -248,7 +270,15 @@ public class SosRmRequestServiceImpl
                     
                     res.setGinNo(ParseUtil.toLong(row[15]));
                     res.setProductCode(ParseUtil.toString(row[16]));  // ← new
-                    res.setProductName(ParseUtil.toString(row[17]));  // ← new
+                    res.setProductName(ParseUtil.toString(row[17])); 
+                    List<DropDownResponse> users =
+                            dropDownRepository.getUserListForDropdown(
+                                    ParseUtil.toString(row[18])
+                            );
+                    res.setRequestBy(
+                            users.isEmpty() ? null : users.get(0).getLabel()
+                    );
+                    
                     return res;
                 })
                 .collect(Collectors.toList());

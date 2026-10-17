@@ -19,8 +19,17 @@ interface DropDownOption {
   code?: string;
 }
 
+export type PartnerType = 'SUPPLIER' | 'CUSTOMER' | 'BOTH';
+
+export const PARTNER_TYPE_OPTIONS: { value: PartnerType; label: string }[] = [
+  { value: 'SUPPLIER', label: 'Supplier' },
+  { value: 'CUSTOMER', label: 'Customer' },
+  { value: 'BOTH',     label: 'Both'     },
+];
+
 export interface SupplierMasterFormData {
   supplierId: number | null;
+  partnerType: PartnerType;
   supplierName: string;
   supplierCode: string;
   address: string;
@@ -46,6 +55,7 @@ export interface SupplierMasterFormProps {
 
 const defaultForm: SupplierMasterFormData = {
   supplierId: null,
+  partnerType: 'SUPPLIER',
   supplierName: '',
   supplierCode: 'SOSPLS-',
   address: '',
@@ -65,7 +75,7 @@ const validateForm = (form: SupplierMasterFormData): string[] => {
   const errors: string[] = [];
 
   if (!form.supplierName.trim())
-    errors.push('Supplier Name is required');
+    errors.push('Partner Name is required');
 
   if (!form.address.trim())
     errors.push('Address is required');
@@ -147,6 +157,8 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
           const d = res.data.data ?? res.data;
           setForm({
             supplierId: d.supplierId ?? null,
+            partnerType: d.partnerType === 'CUSTOMER' || d.partnerType === 'BOTH'
+              ? d.partnerType : 'SUPPLIER',
             supplierName: d.supplierName ?? '',
             supplierCode: d.supplierCode ?? '',
             address: d.address ?? '',
@@ -166,7 +178,7 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
           });
         }
       } catch {
-        setFetchError('Failed to load supplier. Please close and try again.');
+        setFetchError('Failed to load business partner. Please close and try again.');
       } finally {
         setLoading(false);
       }
@@ -199,8 +211,8 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
 
   const confirmLabel = mode === 'update' ? 'Update' : 'Submit';
   const headerTitle = mode === 'update' && form.supplierId
-    ? `Edit Supplier — ${form.supplierName || `#${supplierId}`}`
-    : 'New Supplier';
+    ? `Edit Business Partner — ${form.supplierName || `#${supplierId}`}`
+    : 'Add Business Partner';
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -243,7 +255,7 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
             <Center py={80} style={{ flex: 1 }}>
               <Stack align="center" gap="sm">
                 <Loader size="md" />
-                <Text size="sm" c="dimmed">Loading supplier...</Text>
+                <Text size="sm" c="dimmed">Loading business partner...</Text>
               </Stack>
             </Center>
           ) : (
@@ -255,26 +267,38 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
               <Paper withBorder p="md" radius="sm" mb="md"
                 style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
 
-                <Text fw={600} size="sm" mb="md">Supplier Information</Text>
+                <Text fw={600} size="sm" mb="md">Business Partner Information</Text>
 
                 <Grid columns={12} gutter="sm">
 
-                  {/* Row 1: Supplier Code (= supplierId from API) | Supplier Name */}
-                  <Grid.Col span={4}>
+                  {/* Row 1: Partner Type | Partner Code (= supplierId from API) | Partner Name */}
+                  <Grid.Col span={3}>
+                    <FormSelect
+                      label="Partner Type"
+                      value={form.partnerType}
+                      onChange={(value) => {
+                        setForm(prev => ({ ...prev, partnerType: (value as PartnerType) ?? 'SUPPLIER' }));
+                        if (validationErrors.length > 0) setValidationErrors([]);
+                      }}
+                      data={PARTNER_TYPE_OPTIONS}
+                      required
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={3}>
                     <FormTextInput
-                      label="Supplier Code"
+                      label="Partner Code"
                       value={form.supplierId != null ? String(form.supplierId) : ''}
                       onChange={() => { }}
                       placeholder="Auto-generated"
                       readOnly
                     />
                   </Grid.Col>
-                  <Grid.Col span={8}>
+                  <Grid.Col span={6}>
                     <FormTextInput
-                      label="* Supplier Name"
+                      label="Partner Name"
                       value={form.supplierName}
                       onChange={setStr('supplierName')}
-                      placeholder="Supplier Name"
+                      placeholder="Partner Name"
                       required
                     />
                   </Grid.Col>
@@ -288,7 +312,7 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
                         setForm(prev => ({ ...prev, address: e.target.value }));
                         if (validationErrors.length > 0) setValidationErrors([]);
                       }}
-                      placeholder="Enter supplier address"
+                      placeholder="Enter partner address"
                       minRows={2}
                       maxLength={250}
                       autosize
@@ -435,7 +459,7 @@ const SupplierMasterForm: React.FC<SupplierMasterFormProps> = ({
           setConfirmOpen(false);
           onClose();
         }}
-        message={`Are you sure you want to ${confirmLabel.toLowerCase()} this Supplier?`}
+        message={`Are you sure you want to ${confirmLabel.toLowerCase()} this Business Partner?`}
         confirmLabel={confirmLabel}
         errors={validationErrors}
         zIndex={250}

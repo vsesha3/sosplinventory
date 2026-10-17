@@ -24,6 +24,8 @@ import type { PagedApiResponse } from '../../types/api.types';
 
 import SupplierMasterForm, {
   type SupplierMasterFormData,
+  type PartnerType,
+  PARTNER_TYPE_OPTIONS,
 } from './Forms/SupplierMasterForm';
 
 import SaveStatusBanner from '../../pages/common/Savestatusbanner';
@@ -40,6 +42,8 @@ interface Supplier {
   supplierCode: string;
 
   supplierName: string;
+
+  partnerType?: PartnerType | null;
 
   address: string | null;
 
@@ -98,6 +102,12 @@ interface Supplier {
 
 const PAGE_SIZE = 10;
 
+const PARTNER_TYPE_COLORS: Record<PartnerType, string> = {
+  SUPPLIER: 'blue',
+  CUSTOMER: 'teal',
+  BOTH:     'grape',
+};
+
 
 // =============================================================================
 // Columns
@@ -107,14 +117,20 @@ const COLUMNS: ColumnDef[] = [
 
   {
     key: 'supplierCode',
-    label: 'Supplier Code',
+    label: 'Partner Code',
     width: 110,
   },
 
   {
     key: 'supplierName',
-    label: 'Supplier Name',
+    label: 'Partner Name',
     width: 140,
+  },
+
+  {
+    key: 'partnerType',
+    label: 'Partner Type',
+    width: 110,
   },
 
   {
@@ -278,7 +294,7 @@ const SupplierPage: React.FC = () => {
 
         setError(
           (err as any)?.response?.data?.message ||
-          'Failed to fetch suppliers.'
+          'Failed to fetch business partners.'
         );
 
       } finally {
@@ -429,7 +445,7 @@ const SupplierPage: React.FC = () => {
     if (selected.length !== 1) {
 
       setError(
-        'Please select exactly one supplier to edit.'
+        'Please select exactly one business partner to edit.'
       );
 
       return;
@@ -465,7 +481,7 @@ const SupplierPage: React.FC = () => {
     }
 
     setSaveStatus('success');       // ← add
-    setSaveMessage(formMode === 'create' ? 'Supplier created!' : 'Supplier updated!');  // ← add
+    setSaveMessage(formMode === 'create' ? 'Business Partner created!' : 'Business Partner updated!');
     setFormOpened(false);
     setEditingSupplierId(null);
     await fetchData(page, keyword);
@@ -473,13 +489,13 @@ const SupplierPage: React.FC = () => {
   } catch (err: any) {
     console.error('[Supplier Save]', err);
     setSaveStatus('error');         // ← add
-    setSaveMessage(               // ← add
+    setSaveMessage(
       err?.response?.data?.message ||
-      `Failed to ${formMode === 'create' ? 'create' : 'update'} supplier.`
+      `Failed to ${formMode === 'create' ? 'create' : 'update'} business partner.`
     );
     setError(
       err?.response?.data?.message ||
-      `Failed to ${formMode === 'create' ? 'create' : 'update'} supplier.`
+      `Failed to ${formMode === 'create' ? 'create' : 'update'} business partner.`
     );
   }
 };
@@ -494,7 +510,7 @@ const SupplierPage: React.FC = () => {
     if (selected.length === 0) {
 
       setError(
-        'Please select at least one supplier.'
+        'Please select at least one business partner.'
       );
 
       return;
@@ -537,7 +553,7 @@ const SupplierPage: React.FC = () => {
 
       setError(
         err?.response?.data?.message ||
-        'Failed to delete supplier.'
+        'Failed to delete business partner.'
       );
     }
   };
@@ -597,6 +613,23 @@ const SupplierPage: React.FC = () => {
 
           <Table.Td fw={500}>
             {item.supplierName}
+          </Table.Td>
+
+
+          <Table.Td>
+            {item.partnerType
+              ? (
+                <Badge
+                  variant="light"
+                  color={PARTNER_TYPE_COLORS[item.partnerType] ?? 'gray'}
+                  size="sm"
+                >
+                  {PARTNER_TYPE_OPTIONS.find(o => o.value === item.partnerType)?.label
+                    ?? item.partnerType}
+                </Badge>
+              )
+              : <Text c="dimmed" size="sm">—</Text>
+            }
           </Table.Td>
 
 
@@ -719,14 +752,14 @@ const SupplierPage: React.FC = () => {
       <Box mb="md">
 
         <Title order={3}>
-          Supplier Master
+          Business Partner Master
         </Title>
 
         <Text
           c="dimmed"
           size="sm"
         >
-          Manage Supplier Master records
+          Manage suppliers and customers
         </Text>
 
       </Box>

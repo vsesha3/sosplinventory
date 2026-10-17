@@ -95,7 +95,7 @@ const navGroups = [
     items: [
       { label: 'Product Master',          path: '/masters/product',          icon: <IconBox size={17} /> },
       { label: 'Raw Material Master',     path: '/masters/raw-material',     icon: <IconAtom size={17} /> },
-      { label: 'Supplier Master',         path: '/masters/supplier',         icon: <IconBuildingStore size={17} /> },
+      { label: 'Business Partner Master', path: '/masters/supplier',        icon: <IconBuildingStore size={17} /> },
       //{ label: 'Capital Goods Master',    path: '/masters/capital-goods',    icon: <IconBuildingWarehouse size={17} /> }, 
       { label: 'Lab Test Master',         path: '/masters/lab-test',         icon: <IconFlask size={17} /> },
       //{ label: 'Subitem Master',          path: '/masters/subitem',          icon: <IconReceipt size={17} /> },

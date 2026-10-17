@@ -113,6 +113,7 @@ public class SosSupplierViewServiceImpl implements SosSupplierViewService {
         response.setContactPerson(entity.getContactPerson());
         response.setContactMobile(entity.getContactMobile());
         response.setGstNo(entity.getGstNo());
+        response.setPartnerType(entity.getPartnerType());
         return response;
     }
     

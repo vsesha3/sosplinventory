@@ -35,13 +35,14 @@ const PAGE_SIZE = 10;
 
 const COLUMNS: ColumnDef[] = [
   { key: 'poId',           label: 'PO Id',           width: 90  },
-  { key: 'poNumber',       label: 'Sales Order No',  width: 160 },
-  { key: 'inwardType',     label: 'Inward Type',     width: 120 },
+  { key: 'poNumber',       label: 'Sales Order Reference No', width: 180 },
+  { key: 'inwardType',     label: 'Sales Order Type',         width: 130 },
+  { key: 'partnerName',    label: 'Customer',        width: 180 },
   { key: 'companyName',    label: 'Company',         width: 180 },
   { key: 'ordDate',        label: 'Order Date',      width: 120 },
   { key: 'ordDeliveryDate',label: 'Delivery Date',   width: 120 },
   { key: 'partialPoFlag',  label: 'Partial PO',      width: 100 },
-  { key: 'createdBy',      label: 'Created By',      width: 120 },
+  { key: 'requestedBy',    label: 'Requested By',    width: 140 },
   { key: 'createdAt',      label: 'Created At',      width: 130 },
 ];
 
@@ -95,6 +96,21 @@ const SalesOrderPage: React.FC = () => {
 
   const [saveStatus, setSaveStatus]       = useState<SaveStatus>('idle');
   const [saveMessage, setSaveMessage]     = useState('');
+
+  // Requested By: employee code → name, from the same list the form's dropdown uses
+  const [userNames, setUserNames]         = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    api.get('/api/dropdown/user-list')
+      .then(res => {
+        const map: Record<string, string> = {};
+        (res.data?.data ?? []).forEach((o: any) => {
+          if (o?.value != null) map[String(o.value)] = String(o.label ?? '');
+        });
+        setUserNames(map);
+      })
+      .catch(() => setUserNames({}));   // falls back to showing the code
+  }, []);
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
 
@@ -257,6 +273,7 @@ const fetchWorkOrders = useCallback(
               <Text c="dimmed" size="sm">—</Text>
             )}
           </Table.Td>
+          <Table.Td>{dash(item.partnerName)}</Table.Td>
           <Table.Td>{dash(item.companyName)}</Table.Td>
           <Table.Td>{fmtDate(item.ordDate)}</Table.Td>
           <Table.Td>{fmtDate(item.ordDeliveryDate)}</Table.Td>
@@ -271,7 +288,12 @@ const fetchWorkOrders = useCallback(
               <Text c="dimmed" size="sm">—</Text>
             )}
           </Table.Td>
-          <Table.Td>{dash(item.createdBy)}</Table.Td>
+          <Table.Td>
+            {/* Employee name from user-list, otherwise the code (e.g. SOSPL-0298) */}
+            {dash(item.requestedBy != null
+              ? (userNames[String(item.requestedBy)] || String(item.requestedBy))
+              : null)}
+          </Table.Td>
           <Table.Td>{fmtDate(item.createdAt ?? null)}</Table.Td>
         </>
       }

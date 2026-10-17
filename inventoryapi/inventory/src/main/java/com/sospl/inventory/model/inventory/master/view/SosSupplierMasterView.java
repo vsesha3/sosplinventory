@@ -47,7 +47,8 @@ import java.time.LocalDateTime;
             COALESCE(s.e_mailid, '-')                   AS e_mailid,
             COALESCE(s.contact_person, '-')             AS contact_person,
             COALESCE(s.contact_mobile, '-')             AS contact_mobile,
-            COALESCE(s.gst_no, '-')             AS gst_no
+            COALESCE(s.gst_no, '-')             AS gst_no,
+             COALESCE(s.partner_type, 'SUPPLIER')        AS partner_type
         FROM sos_supplier_master_t s
         LEFT JOIN sos_country_master_t c
             ON s.country_id = c.country_id
@@ -153,8 +154,14 @@ public class SosSupplierMasterView {
     
     @Column(name="gst_no")
     private String gstNo;
+    
+    @Column(name="partner_type")
+   private String partnerType;
 
-    public Long getSupplierId() { return supplierId; }
+    public String getPartnerType() {
+		return partnerType;
+	}
+	public Long getSupplierId() { return supplierId; }
     public String getSupplierName() { return supplierName; }
     public String getSupplierCode() { return supplierCode; }
     public String getAddress() { return address; }

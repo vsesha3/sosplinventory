@@ -32,10 +32,18 @@ public class SosSupplierMasterVResponse {
     private LocalDateTime createdOn;
     private String        lastUpdatedBy;
     private LocalDateTime lastUpdatedOn;
+    
+    private String    partnerType;
 
     // ── Getters & Setters ─────────────────────────────────────────────────────
 
-    public Long getSupplierId() { return supplierId; }
+    public String getPartnerType() {
+		return partnerType;
+	}
+	public void setPartnerType(String partnerType) {
+		this.partnerType = partnerType;
+	}
+	public Long getSupplierId() { return supplierId; }
     public void setSupplierId(Long supplierId) { this.supplierId = supplierId; }
 
     public String getSupplierCode() { return supplierCode; }

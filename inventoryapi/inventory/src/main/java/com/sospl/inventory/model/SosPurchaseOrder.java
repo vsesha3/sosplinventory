@@ -7,7 +7,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.Formula;
 
 @Entity
 @Table(name = "sos_purchase_order_t")
@@ -40,8 +44,26 @@ public class SosPurchaseOrder extends BaseAuditEntity {
     
     @Column(name = "inward_type", length = 20)
     private String inwardType;
-
-    public String getRequestedBy() {
+    
+    @Column(name = "partner_code", length = 20)
+    private String partnerCode;
+    
+    @Formula("(SELECT m.misc_name FROM sos_misc_master_t m WHERE m.misc_id = company_id)")
+    private String companyName;
+    
+    @Formula("(SELECT s.supplier_name FROM sos_supplier_master_t s WHERE s.supplier_id = partner_code)")
+    private String partnerName;
+    
+    @Formula("""
+    	    (SELECT e.employee_name
+    	     FROM sospl_attendancedev.sospl_employee_data e
+    	     WHERE e.employee_id = requested_by)
+    	    """)
+	private String requestedByName;
+    
+    
+   
+	public String getRequestedBy() {
 		return requestedBy;
 	}
 	public void setRequestedBy(String requestedBy) {
@@ -65,4 +87,11 @@ public class SosPurchaseOrder extends BaseAuditEntity {
     
     public String getInwardType() { return inwardType; }
     public void setInwardType(String inwardType) { this.inwardType = inwardType; }
+    public String getPartnerCode() {return partnerCode;	}
+	public void setPartnerCode(String partnerCode) {this.partnerCode = partnerCode;	}
+	
+	public String getCompanyName() { return companyName; }
+	public String getPartnerName() { return partnerName; }
+	public String getRequestedByName() { return requestedByName; }
+	
 }

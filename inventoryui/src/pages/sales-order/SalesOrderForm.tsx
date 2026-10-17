@@ -81,6 +81,11 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [companyOptions, setCompanyOptions] = useState<DropDownOption[]>([]);
   const [userOptions, setUserOptions] = useState<DropDownOption[]>([]);
+  const [customerOptions, setCustomerOptions] = useState<DropDownOption[]>([]);
+
+  // ── QuickAdd: Customer ────────────────────────────────────────────────────
+  const [addCustomerOpen, setAddCustomerOpen] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
   // ── QuickAdd: Company ─────────────────────────────────────────────────────
   const [addCompanyOpen, setAddCompanyOpen] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
@@ -114,14 +119,17 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
     const load = async () => {
       setLoading(true);
       try {
-        const [companyRes, userRes] = await Promise.all([
+        const [companyRes, userRes, customerRes] = await Promise.all([
           api.get('/api/dropdown/company-list')
             .catch(() => ({ data: { data: [] } })),
           api.get('/api/dropdown/user-list')
             .catch(() => ({ data: { data: [] } })),
+          api.get('/api/dropdown/customer-list')
+            .catch(() => ({ data: { data: [] } })),
         ]);
         setCompanyOptions(toOptions(companyRes.data.data));
         setUserOptions(toOptions(userRes.data.data));
+        setCustomerOptions(toOptions(customerRes.data.data));
 
         if (mode === 'update' && poId) {
           const [soRes] = await Promise.all([
@@ -192,6 +200,51 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
       console.error('[handleAddCompany] Failed:', err?.response?.data ?? err);
       setFetchError(
         err?.response?.data?.message || 'Failed to add Company. Please try again.'
+      );
+    } finally {
+      setQuickSaving(false);
+    }
+  };
+
+  const handleAddCustomer = async () => {
+    const name = newCustomerName.trim();
+    if (!name) return;
+    setQuickSaving(true);
+    try {
+      const res = await api.post('/api/supplier', {
+        partnerType:  'CUSTOMER',
+        supplierName: name,
+        isActive:     true,   // dropdowns list active records only
+      });
+      const created = res.data?.data ?? res.data;
+      const createdId = created?.supplierId ?? created?.id ?? null;
+
+      // Refresh customer dropdown
+      const customerRes = await api.get('/api/dropdown/customer-list')
+        .catch(() => ({ data: { data: [] } }));
+      let updated = toOptions(customerRes.data.data);
+
+      // Auto-select the new customer — by returned id first, then by name
+      let match = (createdId != null ? updated.find(o => o.value === String(createdId)) : undefined)
+        ?? updated.find(o => o.label.trim().toLowerCase() === name.toLowerCase());
+
+      // Not in the refreshed list yet — add it so the Select can show it
+      if (!match && createdId != null) {
+        match = { value: String(createdId), label: created?.supplierName ?? name };
+        updated = [...updated, match];
+      }
+
+      setCustomerOptions(updated);
+      if (match) {
+        const partnerCode = match.value;
+        setForm(prev => ({ ...prev, partnerCode }));
+      }
+      setNewCustomerName('');
+      setAddCustomerOpen(false);
+    } catch (err: any) {
+      console.error('[handleAddCustomer] Failed:', err?.response?.data ?? err);
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add Customer. Please try again.'
       );
     } finally {
       setQuickSaving(false);
@@ -339,8 +392,8 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                 style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
                 <Grid columns={12} gutter="sm">
 
-                  {/* PO Id | Inward Type | Sales Order No */}
-                  <Grid.Col span={4}>
+                  {/* ── Row 1: PO Id | Sales Order Type | Sales Order Reference No | Customer ── */}
+                  <Grid.Col span={2}>
                     <FormTextInput
                       label="PO Id"
                       value={form.poId ? String(form.poId) : '—'}
@@ -348,11 +401,11 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                       readOnly
                     />
                   </Grid.Col>
-                  <Grid.Col span={4}>
+                  <Grid.Col span={3}>
                     {/* Job Order → JOBINWARD, By PO → BYPO. Optional and editable for now —
                         to be locked once the WO reaches material issue (handled there later). */}
                     <FormSelect
-                      label="Inward Type"
+                      label="Sales Order Type"
                       value={form.inwardType}
                       onChange={(value) =>
                         setForm(prev => ({ ...prev, inwardType: value as InwardType | null }))}
@@ -361,17 +414,43 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                       clearable
                     />
                   </Grid.Col>
-                  <Grid.Col span={4}>
+                  <Grid.Col span={3}>
                     <FormTextInput
-                      label="Sales Order No"
+                      label="Sales Order Reference No"
                       value={form.poNumber}
                       onChange={setStr('poNumber')}
-                      placeholder="Enter sales order number"
+                      placeholder="Enter reference number"
                     />
                   </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+                        <FormSelect
+                          label="Customer"
+                          value={form.partnerCode}
+                          onChange={setSelect('partnerCode')}
+                          data={customerOptions}
+                          placeholder="--------Select----------"
+                          searchable
+                          clearable
+                        />
+                      </Box>
+                      <Tooltip label="Add new Customer" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewCustomerName(''); setAddCustomerOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
+                  </Grid.Col>
 
-                  {/* Company */}
-                  <Grid.Col span={12}>
+                  {/* ── Row 2: Company | Order Date | Delivery Date ── */}
+                  <Grid.Col span={4}>
                     <Group gap="xs" align="flex-end">
                       <Box style={{ flex: 1 }}>
                         <FormSelect
@@ -397,9 +476,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                       </Tooltip>
                     </Group>
                   </Grid.Col>
-
-                  {/* Order Date | Delivery Date */}
-                  <Grid.Col span={6}>
+                  <Grid.Col span={4}>
                     <FormDatePicker
                       label="* Order Date"
                       value={form.ordDate}
@@ -407,7 +484,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                       required
                     />
                   </Grid.Col>
-                  <Grid.Col span={6}>
+                  <Grid.Col span={4}>
                     <FormDatePicker
                       label="* Delivery Date"
                       value={form.ordDeliveryDate}
@@ -416,7 +493,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                     />
                   </Grid.Col>
 
-                  {/* Partial PO | Requested By */}
+                  {/* ── Row 3: Partial PO | Requested By ── */}
                   <Grid.Col span={6}>
                     <FormSelect
                       label="* Partial PO"
@@ -595,6 +672,18 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
         value={newCompanyName}
         onChange={setNewCompanyName}
         onSave={handleAddCompany}
+        saving={quickSaving}
+      />
+
+      {/* ── QuickAdd: Customer ── */}
+      <QuickAddModal
+        opened={addCustomerOpen}
+        onClose={() => setAddCustomerOpen(false)}
+        title="Add Customer"
+        label="Customer Name"
+        value={newCustomerName}
+        onChange={setNewCustomerName}
+        onSave={handleAddCustomer}
         saving={quickSaving}
       />
     </>
