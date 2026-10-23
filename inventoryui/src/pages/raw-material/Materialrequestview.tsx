@@ -12,6 +12,8 @@ import MaterialRequestForm from './MaterialRequestForm';
 import type { MaterialRequestFormData } from '../../types/MaterialRequest.types';
 import type { RmRequestApiData } from '../../types/MaterialRequest.types';
 import { mapRmRequest } from '../../types/MaterialRequest.types';
+import type { SaveStatus } from '../common/Savestatusbanner';
+import SaveStatusBanner from '../common/Savestatusbanner';
 
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -28,6 +30,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'scheduleDate',  label: 'Schedule Date',          width: 120 },
   { key: 'productName',   label: 'Product Name',           width: 220 },
   { key: 'woCode',        label: 'WO Code',                width: 150 },
+  { key: 'productionLotNumber', label: 'Production Lot No', width: 150 },
   { key: 'planToProdQty', label: 'Plan To Product Quantity', width: 170, align: 'right' },
   { key: 'requestBy',     label: 'Request By',             width: 120 },
   { key: 'ginNo',         label: 'GIN No',                 width: 90, align: 'right' },
@@ -65,6 +68,10 @@ const MaterialRequestView: React.FC = () => {
   const [formOpen, setFormOpen]   = useState(false);
   const [formMode, setFormMode]   = useState<'create' | 'update'>('create');
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  // ── Save progress banner ──────────────────────────────────────────────────
+  const [saveStatus, setSaveStatus]   = useState<SaveStatus>('idle');
+  const [saveMessage, setSaveMessage] = useState('');
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
 
@@ -155,7 +162,8 @@ const MaterialRequestView: React.FC = () => {
   };
 
   const handleSave = async (formData: MaterialRequestFormData) => {
-   
+    if (saveStatus === 'saving') return;   // ignore double submit
+    setSaveStatus('saving');
     try {
       const payload = {
         rmReqId:             formData.rmReqId,
@@ -182,33 +190,26 @@ const MaterialRequestView: React.FC = () => {
 
       if (formMode === 'update' && formData.rmReqId) {
         await api.put(`/api/inventory/rm-request/${formData.rmReqId}`, payload);
-        notifications.show({
-          color:   'green',
-          title:   'Updated',
-          message: 'Material Request updated successfully',
-        });
       } else {
-        
         await api.post('/api/inventory/rm-request/save', payload);
-        notifications.show({
-          color:   'green',
-          title:   'Created',
-          message: 'Material Request created successfully',
-        });
       }
 
+      setSaveStatus('success');
+      setSaveMessage(
+        formMode === 'update'
+          ? 'Material Request updated successfully!'
+          : 'Material Request created successfully!'
+      );
       setFormOpen(false);
       setSelected([]);
       await fetchData(page, keyword);
     } catch (err: unknown) {
-      
-      notifications.show({
-        color: 'red',
-        title: 'Save failed',
-        message:
-          (err as any)?.response?.data?.message ||
-          'Failed to save Material Request',
-      });
+      // Form stays open so the user can fix and retry
+      setSaveStatus('error');
+      setSaveMessage(
+        (err as any)?.response?.data?.message ||
+        'Failed to save Material Request.'
+      );
     }
   };
 
@@ -248,6 +249,11 @@ const MaterialRequestView: React.FC = () => {
         {/* WO Code */}
         <Table.Td>
           <Text size="xs">{dash(item.woCode)}</Text>
+        </Table.Td>
+
+        {/* Production Lot Number */}
+        <Table.Td>
+          <Text size="xs" fw={500}>{dash(item.productionLotNumber)}</Text>
         </Table.Td>
 
         {/* Plan To Product Quantity */}
@@ -335,6 +341,17 @@ const MaterialRequestView: React.FC = () => {
         mode={formMode}
         rmReqId={editingId}
         onSave={handleSave}
+        saving={saveStatus === 'saving'}
+      />
+
+      <SaveStatusBanner
+        status={saveStatus}
+        savingMessage={formMode === 'update'
+          ? 'Updating Material Request, please wait...'
+          : 'Saving Material Request, please wait...'}
+        successMessage={saveMessage}
+        errorMessage={saveMessage}
+        onDismiss={() => setSaveStatus('idle')}
       />
 
     </Box>

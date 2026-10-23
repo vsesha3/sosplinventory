@@ -5,6 +5,7 @@ import {
   Burger, Divider, Avatar,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import { clearAuth, getUser } from '../../utils/tokenUtils';
 
 /*
 
@@ -133,10 +134,7 @@ const AppLayout: React.FC = () => {
   const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
   const [openGroups, setOpenGroups] = useState<string[]>(['User Management']);
 
-  const user = (() => {
-    try { return JSON.parse(localStorage.getItem('user') || '{}'); }
-    catch { return {}; }
-  })();
+  const user: any = getUser();
 
   const pageTitle = getPageTitle(location.pathname);
 
@@ -150,8 +148,7 @@ const AppLayout: React.FC = () => {
     items.some((item) => location.pathname.startsWith(item.path));
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearAuth();
     navigate('/login');
   };
 

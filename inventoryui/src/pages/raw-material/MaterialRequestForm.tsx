@@ -2,8 +2,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box, Paper, Text, Group, Button,
-  Grid, Badge, Stack, Loader, Center, Table, Checkbox,
+  Grid, Badge, Stack, Loader, Center, Table, Checkbox, Tooltip, ActionIcon,
 } from '@mantine/core';
+import { IconListSearch, IconX } from '@tabler/icons-react';
+import ProductionPlanPickerModal from '../Operations/ProductionPlanPickerModal';
+import type { ProductionPlanApiData } from '../../types/production.types';
+import type { DateValue } from '@mantine/dates';
 import { Modal } from '@mantine/core';
 import api from '../../services/api';
 
@@ -105,21 +109,26 @@ const STOCK_COLUMNS: ColumnDef[] = [
   { key: 'invoiceNo', label: 'Invoice No', width: 130 },
 ];
 
+// Raw fields first, normalised fields after — so the normalised values win.
+// product-pm-mapping/wo returns the PM name as `rmName` and no pmCode → fall back.
 const mapPmDetail = (raw: any): PmPackingDetail => ({
+  ...raw,
   woId: raw.woId != null ? Number(raw.woId) : null,
   pmId: raw.pmId != null ? Number(raw.pmId) : null,
-  pmCode: raw.pmCode != null ? String(raw.pmCode) : null,
-  pmName: raw.pmName ?? null,
+  pmCode: raw.pmCode != null ? String(raw.pmCode)
+        : raw.pmId != null ? String(raw.pmId) : null,
+  pmName: raw.pmName ?? raw.rmName ?? null,
   pmSize: raw.pmSize != null ? Number(raw.pmSize) : null,
   pmQty: extractDecimal(raw.pmQty),
   pmUom: raw.pmUom ?? null,
   description: raw.description ?? null,
   avgRate: raw.avgRate != null ? Number(raw.avgRate) : null,
   fgLotCode: raw.fgLotCode ?? null,
-  ...raw,
 });
 
 // ── RM Mapping columns ────────────────────────────────────────────────────────
+
+const RM_PAGE_SIZE = 5;
 
 const RM_COLUMNS: ColumnDef[] = [
   { key: 'rmCode', label: 'RM Code', width: 90 },
@@ -142,6 +151,7 @@ export interface MaterialRequestFormProps {
   onClose: () => void;
   mode?: 'create' | 'update';
   rmReqId?: number | null;
+  saving?: boolean;   // true while the parent is saving — shows a loading Save button
 }
 
 // ── Work order details (product / vessel / lot) — display only ───────────────
@@ -181,6 +191,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
   onClose,
   mode = 'create',
   rmReqId = null,
+  saving = false,
 }) => {
 
   const [form, setForm] = useState<MaterialRequestFormData>({ ...defaultForm, ...initialData });
@@ -188,6 +199,144 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
     workOrderOptions: [] as DropDownOption[],
     employeeOptions: [] as DropDownOption[],
   });
+
+  // ── Production Plan ───────────────────────────────────────────────────────
+  // The plan drives the form: it sets the Work Order (→ wo-details as before) and
+  // the allowed Schedule Date range (plan From – To). Nothing else is editable until
+  // a plan is selected.
+  const [planPickerOpen, setPlanPickerOpen]   = useState(false);
+  const [pickedPlanLabel, setPickedPlanLabel] = useState('');
+  const [planRange, setPlanRange] = useState<{ from: Date | null; to: Date | null }>(
+    { from: null, to: null });
+  const [planLoading, setPlanLoading] = useState(false);
+  // From the plan itself — the WO dropdown can't be used (it omits fully planned WOs)
+  const [planQty, setPlanQty]       = useState<number | null>(null);
+  const [planWoCode, setPlanWoCode] = useState('');
+  const [planVessel, setPlanVessel] = useState('');   // the plan's vessel (plan-specific)
+
+  const planChosen = form.productionPlanId != null;
+
+  // Start of day, so range checks ignore the time part
+  const dayStart = (v: string | Date | null | undefined): Date | null => {
+    if (!v) return null;
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const inPlanRange = (v: DateValue | null | undefined): boolean => {
+    const d = dayStart(v as Date | null);
+    if (!d) return true;
+    if (planRange.from && d < planRange.from) return false;
+    if (planRange.to && d > planRange.to) return false;
+    return true;
+  };
+
+  const handlePlanPicked = (plan: ProductionPlanApiData) => {
+    const from = dayStart(plan.productionFromDate);
+    const to   = dayStart(plan.productionToDate);
+    const woId = plan.woId != null ? String(plan.woId) : null;
+
+    setPickedPlanLabel(`#${plan.productionPlanId}${plan.woCode ? ` — ${plan.woCode}` : ''}`);
+    setPlanRange({ from, to });
+    setPlanQty(plan.qty);
+    setPlanWoCode(plan.woCode ?? '');
+    setPlanVessel(plan.vesselName ?? '');
+
+    // New plan → new work order: reset everything that depended on the old one
+    setForm(prev => {
+      const sd = dayStart(prev.scheduleDate as Date | null);
+      const keepSchedule = sd != null
+        && (!from || sd >= from) && (!to || sd <= to);
+      return {
+        ...prev,
+        productionPlanId:    plan.productionPlanId,
+        woId,
+        planToProdQty:       '',
+        productionLotNumber: '',
+        scheduleDate:        keepSchedule ? prev.scheduleDate : null,
+      };
+    });
+    setRmLines([]);
+    setPmLines([]);
+    setPmRawResponse(null);
+    setRmStock([]);
+    setSelectedRmId(null);
+    setSelectedRmCode(null);
+    setValidationErrors([]);
+
+    loadWoDetails(woId);   // product / product code / vessel — previous workflow
+  };
+
+  const clearPlan = () => {
+    setPickedPlanLabel('');
+    setPlanRange({ from: null, to: null });
+    setPlanQty(null);
+    setPlanWoCode('');
+    setPlanVessel('');
+    setForm(prev => ({
+      ...prev,
+      productionPlanId: null, woId: null, planToProdQty: '',
+      productionLotNumber: '', scheduleDate: null,
+    }));
+    setRmLines([]);
+    setPmLines([]);
+    setPmRawResponse(null);
+    setRmStock([]);
+    setSelectedRmId(null);
+    setSelectedRmCode(null);
+    loadWoDetails(null);
+  };
+
+  // Edit mode: the request only stores productionPlanId + woId. Rebuild what the picker
+  // gives us — date range, plan qty, WO code — from the plan and WO APIs.
+  const loadPlanForEdit = async (planId: number, woId: number | null) => {
+    setPlanLoading(true);
+    try {
+      const [planRes, woRes] = await Promise.allSettled([
+        api.get(`/api/inventory/production-plan/${planId}`),
+        woId != null ? api.get(`/api/inventory/work-order/${woId}`) : Promise.reject(),
+      ]);
+
+      const plan = planRes.status === 'fulfilled'
+        ? (planRes.value.data?.data ?? planRes.value.data) : null;
+      if (plan) {
+        setPlanRange({ from: dayStart(plan.productionFromDate), to: dayStart(plan.productionToDate) });
+        setPlanQty(extractDecimal(plan.qty));
+      }
+
+      // WO code
+      const wo = woRes.status === 'fulfilled' ? (woRes.value.data?.data ?? woRes.value.data) : null;
+      const woCode = wo?.woCode ?? plan?.woCode ?? '';
+      if (woCode) setPlanWoCode(String(woCode));
+
+      // Vessel — only if the plan API sends the name. Otherwise the Vessel field uses
+      // /api/misc/wo-details (same source as on plan selection). Don't look up vesselId
+      // in vessel-list: it only holds VESSEL misc rows, so older ids map to the wrong name.
+      setPlanVessel(plan?.vesselName ?? '');
+    } catch (err: any) {
+      console.warn('[loadPlanForEdit] Failed:', err?.response?.data ?? err);
+    } finally {
+      setPlanLoading(false);
+    }
+  };
+
+  // Work Order text: plan's WO code → dropdown label → WO id
+  const woDisplay = !form.woId
+    ? ''
+    : planWoCode
+      || dropdowns.workOrderOptions.find(o => o.value === form.woId)?.label
+      || `WO #${form.woId}`;
+
+  // Text shown in the Production Plan box: picked label → "#id — WO code" (edit mode)
+  const planLabel = !planChosen
+    ? ''
+    : pickedPlanLabel
+      || [
+        `#${form.productionPlanId}`,
+        planWoCode || dropdowns.workOrderOptions.find(o => o.value === form.woId)?.label,
+      ].filter(Boolean).join(' — ');
   const [formLoading, setFormLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -195,6 +344,10 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
 
   // ── RM Mapping state ──────────────────────────────────────────────────────
   const [rmLines, setRmLines] = useState<RmMappingLine[]>([]);
+  const [rmPage, setRmPage]   = useState(1);
+
+  // Back to page 1 whenever the RM mapping is reloaded
+  useEffect(() => { setRmPage(1); }, [rmLines]);
   const [rmLoading, setRmLoading] = useState(false);
 
   // ── PM Packing state ──────────────────────────────────────────────────────
@@ -243,10 +396,6 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
     }
   };
 
-  const handleWoChange = (value: string | null) => {
-    setForm(prev => ({ ...prev, woId: value, productionLotNumber: '' }));
-    loadWoDetails(value);
-  };
 
 
   const [rmStock, setRmStock] = useState<RmStockLine[]>([]);
@@ -313,10 +462,12 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
     setPmLoading(true);
     try {
       // ── Fire all three calls in parallel ────────────────────────────────
+      // Lot number: new request → generated; existing request (rmReqId) → its saved lot
+      const lotParams = mode === 'update' && rmReqId ? { rmReqId } : undefined;
       const [rmRes, lotRes, pmRes] = await Promise.allSettled([
         api.get(`/api/inventory/product-rm-mapping/wo/${woId}`, { params: { qty } }),
-        api.get(`/api/inventory/lot-number/generate/${woId}`, { params: { woId } }),
-        api.get(`/api/pm/wo/${woId}`),
+        api.get(`/api/misc/wo-details/${woId}`, { params: lotParams }),
+        api.get(`/api/inventory/product-pm-mapping/wo/${woId}`),
       ]);
 
       // ── RM Mapping ───────────────────────────────────────────────────────
@@ -333,15 +484,17 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
 
       // ── Lot Number — auto-fill productionLotNumber ───────────────────────
       if (lotRes.status === 'fulfilled') {
-        const lotData = lotRes.value.data?.data ?? lotRes.value.data;
+        // Accepts a plain string, an object, or a one-item array
+        const rawLot  = lotRes.value.data?.data ?? lotRes.value.data;
+        const lotData = Array.isArray(rawLot) ? rawLot[0] : rawLot;
         const lotNumber = typeof lotData === 'string'
           ? lotData
-          : lotData?.lotNumber ?? lotData?.generatedLotNumber ?? '';
+          : lotData?.productionLotNumber ?? lotData?.lotNumber ?? lotData?.generatedLotNumber ?? '';
         if (lotNumber) {
           setForm(prev => ({ ...prev, productionLotNumber: String(lotNumber) }));
         }
       } else {
-        console.warn('Lot number generation failed:', lotRes.reason);
+        console.warn('Lot number fetch failed:', lotRes.reason);
       }
 
       // ── PM Packing Details ───────────────────────────────────────────────
@@ -399,7 +552,10 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
         const apiData = results[2] as MaterialRequestApiData;
         const mapped = mapApiToForm(apiData);
         setForm(mapped);
-        // Edit mode: wo-details is keyed by the request's production plan id
+        // Schedule Date range comes from the saved plan
+        if (apiData.productionPlanId != null) {
+          loadPlanForEdit(apiData.productionPlanId, apiData.woId ?? null);
+        }
         if (apiData.woId != null) loadWoDetails(String(apiData.woId));
         // Auto-load RM mapping if we have woId and qty
         if (apiData.woId && apiData.planToProdQty) {
@@ -428,6 +584,13 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
       setSelectedRmId(null);
       setSelectedRmCode(null);
       latestWoRef.current = null;
+      setPlanPickerOpen(false);
+      setPickedPlanLabel('');
+      setPlanRange({ from: null, to: null });
+      setPlanLoading(false);
+      setPlanQty(null);
+      setPlanWoCode('');
+      setPlanVessel('');
       setWoDetails({ ...emptyWoDetails });
       setWoDetailsLoading(false);
       return;
@@ -439,28 +602,25 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
 
   // ── Remaining Plan Qty ────────────────────────────────────────────────────
 
+  // Based on the selected production plan's qty (not the WO dropdown, which only
+  // lists work orders with unplanned qty and so misses fully planned ones).
   const remainingPlanQty = useMemo(() => {
-    if (!form.woId) return '';
-    const wo = dropdowns.workOrderOptions.find(opt => opt.value === form.woId);
-    if (!wo || wo.quantity == null) return '';
-    const remaining = Number(wo.quantity) - (Number(form.planToProdQty) || 0);
+    if (!planChosen || planQty == null) return '';
+    const remaining = planQty - (Number(form.planToProdQty) || 0);
     return String(remaining);
-  }, [form.woId, form.planToProdQty, dropdowns.workOrderOptions]);
+  }, [planChosen, planQty, form.planToProdQty]);
 
   // ── Qty validation ────────────────────────────────────────────────────────
 
   const validateQty = (value: string): string[] => {
     const errors: string[] = [];
-    if (!form.woId)
-      errors.push('Please select a Work Order first');
+    if (!planChosen || !form.woId)
+      errors.push('Please select a Production Plan first');
     const entered = Number(value) || 0;
-    const remaining = Number(
-      dropdowns.workOrderOptions.find(o => o.value === form.woId)?.quantity ?? 0
-    );
     if (entered <= 0)
       errors.push('Quantity must be greater than 0');
-    if (form.woId && entered > remaining)
-      errors.push(`Quantity cannot exceed remaining plan qty (${remaining})`);
+    if (planQty != null && entered > planQty)
+      errors.push(`Quantity cannot exceed the plan qty (${planQty})`);
     return errors;
   };
 
@@ -499,8 +659,14 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
 
   const validateForm = (): string[] => {
     const errors: string[] = [];
+    if (!planChosen) errors.push('Production Plan is required');
     if (!form.rmReqDate) errors.push('Request Date is required');
     if (!form.scheduleDate) errors.push('Schedule Date is required');
+    else if (!inPlanRange(form.scheduleDate)) {
+      const f = (d: Date | null) => d ? d.toLocaleDateString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+      errors.push(`Schedule Date must be within the production plan (${f(planRange.from)} – ${f(planRange.to)})`);
+    }
     if (!form.woId) errors.push('Work Order is required');
     if (!form.planToProdQty || parseFloat(form.planToProdQty) <= 0)
       errors.push('Request Quantity must be greater than 0');
@@ -518,7 +684,12 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
 
   // ── RM Mapping rows ───────────────────────────────────────────────────────
 
-  const rmRows = rmLines.map(item => {
+  // RM Mapping is paged client-side — RM_PAGE_SIZE rows per page
+  const rmTotalPages = Math.max(1, Math.ceil(rmLines.length / RM_PAGE_SIZE));
+  const rmPageSafe   = Math.min(rmPage, rmTotalPages);
+  const rmPageLines  = rmLines.slice((rmPageSafe - 1) * RM_PAGE_SIZE, rmPageSafe * RM_PAGE_SIZE);
+
+  const rmRows = rmPageLines.map(item => {
     const isSel = selectedRmId === item.rmId;
     return (
       <Table.Tr
@@ -670,32 +841,70 @@ const handleStockEdit = () => {
               style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
               <Grid columns={12} gutter="md">
 
-                {/* Row 1: Request Date | Schedule Date */}
-                <Grid.Col span={3}>
+                {/* Row 1: Request Date | Production Plan | Schedule Date | G.I.N. No. | Request By
+                    Every field except Production Plan stays disabled until a plan is picked. */}
+                <Grid.Col span={2}>
                   <FormDatePicker
                     label="Request Date"
                     value={form.rmReqDate}
                     onChange={setDate('rmReqDate')}
                     required
                     readOnly={readOnly}
+                    disabled={!planChosen}
                   />
                 </Grid.Col>
                 <Grid.Col span={3}>
+                  {/* Picked from a modal table — sets the Work Order and the Schedule Date range */}
+                  <Group gap="xs" align="flex-end" wrap="nowrap">
+                    <Box style={{ flex: 1 }}>
+                      <FormTextInput
+                        label="Production Plan"
+                        value={planLabel}
+                        onChange={() => { }}
+                        placeholder={planLoading ? 'Loading plan...' : 'Pick a production plan'}
+                        required
+                        readOnly
+                      />
+                    </Box>
+                    {!readOnly && (
+                      <Tooltip label="Pick production plan" position="top">
+                        <ActionIcon variant="light" color="blue" size="lg" mb={1}
+                          onClick={() => setPlanPickerOpen(true)}>
+                          <IconListSearch size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                    {!readOnly && form.productionPlanId != null && (
+                      <Tooltip label="Clear production plan" position="top">
+                        <ActionIcon variant="subtle" color="gray" size="lg" mb={1}
+                          onClick={clearPlan}>
+                          <IconX size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                  </Group>
+                </Grid.Col>
+                <Grid.Col span={2}>
+                  {/* Only dates inside the plan's From – To range can be picked */}
                   <FormDatePicker
                     label="Schedule Date"
                     value={form.scheduleDate}
                     onChange={setDate('scheduleDate')}
                     required
                     readOnly={readOnly}
+                    disabled={!planChosen}
+                    minDate={planRange.from ?? undefined}
+                    maxDate={planRange.to ?? undefined}
                   />
                 </Grid.Col>
-                <Grid.Col span={3}>
+                <Grid.Col span={2}>
                   <FormTextInput
                     label="G.I.N. No."
                     value={form.ginNo}
                     onChange={setStr('ginNo')}
                     placeholder="e.g. 35"
                     readOnly={readOnly}
+                    disabled={!planChosen}
                   />
                 </Grid.Col>
                 <Grid.Col span={3}>
@@ -708,20 +917,21 @@ const handleStockEdit = () => {
                     required
                     searchable
                     readOnly={readOnly}
+                    disabled={!planChosen}
                   />
                 </Grid.Col>
 
-                {/* Row 2: Work Order | Remaining Plan Qty */}
+                {/* Row 2: Work Order (set by the Production Plan) | Remaining Plan Qty */}
                 <Grid.Col span={6}>
-                  <FormSelect
+                  {/* Shown as text — the WO dropdown omits fully planned work orders */}
+                  <FormTextInput
                     label="Work Order"
-                    value={form.woId}
-                    onChange={handleWoChange}
-                    data={dropdowns.workOrderOptions}
-                    placeholder="Select work order"
+                    value={woDisplay}
+                    onChange={() => { }}
+                    placeholder="Set by the Production Plan"
                     required
-                    searchable
-                    readOnly={readOnly}
+                    readOnly
+                    disabled={!planChosen}
                   />
                 </Grid.Col>
                 <Grid.Col span={2}>
@@ -742,6 +952,7 @@ const handleStockEdit = () => {
                     placeholder="0.00"
                     required
                     readOnly={readOnly}
+                    disabled={!planChosen}
                   />
                   {validationErrors.length > 0 && (
                     <Box mt={4}>
@@ -755,9 +966,9 @@ const handleStockEdit = () => {
                   <FormTextInput
                     label="Production Lot Number"
                     value={form.productionLotNumber}
-                    onChange={setStr('productionLotNumber')}
-                    placeholder="e.g. 42032Z265C"
-                    readOnly={readOnly}
+                    onChange={() => { }}
+                    placeholder="Auto-generated"
+                    readOnly   // generated by the backend (wo-details) — not editable
                   />
                 </Grid.Col>
 
@@ -783,7 +994,7 @@ const handleStockEdit = () => {
                 <Grid.Col span={3}>
                   <FormTextInput
                     label="Vessel"
-                    value={woDetails.vesselName}
+                    value={planVessel || woDetails.vesselName}
                     onChange={() => { }}
                     placeholder={woDetailsLoading ? 'Loading...' : 'Auto-filled from Work Order'}
                     readOnly
@@ -813,10 +1024,10 @@ const handleStockEdit = () => {
                   colSpan={RM_COLUMNS.length + 1}
                   totalElements={rmLines.length}
                   loading={rmLoading}
-                  page={1}
-                  totalPages={1}
-                  pageSize={rmLines.length || 1}
-                  onPageChange={() => { }}
+                  page={rmPageSafe}
+                  totalPages={rmTotalPages}
+                  pageSize={RM_PAGE_SIZE}
+                  onPageChange={setRmPage}
                   searchValue=""
                   onSearchChange={() => { }}
                   allSelected={false}
@@ -986,8 +1197,9 @@ const handleStockEdit = () => {
               flexShrink: 0,
             }}>
             <Group justify="flex-end" gap="sm">
-              <Button variant="default" size="sm" onClick={onClose}>Cancel</Button>
+              <Button variant="default" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
               <Button size="sm"
+                loading={saving}
                 onClick={() => {
                   const errors = validateForm();
                   setValidationErrors(errors);
@@ -1004,11 +1216,22 @@ const handleStockEdit = () => {
       <ConfirmDialog
         opened={confirmOpen}
         onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
-        onConfirm={() => onSave?.({ ...form, rmLines: rmLines })}
+        onConfirm={() => {
+          setConfirmOpen(false);   // close the dialog; progress shows on the Save button + banner
+          onSave?.({ ...form, rmLines: rmLines });
+        }}
         message={`Are you sure you want to ${confirmLabel.toLowerCase()} this Material Request?`}
         confirmLabel={confirmLabel}
         zIndex={250}
         errors={validationErrors}
+      />
+
+      {/* ── Production Plan picker ── */}
+      <ProductionPlanPickerModal
+        opened={planPickerOpen}
+        onClose={() => setPlanPickerOpen(false)}
+        onSelect={handlePlanPicked}
+        selectedPlanId={form.productionPlanId}
       />
 
        <StockIssuanceEditModal

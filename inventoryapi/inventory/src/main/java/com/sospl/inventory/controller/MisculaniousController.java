@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -48,13 +49,15 @@ public class MisculaniousController {
                                 .collect(Collectors.toList())));
     }
     
-    @GetMapping("/wo-details/{planId}")
-    public ResponseEntity<List<Map<String, Object>>> getWoDetails(
-            @PathVariable Long planId) {
-
-        List<Map<String, Object>> response =
-        		miscmMasterService.getWoDetails(planId);
-
-        return ResponseEntity.ok(response);
+   
+    
+    @GetMapping("/wo-details/{woId}")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getWoDetails(
+            @PathVariable Long woId,
+            @RequestParam(required = false) Long rmReqId) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "WO details fetched successfully",
+                        miscmMasterService.getWoDetails(woId, rmReqId)));
     }
 }

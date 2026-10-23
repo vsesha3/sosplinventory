@@ -27,6 +27,18 @@ export interface ProductionPlanApiData {
   toDate:            string | null;
 }
 
+// Decimal fields arrive as a number or as { source, parsedValue } — normalise to number
+const toNum = (v: any): number | null => {
+  if (v == null) return null;
+  if (typeof v === 'number') return v;
+  if (typeof v === 'object') {
+    const n = v.parsedValue ?? (v.source != null ? Number(v.source) : null);
+    return n != null && !isNaN(n) ? Number(n) : null;
+  }
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+};
+
 // Mapper: raw list API response → ProductionPlanApiData
 export const mapProductionPlan = (d: any): ProductionPlanApiData => ({
   productionPlanId:   d.productionPlanId,
@@ -34,11 +46,11 @@ export const mapProductionPlan = (d: any): ProductionPlanApiData => ({
   woCode:             d.woCode            ?? null,
   poId:               d.poId              ?? null,
   plant:              d.plant             ?? null,
-  woQty:              d.woQty             ?? null,
-  perUnitRate:        d.perUnitRate       ?? null,
+  woQty:              toNum(d.woQty),
+  perUnitRate:        toNum(d.perUnitRate),
   vesselName:         d.vesselName        ?? null,
   productName:        d.productName       ?? null,
-  qty:                d.qty               ?? null,
+  qty:                toNum(d.qty),
   // alias date fields for fmtDate
   fromDate:           d.productionFromDate ?? null,
   toDate:             d.productionToDate   ?? null,

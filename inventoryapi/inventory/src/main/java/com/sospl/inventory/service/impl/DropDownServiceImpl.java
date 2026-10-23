@@ -70,6 +70,7 @@ public class DropDownServiceImpl implements DropDownService {
             case "vessel-list"->repository.getMiscNameForDropdown("vessel");
             case "wo-list"->repository.getWorkOrderListForDropDown();
             case "customer-list" ->repository.getSupplierListForDropDown("CUSTOMER");
+            
 
             // ── Unknown type ──────────────────────────────────────────────
             default -> throw new RuntimeException(

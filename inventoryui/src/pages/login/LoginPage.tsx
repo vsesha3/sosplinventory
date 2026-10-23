@@ -14,6 +14,7 @@ import {
 import { useForm } from '@mantine/form';
 import { IconAlertCircle, IconPackage, IconLock, IconUser } from '@tabler/icons-react';
 import { authService } from '../../services/authService';
+import { setAuth } from '../../utils/tokenUtils';
 import { APP_VERSION, RELEASE_DATE } from '../../config/version';
 
 const LoginPage: React.FC = () => {
@@ -37,11 +38,9 @@ const handleSubmit = async (values: { usernameOrEmail: string; password: string 
   setError(null);
   try {
     const response = await authService.login(values);
-    const token = response.data.data.accessToken;  // ← fixed
-    localStorage.setItem('token', token);
-
-    // Optional: store user info too
-    localStorage.setItem('user', JSON.stringify(response.data.data));
+    const token = response.data.data.accessToken;
+    // Session storage — cleared when the browser closes
+    setAuth(token, response.data.data);
 
     navigate('/dashboard');
   } catch (err: any) {

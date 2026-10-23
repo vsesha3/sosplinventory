@@ -1,5 +1,7 @@
 package com.sospl.inventory.model.master;
 
+import org.hibernate.annotations.Formula;
+
 import com.sospl.inventory.model.common.BaseAuditEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,7 +24,12 @@ public class SosProdMasterPmDetls extends BaseAuditEntity {
 
     @Column(name = "pm_id")
     private Long pmId;
+    
+ // Try with explicit column reference
+    @Formula("(SELECT srm.rm_name FROM sos_rm_master_t srm WHERE srm.rm_id = pm_id LIMIT 1)")
+    private String rmName;
 
+     
     public Long getPmPackingDetslId() {
         return pmPackingDetslId;
     }
@@ -31,7 +38,15 @@ public class SosProdMasterPmDetls extends BaseAuditEntity {
         this.pmPackingDetslId = pmPackingDetslId;
     }
 
-    public Long getProductId() {
+    public String getRmName() {
+		return rmName;
+	}
+
+	public void setRmName(String rmName) {
+		this.rmName = rmName;
+	}
+
+	public Long getProductId() {
         return productId;
     }
 

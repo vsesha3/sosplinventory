@@ -25,4 +25,6 @@ public interface SosProdMasterPmDetlsService
     public void saveOrUpdatePMDetails(
             Long productId,
             List<SosProdMasterPmDetls> pmDetails);
+    
+    List<SosProdMasterPmDetls> findByWoId(Long woId);
 }

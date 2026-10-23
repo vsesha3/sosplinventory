@@ -1,4 +1,5 @@
 import api from './api';
+import { clearAuth } from '../utils/tokenUtils';
 
 export interface LoginRequest {
   usernameOrEmail: string;   // ← renamed from username
@@ -26,5 +27,5 @@ export interface LoginResponse {
 
 export const authService = {
   login: (data: LoginRequest) => api.post<LoginResponse>('/api/auth/login', data),
-  logout: () => localStorage.removeItem('token'),
+  logout: () => clearAuth(),
 };

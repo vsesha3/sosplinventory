@@ -52,4 +52,24 @@ public interface SosProdMasterPmDetlsRepository
             """, nativeQuery = true)
  List<Object[]> findAllWithPmDetailsByProductId(
          @Param("productId") Long productId);
+ 
+    
+ 
+ @Query(value = """
+		    SELECT spmpd.*,
+		           (
+		               SELECT srm.rm_name
+		               FROM sos_rm_master_t srm
+		               WHERE srm.rm_id = spmpd.pm_id
+		               LIMIT 1
+		           ) AS rmName
+		    FROM sos_prod_master_pm_detls_t spmpd
+		    INNER JOIN sos_work_order_t swot
+		        ON spmpd.product_id = swot.product_id
+		    WHERE swot.wo_id = :woId
+		      AND swot.is_deleted = 0
+		      AND spmpd.is_active = 1
+		      AND spmpd.is_deleted = 0
+		    """, nativeQuery = true)
+		List<SosProdMasterPmDetls> findAllByWoId(@Param("woId") Long woId);
 }

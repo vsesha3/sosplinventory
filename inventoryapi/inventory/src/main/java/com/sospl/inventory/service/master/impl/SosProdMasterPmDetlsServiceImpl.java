@@ -135,5 +135,10 @@ public class SosProdMasterPmDetlsServiceImpl
             }
         }
     }
+    
+    @Override
+    public List<SosProdMasterPmDetls> findByWoId(Long woId) {
+        return detlsRepository.findAllByWoId(woId);
+    }
 
 }

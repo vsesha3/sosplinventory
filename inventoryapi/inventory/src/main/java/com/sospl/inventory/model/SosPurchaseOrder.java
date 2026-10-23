@@ -56,9 +56,10 @@ public class SosPurchaseOrder extends BaseAuditEntity {
     
     @Formula("""
     	    (SELECT e.employee_name
-    	     FROM sospl_attendancedev.sospl_employee_data e
+    	     FROM sospl_employee_data e
     	     WHERE e.employee_id = requested_by)
     	    """)
+    	
 	private String requestedByName;
     
     

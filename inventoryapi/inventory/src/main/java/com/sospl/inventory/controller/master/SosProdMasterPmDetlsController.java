@@ -31,6 +31,9 @@ public class SosProdMasterPmDetlsController {
                         "PM details fetched successfully",
                         service.findAllActive()));
     }
+    
+    
+    
 
     // Dropdown
     @GetMapping("/dropdown")
@@ -70,6 +73,16 @@ public class SosProdMasterPmDetlsController {
                 ApiResponse.success(
                         "PM details fetched successfully",
                         service.findByProductIdAndPmId(productId, pmId)));
+    }
+    
+ // Get by wo_id
+    @GetMapping("/wo/{woId}")
+    public ResponseEntity<ApiResponse<List<SosProdMasterPmDetls>>> getByWoId(
+            @PathVariable Long woId) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "PM details fetched successfully",
+                        service.findByWoId(woId)));
     }
 
     // Create

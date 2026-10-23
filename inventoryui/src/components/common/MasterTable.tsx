@@ -43,6 +43,8 @@ export interface MasterTableProps {
   extraActions?: React.ReactNode;
   footer?: React.ReactNode;
   expandable?: boolean;
+  // false = hide Add / Edit / Delete / Export (e.g. a picker); Refresh + search stay
+  showCrudActions?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -72,6 +74,7 @@ const MasterTable: React.FC<MasterTableProps> = ({
   extraActions,
   expandable = false,
   footer,
+  showCrudActions = true,
 }) => {
   const startRecord = totalElements === 0 ? 0 : (page - 1) * pageSize + 1;
   const endRecord   = Math.min(page * pageSize, totalElements);
@@ -83,6 +86,7 @@ const MasterTable: React.FC<MasterTableProps> = ({
       <Box px="md" py="sm" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
         <Group justify="space-between" wrap="wrap" gap="sm">
           <Group gap="xs">
+            {showCrudActions && (<>
             <Tooltip label="Add new record">
               <Button size="xs" leftSection={<IconPlus size={14} />} onClick={onAdd}>
                 Add
@@ -112,6 +116,7 @@ const MasterTable: React.FC<MasterTableProps> = ({
             </Tooltip>
 
             <Divider orientation="vertical" />
+            </>)}
 
             <Tooltip label="Refresh data">
               <Button
@@ -123,6 +128,7 @@ const MasterTable: React.FC<MasterTableProps> = ({
               </Button>
             </Tooltip>
 
+            {showCrudActions && (
             <Tooltip label="Export to CSV">
               <Button
                 size="xs" variant="subtle" color="green"
@@ -132,6 +138,7 @@ const MasterTable: React.FC<MasterTableProps> = ({
                 Export
               </Button>
             </Tooltip>
+            )}
 
             {extraActions && (
               <>

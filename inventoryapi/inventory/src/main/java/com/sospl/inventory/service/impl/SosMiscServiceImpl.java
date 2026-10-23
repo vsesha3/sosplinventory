@@ -26,7 +26,8 @@ public class SosMiscServiceImpl implements SosMiscService {
     
     @Override
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> getWoDetails(Long woId) {
+    public List<Map<String, Object>> getWoDetails(
+            Long woId, Long rmReqId) {
 
         List<Map<String, Object>> result =
                 repository.findWoDetailsByWoId(woId);
@@ -35,16 +36,21 @@ public class SosMiscServiceImpl implements SosMiscService {
             return result;
         }
 
-        String lotNumber = repository.findLotNumberByWoId(woId);
-        System.out.println("lot number"+lotNumber);
+        // ── If rmReqId is provided — fetch existing lot number ────────────
+        // ── If rmReqId is null — generate new lot number ──────────────────
+        String lotNumber = repository.findLotNumberByWoId(
+                woId,
+                rmReqId != null ? rmReqId : -1L  // ← -1 means no existing req
+        );
+
+        
 
         List<Map<String, Object>> response = new ArrayList<>();
 
         for (Map<String, Object> item : result) {
             Map<String, Object> mutableItem = new HashMap<>(item);
-
             mutableItem.put("productionLotNumber", lotNumber);
-
+            mutableItem.put("rmReqId", rmReqId);
             response.add(mutableItem);
         }
 

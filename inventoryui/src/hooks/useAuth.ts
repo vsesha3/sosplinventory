@@ -1,16 +1,17 @@
 import { useState } from 'react';
+import { clearAuth, getToken, hasValidToken, setAuth } from '../utils/tokenUtils';
 
 export const useAuth = () => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(hasValidToken() ? getToken() : null);
   const isAuthenticated = !!token;
 
   const login = (newToken: string) => {
-    localStorage.setItem('token', newToken);
+    setAuth(newToken);
     setToken(newToken);
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    clearAuth();
     setToken(null);
   };
 

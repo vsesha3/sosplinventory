@@ -101,4 +101,12 @@ public interface SosRmRequestRepository
     		        @Param("schedule") LocalDate schedule,
     		        @Param("productionPlan") Long productionPlan
     		);
+    	
+    	@Query(value = """
+        	    SELECT fn_generate_lot_number(:woId, :rmReqId)
+        	    """, nativeQuery = true)
+        	String findLotNumberByWoId(
+        	        @Param("woId") Long woId,
+        	        @Param("rmReqId") Long rmReqId
+        	);
 }

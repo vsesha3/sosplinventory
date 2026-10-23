@@ -9,6 +9,6 @@ import org.springframework.stereotype.Service;
 public interface SosMiscService {
 	
 	
-	List<Map<String, Object>> getWoDetails(Long planId);
+	List<Map<String, Object>> getWoDetails(Long planId,Long rmReqId);
 
 }

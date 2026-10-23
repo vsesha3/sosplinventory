@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -62,8 +63,11 @@ public class SosRmRequestServiceImpl
 
         boolean isNew = header.getRmReqId() == null;
         
-        
-
+        LocalDate scheduleDate = ParseUtil.parseDateTime(
+                request.getScheduleDate()
+        ).toLocalDate();
+        String fgLotNumber = null;
+        String fgLotNumberWithDate = null;
         // ── Generate gin_no for new records ──────────────────────────────
         if (isNew) {
             Long nextGinNo = rmRequestRepository.getNextGinNo();
@@ -73,16 +77,17 @@ public class SosRmRequestServiceImpl
             Long productionPlanId = ParseUtil.parseLong(
                     request.getProductionPlanId()
             );
-            LocalDate scheduleDate = ParseUtil.parseDateTime(
-                    request.getScheduleDate()
-            ).toLocalDate();
-
             
-            String fgLotNumber = rmRequestRepository.generateFgLotNumber(
-                    scheduleDate,
-                    productionPlanId
-            );
-            request.setProductionLotNumber(fgLotNumber);
+            
+           
+
+            fgLotNumber = rmRequestRepository.findLotNumberByWoId(
+            	    Long.parseLong(request.getWoId()),
+            	    nextGinNo
+            	);
+            fgLotNumberWithDate  = fgLotNumber
+                    + scheduleDate.format(DateTimeFormatter.ofPattern("yyMMdd"));
+            request.setProductionLotNumber(fgLotNumberWithDate);
 
         }
 
@@ -96,6 +101,7 @@ public class SosRmRequestServiceImpl
                 request.getScheduleDate()));
         header.setPlanToProdQty(ParseUtil.parseBigDecimal(
                 request.getPlanToProdQty()));
+        
         header.setProductionLotNumber(request.getProductionLotNumber());
         header.setRequestBy(request.getRequestBy());
         header.setGinNo(request.getGinNo());
