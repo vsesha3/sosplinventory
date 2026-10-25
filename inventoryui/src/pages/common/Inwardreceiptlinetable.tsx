@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Table, Text, Badge } from '@mantine/core';
+import api from '../../services/api';
 import MasterTable from '../../components/common/MasterTable';
 import type { ColumnDef } from '../../components/common/MasterTable';
 import InwardReceiptLineEditor from './Inwardreceiptlineeditor';
@@ -29,6 +30,14 @@ const dash = (v: any) => (v != null && v !== '' ? String(v) : '—');
 const safe = (val: string): number => {
   const n = parseFloat(val);
   return isNaN(n) ? 0 : n;
+};
+
+// Quantities: always 2 decimals — 100 → "100.00", 50.5 → "50.50"
+const fmtQty = (v: number | string | null | undefined): string => {
+  const n = typeof v === 'number' ? v : parseFloat(String(v ?? ''));
+  return isNaN(n) ? '—' : n.toLocaleString('en-IN', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  });
 };
 
 
@@ -68,6 +77,29 @@ const InwardReceiptLineTable: React.FC<InwardReceiptLineTableProps> = ({
   const [editorOpen, setEditorOpen]       = useState(false);
   const [editingLine, setEditingLine]     = useState<InwardReceiptLine | null>(null);
   const [editorMode, setEditorMode]       = useState<'create' | 'edit'>('edit');
+
+  // ── UOM names — poUom holds the UOM id, so map it to its name for display ──
+  const [uomNames, setUomNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    api.get('/api/dropdown/uom')
+      .then(res => {
+        const map: Record<string, string> = {};
+        (res.data?.data ?? []).forEach((o: any) => {
+          if (o?.value != null) map[String(o.value)] = String(o.label ?? '').split('~')[0].trim();
+        });
+        setUomNames(map);
+      })
+      .catch(() => setUomNames({}));
+  }, []);
+
+  // Name for an id; a bare id with no match shows nothing (never the raw number)
+  const uomLabel = (v: string | null | undefined): string => {
+    if (v == null || v === '') return '';
+    const key = String(v);
+    if (uomNames[key]) return uomNames[key];
+    return /^\d+$/.test(key) ? '' : key;
+  };
 
   // ── Tax flags — PO-level (same logic as PurchaseOrderForm) ────────────────
   const hasIgst     = lines.some(l => safe(l.igst)  > 0);
@@ -205,14 +237,14 @@ const handleAddNewEntry = () => {
         <Table.Td ta="right">
           {jobMode
             ? <Text size="sm" c="dimmed">—</Text>
-            : <>{line.rmOrderQty.toFixed(3)} {dash(line.poUom)}</>}
+            : <>{fmtQty(line.rmOrderQty)} {uomLabel(line.poUom)}</>}
         </Table.Td>
 
         {/* Received Qty */}
         <Table.Td ta="right">
           {hasReceived ? (
             <Text size="sm" fw={600} c="green">
-              {parseFloat(line.rmReceivedQty).toFixed(3)} {dash(line.poUom)}
+              {fmtQty(line.rmReceivedQty)} {uomLabel(line.poUom)}
             </Text>
           ) : (
             <Text size="sm" c="dimmed">—</Text>
@@ -307,11 +339,11 @@ const handleAddNewEntry = () => {
         <Table.Td />
         {/* Order Qty */}
         <Table.Td ta="right">
-          <Text size="xs" fw={700}>{totalOrderQty.toFixed(3)}</Text>
+          <Text size="xs" fw={700}>{fmtQty(totalOrderQty)}</Text>
         </Table.Td>
         {/* Received Qty */}
         <Table.Td ta="right">
-          <Text size="xs" fw={700} c="green">{totalReceivedQty.toFixed(3)}</Text>
+          <Text size="xs" fw={700} c="green">{fmtQty(totalReceivedQty)}</Text>
         </Table.Td>
         {/* Lot No */}
         <Table.Td />

@@ -12,8 +12,27 @@ export interface MaterialReceiptSummary {
   netAmount:     number | null;
   totalAmount:   number | null;
   inwardType:    'BYPO' | 'JOBINWARD';
+  // Raw value from the API: "JOBINWARD" or "<PO No>-BYPO" (e.g. "RM/0002/2026-2027-BYPO")
+  inwardRef:     string;
+  grnNo:         string | null;
   supplierName:  string | null;
 }
+
+// Quantities: always 2 decimals — 500 → "500.00", 50.5 → "50.50"
+export const fmtQty = (v: number | string | null | undefined): string => {
+  if (v == null || v === '') return '—';
+  const n = typeof v === 'number' ? v : parseFloat(String(v));
+  return isNaN(n) ? '—' : n.toLocaleString('en-IN', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  });
+};
+
+// PO number carried in inwardRef — null for job inward (no PO)
+export const poNoFromInwardRef = (ref: string | null | undefined): string | null => {
+  if (!ref || ref === 'JOBINWARD') return null;
+  const poNo = ref.replace(/-?BYPO$/i, '').trim();
+  return poNo || null;
+};
 
 // "2026-10-01" (or "2026-10-01T..." ) → "01-10-2026"; anything else is returned as-is
 export const fmtDdMmYyyy = (val: string | null | undefined): string => {
@@ -22,8 +41,23 @@ export const fmtDdMmYyyy = (val: string | null | undefined): string => {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : val;
 };
 
+// Decimal fields arrive as a number or as { source, parsedValue } — Number({...}) is NaN
+const toNum = (v: any): number | null => {
+  if (v == null) return null;
+  if (typeof v === 'object') {
+    const n = v.parsedValue ?? (v.source != null ? Number(v.source) : null);
+    return n != null && !isNaN(Number(n)) ? Number(n) : null;
+  }
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+};
+
 export const mapMaterialReceiptSummary =(raw: any): MaterialReceiptSummary => ({
+  // inwardType may be "JOBINWARD" or a GRN-style string like "RM/0002/2026-2027-BYPO"
   inwardType:    raw.inwardType === 'JOBINWARD' ? 'JOBINWARD' : 'BYPO',
+  inwardRef:     raw.inwardType    ?? '',
+  // API sends a number (job_grn_no for job inward, grn_no otherwise) — keep as text
+  grnNo:         raw.grnNo != null && raw.grnNo !== '' ? String(raw.grnNo) : null,
   receiptDetId:  raw.receiptDetId  ?? 0,
   poRefNo:       raw.poRefNo       ?? 0,
   materialType:  raw.materialType  ?? '',
@@ -31,12 +65,12 @@ export const mapMaterialReceiptSummary =(raw: any): MaterialReceiptSummary => ({
   supplierId:    raw.supplierId    ?? 0,
   supplierName:  raw.supplierName  ?? null,
   invoiceDate:   raw.invoiceDate   ?? '',
-  sgstValue:     raw.sgstValue  != null ? Number(raw.sgstValue)  : null,
-  cgstValue:     raw.cgstValue  != null ? Number(raw.cgstValue)  : null,
-  igstValue:     raw.igstValue  != null ? Number(raw.igstValue)  : null,
-  noOfReceived:  raw.noOfReceived != null ? Number(raw.noOfReceived) : null,
-  netAmount:     raw.netAmount  != null ? Number(raw.netAmount)  : null,
-  totalAmount:   raw.totalAmount != null ? Number(raw.totalAmount) : null,
+  sgstValue:     toNum(raw.sgstValue),
+  cgstValue:     toNum(raw.cgstValue),
+  igstValue:     toNum(raw.igstValue),
+  noOfReceived:  toNum(raw.noOfReceived),
+  netAmount:     toNum(raw.netAmount),
+  totalAmount:   toNum(raw.totalAmount),
 });
 
 

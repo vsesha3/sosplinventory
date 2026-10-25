@@ -20,7 +20,8 @@ export interface InwardReceiptLandingProps {
   poNo?:         string | null;
   poDate?:       string | null;
   materialType?: string | null;
-  onSave?:       (data: InwardReceiptFormData) => void;
+  // May return a promise — resolve to false to signal a failed save
+  onSave?:       (data: InwardReceiptFormData) => void | boolean | Promise<void | boolean>;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -56,17 +57,21 @@ useEffect(() => {
  console.log(poDate, 'poDate in useEffect'); // Debug log to check poDate value
   const check = async () => {
     try {
+      // No materialType filter: the PO passes its type code (RAW_MATERIAL) but receipts
+      // store the label ("Raw material"), so the filter matched nothing. poRefNo is enough.
       const res = await api.get(
-        `/api/inventory/material-receipt/summary/porefno/${poRefNo}`,
-        { params: materialType ? { materialType } : {} }
+        `/api/inventory/material-receipt/summary/porefno/${poRefNo}`
       );
 
       const d   = res.data.data;
-      const arr = Array.isArray(d)
+      const arr: any[] = Array.isArray(d)
         ? d
         : Array.isArray(d?.content) ? d.content : [];
 
-      setViewMode(arr.length === 0 ? 'new-receipt' : 'receipt-list');
+      // The API can return every receipt (other POs, job inwards with poRefNo 0) —
+      // only this PO's receipts decide list vs new-receipt
+      const forThisPo = arr.filter(r => Number(r?.poRefNo) === Number(poRefNo));
+      setViewMode(forThisPo.length === 0 ? 'new-receipt' : 'receipt-list');
     } catch {
       setViewMode('new-receipt');
     }
@@ -134,10 +139,11 @@ useEffect(() => {
         poNo={poNo}
         poDate={poDate} // Pass the PO date to the form
         receiptDetId={null}        // ← Add mode: empty header + PO lines
-        onSave={(data) => {
-          onSave?.(data);
-          // After save, switch to list view so user can see the new receipt
-          setViewMode('receipt-list');
+        onSave={async (data) => {
+          // Wait for the save before switching — otherwise the list loads before
+          // the first receipt exists and shows nothing
+          const ok = await onSave?.(data);
+          if (ok !== false) setViewMode('receipt-list');
         }}
       />
     );
@@ -155,9 +161,7 @@ useEffect(() => {
       poNo={poNo}
       poDate={poDate}
       materialType={materialType ?? undefined}
-      onSaveReceipt={(data) => {
-        onSave?.(data);
-      }}
+      onSaveReceipt={(data) => onSave?.(data)}
     />
     </>
   );

@@ -275,9 +275,11 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
 
    setForm({
   ...defaultForm,
+  // Job inward has no PO — poRefNo stays null
   poRefNo:                 receipt.poRefNo
     ? String(receipt.poRefNo) : (initialPoRefNo ? String(initialPoRefNo) : null),
-  poDate:                  initialPoDate ?? null,
+  // Prefer the receipt's own PO date (edit is opened by receiptDetId alone)
+  poDate:                  receipt.poDate ?? initialPoDate ?? null,
   poType:                  receipt.poType                  ?? null,
   grnNo:                   receipt.grnNo                   ?? '',
   ircNo:                   receipt.ircNo                   ?? '',
@@ -560,7 +562,17 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
                 style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
                 <Grid columns={12} gutter="sm">
 
-                  {/* ── Row 1 ── */}
+                  {/* ── Row 1: GRN No. | Actual Receipt | STN Invoice No. | Invoice Date | Receipt ── */}
+                  {/* IRC No. / Modvat Copy No. are no longer captured (fields kept in the
+                      data so existing values are preserved on save) */}
+                  <Grid.Col span={2}>
+                    <FormTextInput
+                      label="GRN No."
+                      value={form.grnNo}
+                      onChange={setStr('grnNo')}
+                      placeholder="Auto / manual"
+                    readOnly />
+                  </Grid.Col>
                   <Grid.Col span={3}>
                     <FormDatePicker
                       label="* Actual Date & Time of Receipt"
@@ -578,14 +590,14 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
                       required
                     />
                   </Grid.Col>
-                  <Grid.Col span={3}>
+                  <Grid.Col span={2}>
                     <FormDatePicker
                       label="Invoice Date"
                       value={form.invoiceDate}
                       onChange={setDate('invoiceDate')}
                     />
                   </Grid.Col>
-                  <Grid.Col span={3}>
+                  <Grid.Col span={2}>
                     <FormDatePicker
                       label="* Date & Time of Receipt"
                       value={form.dateTimeOfReceipt}
@@ -594,38 +606,7 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
                     />
                   </Grid.Col>
 
-                  {/* ── Row 2 ── */}
-                  <Grid.Col span={3}>
-                    <FormTextInput
-                      label="GRN No."
-                      value={form.grnNo}
-                      onChange={setStr('grnNo')}
-                      placeholder="Auto / manual"
-                    readOnly />
-                  </Grid.Col>
-                  <Grid.Col span={3}>
-                    <FormTextInput
-                      label="IRC No."
-                      value={form.ircNo}
-                      onChange={setStr('ircNo')}
-                    />
-                  </Grid.Col>
-                  <Grid.Col span={3}>
-                    <FormTextInput
-                      label="Modvat Copy No."
-                      value={form.modvatCopyNo}
-                      onChange={setStr('modvatCopyNo')}
-                    />
-                  </Grid.Col>
-                  <Grid.Col span={3}>
-                    <FormTextInput
-                      label="SAP PO"
-                      value={form.sapPo}
-                      onChange={setStr('sapPo')}
-                    />
-                  </Grid.Col>
-
-                  {/* ── Row 3 ── */}
+                  {/* ── Row 2: Supplier | Transporter | L.R's Number | PO Date | SAP PO ── */}
                   <Grid.Col span={3}>
                     <Box>
                     <FormSelect
@@ -672,14 +653,14 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
     </Group>
   </Box>
 </Grid.Col>
-                  <Grid.Col span={3}>
+                  <Grid.Col span={2}>
                     <FormTextInput
                       label="L.R's Number"
                       value={form.lrNumber}
                       onChange={setStr('lrNumber')}
                     />
                   </Grid.Col>
-                  <Grid.Col span={3}>
+                  <Grid.Col span={2}>
                     {jobMode ? (
                       // Job inward: no PO — choose what kind of material is coming in
                       <FormSelect
@@ -695,14 +676,21 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
                       /* ── PO Date: read from ref so it always reflects latest prop ── */
                       <FormTextInput
                         label="PO Date"
-                        value={initialPoDate ? fmtDate(initialPoDate) : ''}
+                        value={(form.poDate || initialPoDate) ? fmtDate((form.poDate || initialPoDate) as any) : ''}
                         onChange={() => {}}
                         readOnly
                       />
                     )}
                   </Grid.Col>
+                  <Grid.Col span={2}>
+                    <FormTextInput
+                      label="SAP PO"
+                      value={form.sapPo}
+                      onChange={setStr('sapPo')}
+                    />
+                  </Grid.Col>
 
-                  {/* ── Row 4 ── */}
+                  {/* ── Row 3: Freight ── */}
                   <Grid.Col span={3}>
                     <FormTextInput
                       label="Other Charges / Freight"
@@ -746,7 +734,7 @@ const [noLinesMessage, setNoLinesMessage] = useState('');
               <Divider
                 label={
                   <Group gap="xs">
-                    <Text size="sm" fw={500}>{jobMode ? 'Job Work Items' : 'PO Receipt'}</Text>
+                    <Text size="sm" fw={500}>{jobMode ? 'Job Work Items' : 'PO Items'}</Text>
                     {lines.length > 0 && (
                       <Badge size="xs" variant="light" color="blue">
                         {lines.length} item{lines.length !== 1 ? 's' : ''}

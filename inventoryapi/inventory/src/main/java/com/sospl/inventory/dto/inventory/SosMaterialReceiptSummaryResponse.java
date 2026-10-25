@@ -27,8 +27,15 @@ public class SosMaterialReceiptSummaryResponse {
     private String inwardType;
 
     private String supplierName;
+    private Long grnNo;
 
-    public String getSupplierName() { return supplierName; }
+    public Long getGrnNo() {
+		return grnNo;
+	}
+	public void setGrnNo(Long grnNo) {
+		this.grnNo = grnNo;
+	}
+	public String getSupplierName() { return supplierName; }
     public void setSupplierName(String supplierName) { this.supplierName = supplierName; }
 
     // ── Getters ───────────────────────────────────────────────────────────

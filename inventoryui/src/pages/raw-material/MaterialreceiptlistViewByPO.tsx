@@ -13,7 +13,7 @@ import FormHeader from '../common/Formheader';
 import api from '../../services/api';
 
 import type { MaterialReceiptSummary } from '../../types/receipt.type';
-import { mapMaterialReceiptSummary, mapMaterialReceiptWithRMDetails } from '../../types/receipt.type';
+import { mapMaterialReceiptSummary, mapMaterialReceiptWithRMDetails, fmtQty } from '../../types/receipt.type';
 import type { MaterialReceiptWithRMDetails } from '../../types/receipt.type';
 import type { InwardReceiptFormData } from './Rawmaterialinwardreceipt';
 
@@ -28,7 +28,7 @@ export interface MaterialReceiptListModalProps {
   poRefNo: number | null;
   poNo?: string | null;
   materialType?: string;
-  onSaveReceipt?: (data: InwardReceiptFormData) => void;
+  onSaveReceipt?: (data: InwardReceiptFormData) => void | boolean | Promise<void | boolean>;
   poDate?: string | null;
 }
 
@@ -36,6 +36,7 @@ export interface MaterialReceiptListModalProps {
 
 const COLUMNS: ColumnDef[] = [
   { key: 'receiptDetId', label: 'Receipt ID', width: 100 },
+  { key: 'grnNo', label: 'GRN No', width: 140 },
   { key: 'invoiceNo', label: 'Invoice No', width: 150 },
   { key: 'invoiceDate', label: 'Invoice Date', width: 120 },
   { key: 'materialType', label: 'Material Type', width: 130 },
@@ -54,7 +55,7 @@ const CHILD_COLUMNS: ChildColumnDef[] = [
   { key: 'poRmName',             label: 'RM Name',      width: 180 },
   { key: 'poUom',                label: 'UOM',          width: 80  },
   { key: 'rmReceivedQty',        label: 'Qty Received', width: 110, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(3) : '—' },
+    render: (v) => fmtQty(v) },
   { key: 'receivedRate',         label: 'Rate',         width: 100, align: 'right',
     render: (v) => v != null ? Number(v).toFixed(2) : '—' },
   { key: 'sgst',                 label: 'SGST %',       width: 80,  align: 'right',
@@ -84,7 +85,6 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
   onClose,
   poRefNo,
   poNo,
-  materialType,
   onSaveReceipt,
   poDate,
 }) => {
@@ -112,7 +112,8 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
         page: currentPage - 1,
         size: PAGE_SIZE,
       };
-      if (materialType) params.materialType = materialType;
+      // No materialType filter — code (RAW_MATERIAL) vs stored label ("Raw material")
+      // never matched; receipts are already scoped by poRefNo
       if (keyword.trim()) params.keyword = keyword.trim();
 
       const url = keyword.trim()
@@ -122,23 +123,34 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
       const res = await api.get(url, { params });
       const d = res.data.data;
 
+      // The API can return receipts of other POs and job inwards (poRefNo 0) —
+      // keep only this PO's receipts
+      const forThisPo = (rows: any[]) =>
+        rows.map(mapMaterialReceiptSummary).filter(r => Number(r.poRefNo) === Number(poRefNo));
+
       if (Array.isArray(d)) {
-        setData(d.map(mapMaterialReceiptSummary));
+        const rows = forThisPo(d);
+        setData(rows);
         setTotalPages(1);
-        setTotalElements(d.length);
+        setTotalElements(rows.length);
       } else if (d?.content) {
-        setData(d.content.map(mapMaterialReceiptSummary));
-        setTotalPages(d.totalPages ?? 1);
-        setTotalElements(d.totalElements ?? 0);
+        const rows = forThisPo(d.content);
+        setData(rows);
+        // Server paging totals would include other POs' rows when unfiltered
+        const filteredOut = d.content.length - rows.length;
+        setTotalPages(filteredOut > 0 ? 1 : (d.totalPages ?? 1));
+        setTotalElements(filteredOut > 0 ? rows.length : (d.totalElements ?? rows.length));
       } else {
         setData([]);
+        setTotalPages(1);
+        setTotalElements(0);
       }
     } catch {
       setError('Failed to load receipts for this PO.');
     } finally {
       setLoading(false);
     }
-  }, [poRefNo, materialType]);
+  }, [poRefNo]);
 
   // ── Fetch child RM details for a receipt ─────────────────────────────────
 
@@ -219,14 +231,19 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
         parentCells={
           <>
             <Table.Td fw={500} c="blue">{item.receiptDetId}</Table.Td>
+            <Table.Td fw={500}>{dash(item.grnNo)}</Table.Td>
             <Table.Td>{dash(item.invoiceNo)}</Table.Td>
             <Table.Td>{dash(item.invoiceDate)}</Table.Td>
             <Table.Td>
               {item.materialType
-                ? <Badge variant="light" color="indigo" size="sm">{item.materialType}</Badge>
+                // tt="none": Badge uppercases by default ("Raw material" looked like RAW_MATERIAL)
+                ? <Badge variant="light" color="indigo" size="sm" tt="none"
+                    styles={{ root: { maxWidth: 'none' }, label: { overflow: 'visible' } }}>
+                    {item.materialType}
+                  </Badge>
                 : <Text c="dimmed" size="sm">—</Text>}
             </Table.Td>
-            <Table.Td ta="right">{fmt(item.noOfReceived, 3)}</Table.Td>
+            <Table.Td ta="right">{fmtQty(item.noOfReceived)}</Table.Td>
             <Table.Td ta="right">{fmt(item.netAmount)}</Table.Td>
             <Table.Td ta="right">{fmt(item.sgstValue)}</Table.Td>
             <Table.Td ta="right">{fmt(item.cgstValue)}</Table.Td>
@@ -327,10 +344,11 @@ const MaterialReceiptListModal: React.FC<MaterialReceiptListModalProps> = ({
             setInwardOpen(false);
             setEditReceiptDetId(null);   // ← clear edit target on close
           }}
-          onSave={(data: InwardReceiptFormData) => {
-            if (onSaveReceipt) onSaveReceipt(data);
+          onSave={async (data: InwardReceiptFormData) => {
             setInwardOpen(false);
             setEditReceiptDetId(null);
+            // Refresh only after the save completes, so the new receipt is in the list
+            if (onSaveReceipt) await onSaveReceipt(data);
             fetchData(page, searchInput);
           }}
           poRefNo={poRefNo}

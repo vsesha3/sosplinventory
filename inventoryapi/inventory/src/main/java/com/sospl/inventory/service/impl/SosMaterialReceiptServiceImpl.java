@@ -465,6 +465,7 @@ public class SosMaterialReceiptServiceImpl
                     // ...and supplier_name (column 13)
                     res.setSupplierName(row.length > 13
                             ? ParseUtil.toString(row[13]) : null);
+                    res.setGrnNo(ParseUtil.toLong(row[14]));
                     return res;
                 })
                 .collect(Collectors.toList());
@@ -527,6 +528,8 @@ public class SosMaterialReceiptServiceImpl
                 ? det.getActualReceiptDateTime().toString() : null);
         request.setInwardType(det.getInwardType() != null ? det.getInwardType() : "BYPO");
         request.setReceiptDetId(det.getReceiptDetId());
+        
+        
 
 
         // ── Lines — from sos_material_receipt_t ──────────────────────────────

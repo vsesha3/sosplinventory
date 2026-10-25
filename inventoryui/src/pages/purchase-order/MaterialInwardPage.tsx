@@ -16,23 +16,15 @@ import RawMaterialInwardReceipt from '../raw-material/Rawmaterialinwardreceipt';
 import type { InwardReceiptFormData } from '../raw-material/Rawmaterialinwardreceipt';
 import { saveInwardReceipt } from '../raw-material/saveInwardReceipt';
 import type { MaterialReceiptSummary, MaterialReceiptWithRMDetails } from '../../types/receipt.type';
-import { mapMaterialReceiptSummary, mapMaterialReceiptWithRMDetails } from '../../types/receipt.type';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface PoLookup {
-  poRefNo: number;
-  poNo: string;
-  poDate: string | null;
-  poType: string | null;
-  supplierName: string | null;
-  poLegacyRefNo: string | null;
-}
+import {
+  mapMaterialReceiptSummary, mapMaterialReceiptWithRMDetails, poNoFromInwardRef, fmtQty,
+} from '../../types/receipt.type';
 
 // ── Columns ───────────────────────────────────────────────────────────────────
 
 const COLUMNS: ColumnDef[] = [
   { key: 'receiptDetId', label: 'Receipt ID',    width: 90 },
+  { key: 'grnNo',        label: 'GRN No',        width: 140 },
   { key: 'poNo',         label: 'PO No / Inward Type', width: 240 },
   { key: 'supplierName', label: 'Supplier',      width: 180 },
   { key: 'invoiceNo',    label: 'Invoice No',    width: 140 },
@@ -59,7 +51,7 @@ const CHILD_COLUMNS: ChildColumnDef[] = [
   { key: 'poRmName',             label: 'RM Name',      width: 180 },
   { key: 'poUom',                label: 'UOM',          width: 80  },
   { key: 'rmReceivedQty',        label: 'Qty Received', width: 110, align: 'right',
-    render: (v) => v != null ? Number(v).toFixed(3) : '—' },
+    render: (v) => fmtQty(v) },
   { key: 'receivedRate',         label: 'Rate',         width: 100, align: 'right',
     render: (v) => v != null ? Number(v).toFixed(2) : '—' },
   { key: 'gst',                  label: 'GST %',        width: 170,
@@ -81,15 +73,13 @@ const fmtTax = (v: number | null) => v ? v.toFixed(2) : '—';
 const dash = (v: any) =>
   v != null && v !== '' ? v : <Text c="dimmed" size="sm">—</Text>;
 
-const poLabel = (po: PoLookup | undefined, poRefNo: number) =>
-  po ? (po.poLegacyRefNo?.trim() || po.poNo) : poRefNo ? `Ref #${poRefNo}` : '';
-
-const inwardTypeLabel = (inwardType: string | null | undefined) =>
-  inwardType === 'JOBINWARD' ? 'JOB INWARD' : 'BY PO';
-
-// e.g. "RM/0001/2026-2027-BY PO", or just "JOB INWARD" when there is no PO
-const poInwardLabel = (po: PoLookup | undefined, poRefNo: number, inwardType: string | null | undefined) =>
-  [poLabel(po, poRefNo), inwardTypeLabel(inwardType)].filter(Boolean).join('-');
+// From the API's inwardType: "RM/0002/2026-2027-BYPO" → "RM/0002/2026-2027-BY PO";
+// "JOBINWARD" → "JOB INWARD" (job inward has no PO)
+const poInwardLabel = (r: MaterialReceiptSummary) => {
+  if (r.inwardType === 'JOBINWARD') return 'JOB INWARD';
+  const poNo = poNoFromInwardRef(r.inwardRef);
+  return poNo ? `${poNo}-BY PO` : 'BY PO';
+};
 
 const fmtDate = (v: string | null | undefined) => {
   if (!v) return null;
@@ -101,7 +91,6 @@ const fmtDate = (v: string | null | undefined) => {
 
 const MaterialInwardPage: React.FC = () => {
   const [allData, setAllData]       = useState<MaterialReceiptSummary[]>([]);
-  const [poMap, setPoMap]           = useState<Map<number, PoLookup>>(new Map());
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
@@ -118,26 +107,8 @@ const MaterialInwardPage: React.FC = () => {
   const [editReceipt, setEditReceipt] = useState<MaterialReceiptSummary | null>(null);
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
-
-  const fetchPos = useCallback(async () => {
-    try {
-      const res = await api.get('/api/inventory/purchase-order', {
-        params: { page: 0, size: 1000, sortBy: 'poRefNo', sortDir: 'desc' },
-      });
-      const d = res.data?.data;
-      const content: any[] = Array.isArray(d) ? d : (d?.content ?? []);
-      setPoMap(new Map(content.map((p: any) => [Number(p.poRefNo), {
-        poRefNo:       Number(p.poRefNo),
-        poNo:          p.poNo ?? '',
-        poDate:        p.poDate ?? null,
-        poType:        p.poType ?? null,
-        supplierName:  p.supplierName ?? null,
-        poLegacyRefNo: p.poLegacyRefNo ?? null,
-      }])));
-    } catch {
-      // PO lookup is only used for labels — the list still works without it
-    }
-  }, []);
+  // The summary carries everything the list needs (PO no in inwardType, supplierName),
+  // and edit loads the receipt by receiptDetId — no separate PO lookup call.
 
   const fetchReceipts = useCallback(async () => {
     setLoading(true);
@@ -156,12 +127,7 @@ const MaterialInwardPage: React.FC = () => {
     }
   }, []);
 
-  const refreshAll = useCallback(() => {
-    fetchReceipts();
-    fetchPos();
-  }, [fetchReceipts, fetchPos]);
-
-  useEffect(() => { refreshAll(); }, [refreshAll]);
+  useEffect(() => { fetchReceipts(); }, [fetchReceipts]);
 
   const fetchRmDetails = useCallback(
     async (receiptDetId: number | string): Promise<MaterialReceiptWithRMDetails[]> => {
@@ -178,19 +144,18 @@ const MaterialInwardPage: React.FC = () => {
   const filtered = useMemo(() => {
     const kw = searchInput.trim().toLowerCase();
     if (!kw) return allData;
-    return allData.filter(r => {
-      const po = poMap.get(r.poRefNo);
-      return [
+    return allData.filter(r =>
+      [
         String(r.receiptDetId),
-        r.inwardType,
+        r.grnNo ?? undefined,
+        r.inwardRef,           // PO no + type, or JOBINWARD
+        poInwardLabel(r),
         r.invoiceNo,
         r.materialType,
-        po?.poNo,
-        po?.poLegacyRefNo,
-        r.supplierName ?? po?.supplierName,
-      ].some(v => v?.toLowerCase().includes(kw));
-    });
-  }, [allData, poMap, searchInput]);
+        r.supplierName,
+      ].some(v => v?.toLowerCase().includes(kw))
+    );
+  }, [allData, searchInput]);
 
   useEffect(() => { setPage(1); }, [searchInput]);
 
@@ -232,7 +197,6 @@ const MaterialInwardPage: React.FC = () => {
 
   const rows = pageData.map(item => {
     const isSel = selected.includes(item.receiptDetId);
-    const po = poMap.get(item.poRefNo);
     return (
       <ExpandableRow
         key={item.receiptDetId}
@@ -248,16 +212,21 @@ const MaterialInwardPage: React.FC = () => {
         parentCells={
           <>
             <Table.Td fw={500} c="blue">{item.receiptDetId}</Table.Td>
-            <Table.Td>{poInwardLabel(po, item.poRefNo, item.inwardType)}</Table.Td>
-            <Table.Td>{dash(item.supplierName ?? po?.supplierName)}</Table.Td>
+            <Table.Td fw={500}>{dash(item.grnNo)}</Table.Td>
+            <Table.Td>{poInwardLabel(item)}</Table.Td>
+            <Table.Td>{dash(item.supplierName)}</Table.Td>
             <Table.Td>{dash(item.invoiceNo)}</Table.Td>
             <Table.Td>{dash(fmtDate(item.invoiceDate))}</Table.Td>
             <Table.Td>
               {item.materialType
-                ? <Badge variant="light" color="indigo" size="sm">{item.materialType}</Badge>
+                // tt="none": Badge uppercases by default ("Raw material" looked like RAW_MATERIAL)
+                ? <Badge variant="light" color="indigo" size="sm" tt="none"
+                    styles={{ root: { maxWidth: 'none' }, label: { overflow: 'visible' } }}>
+                    {item.materialType}
+                  </Badge>
                 : <Text c="dimmed" size="sm">—</Text>}
             </Table.Td>
-            <Table.Td ta="right">{fmt(item.noOfReceived, 3)}</Table.Td>
+            <Table.Td ta="right">{fmtQty(item.noOfReceived)}</Table.Td>
             <Table.Td ta="right">{fmt(item.netAmount)}</Table.Td>
             <Table.Td ta="right">{fmtTax(item.sgstValue)}</Table.Td>
             <Table.Td ta="right">{fmtTax(item.cgstValue)}</Table.Td>
@@ -269,7 +238,6 @@ const MaterialInwardPage: React.FC = () => {
     );
   });
 
-  const editPo = editReceipt ? poMap.get(editReceipt.poRefNo) : undefined;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -316,7 +284,7 @@ const MaterialInwardPage: React.FC = () => {
             }
             : undefined}
           onDelete={undefined}
-          onRefresh={refreshAll}
+          onRefresh={fetchReceipts}
           onExport={() => console.log('Export inward entries', selected)}
         />
       )}
@@ -336,9 +304,9 @@ const MaterialInwardPage: React.FC = () => {
         onClose={() => setEditReceipt(null)}
         onSave={handleSave}
         inwardType={editReceipt?.inwardType ?? 'BYPO'}
-        poRefNo={editReceipt?.inwardType === 'JOBINWARD' ? null : (editReceipt?.poRefNo ?? null)}
-        poNo={editPo?.poNo ?? null}
-        poDate={editPo?.poDate ?? null}
+        // Job inward has no PO; for By PO the form loads everything by receiptDetId
+        poRefNo={editReceipt?.inwardType === 'JOBINWARD' ? null : (editReceipt?.poRefNo || null)}
+        poNo={editReceipt ? poNoFromInwardRef(editReceipt.inwardRef) : null}
         receiptDetId={editReceipt?.receiptDetId ?? null}
       />
 

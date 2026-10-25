@@ -401,21 +401,23 @@ const extraActions = (
 
 // ── Material Receipt Save (shared with Procurement → Material Inward) ────────
 
-const handleInwardReceiptSave = async (data: InwardReceiptFormData) => {
+// Returns true on success so the receipt list can refresh only after the save lands.
+// The PO ref/no are kept — they're cleared when the Inward Receipt dialog closes;
+// clearing them here left the receipt list with no PO to load (new receipt not shown).
+const handleInwardReceiptSave = async (data: InwardReceiptFormData): Promise<boolean> => {
   setSaveStatus('saving');
   try {
     await saveInwardReceipt(data);
 
     setSaveStatus('success');
     setSaveMessage('Inward Receipt saved successfully!');
-
-    setInwardPoRefNo(null);
-    setInwardPoNo(null);
     fetchData(page, keyword, fromDate, toDate);
+    return true;
   } catch (err: any) {
     setSaveStatus('error');
     setSaveMessage(err?.message || 'Failed to save Inward Receipt.');
     console.error('Failed to save inward receipt', err);
+    return false;
   }
 };
 
