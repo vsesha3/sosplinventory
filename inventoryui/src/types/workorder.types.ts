@@ -10,6 +10,7 @@ export interface WorkOrderDetailData {
   productId:    number | null;
   productCode:  string | null;
   productName:  string | null;
+  woCode:       string | null;
   // ── From PM master ──   
   pmId:         number | null;
   pmName:       string | null;
@@ -25,6 +26,7 @@ export const mapWorkOrderDetail = (raw: any): WorkOrderDetailData => ({
   perUnitRate:  raw.perUnitRate  != null ? Number(raw.perUnitRate)  : null,
   productId:    raw.productId    != null ? Number(raw.productId)    : null,
   productCode:  raw.productCode  ?? null,
+  woCode:       raw.woCode       ?? null,
   productName:  raw.productName  ?? null,
   pmId:         raw.pmId         != null ? Number(raw.pmId)         : null,
   pmName:       raw.pmName       ?? null,

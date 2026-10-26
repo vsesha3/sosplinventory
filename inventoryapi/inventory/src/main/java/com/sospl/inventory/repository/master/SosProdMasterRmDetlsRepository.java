@@ -33,9 +33,9 @@ public interface SosProdMasterRmDetlsRepository
                srmt.rm_id                              AS rmId,
                srmt.rm_code                            AS rmCode,
                srmt.rm_name                            AS rmName,
-               spmrd.mixpercentage                     AS mixPercentage,
-               :qty                                    AS planQty,
-               (:qty * spmrd.mixpercentage / 100)      AS requiredQty
+               round(spmrd.mixpercentage,2)                     AS mixPercentage,
+               round(:qty,2)                                    AS planQty,
+               round((:qty * spmrd.mixpercentage / 100),2)      AS requiredQty
            FROM sos_work_order_t swot
            LEFT JOIN sos_prod_master_rm_detls_t spmrd
                ON swot.product_id = spmrd.product_id

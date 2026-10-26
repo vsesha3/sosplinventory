@@ -31,6 +31,7 @@ export interface PmMappingRow {
   pmPackingDetslId: number | null;
   rowId: string;        // local key for React
   pmId: string | null;
+  packSize: string;     // whole number — stored as pack_size (Long)
 }
 
 export interface ProductMasterFormData {
@@ -97,6 +98,7 @@ const newPmRow = (): PmMappingRow => ({
   rowId: crypto.randomUUID(),
   pmId: null,
   pmPackingDetslId: null,
+  packSize: '',
 });
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -128,19 +130,32 @@ const validateForm = (form: ProductMasterFormData): string[] => {
   if (form.conversionCost && isNaN(parseFloat(form.conversionCost)))
     errors.push('Conversion Cost must be a valid number');
 
-  // RM mapping validation
-  for (const row of form.rmMappings) {
+  // RM mapping validation — one message per problem, with the row number
+  form.rmMappings.forEach((row, i) => {
+    const n = i + 1;
     if (!row.rmId)
-      errors.push('All RM mapping rows must have a Raw Material selected');
-    if (!row.mixPercentage || isNaN(parseFloat(row.mixPercentage)))
-      errors.push('All RM mapping rows must have a valid Percentage');
-    if (row.mixPercentage && parseFloat(row.mixPercentage) <= 0)
-      errors.push('RM Percentage must be greater than 0');
-  }
+      errors.push(`Raw Material row ${n}: select a Raw Material`);
+    const pct = parseFloat(row.mixPercentage);
+    if (!row.mixPercentage || isNaN(pct))
+      errors.push(`Raw Material row ${n}: enter a valid Percentage`);
+    else if (pct <= 0)
+      errors.push(`Raw Material row ${n}: Percentage must be greater than 0`);
+  });
+
+  // Same raw material added twice
+  const rmIds = form.rmMappings.map(r => r.rmId).filter(Boolean) as string[];
+  if (new Set(rmIds).size !== rmIds.length)
+    errors.push('The same Raw Material is added more than once');
 
   // PM mapping validation
-  if (form.pmMappings.some(row => !row.pmId))
-    errors.push('All Packing Material rows must have a Packing Material selected');
+  form.pmMappings.forEach((row, i) => {
+    const n = i + 1;
+    if (!row.pmId)
+      errors.push(`Packing Material row ${n}: select a Packing Material`);
+    // Pack Size is optional; when entered it must be a whole number > 0 (Long column)
+    if (row.packSize.trim() && !/^[1-9]\d*$/.test(row.packSize.trim()))
+      errors.push(`Packing Material row ${n}: Pack Size must be a whole number greater than 0`);
+  });
 
   return errors;
 };
@@ -268,6 +283,7 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
             pmPackingDetslId: m.pmPackingDetslId ?? null,
             rowId: crypto.randomUUID(),
             pmId: m.pmId != null ? String(m.pmId) : null,   // matches pmOptions value
+            packSize: m.packSize != null ? String(m.packSize) : '',
           }));
           setForm({
             id: d.productId ?? null,
@@ -382,12 +398,26 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
     if (validationErrors.length > 0) setValidationErrors([]);
   };
 
+  // Pack Size — digits only (whole number, stored as Long)
+  const updatePmPackSize = (rowId: string, value: string) => {
+    const digits = value.replace(/\D/g, '');
+    setForm(prev => ({
+      ...prev,
+      pmMappings: prev.pmMappings.map(r =>
+        r.rowId === rowId ? { ...r, packSize: digits } : r),
+    }));
+    if (validationErrors.length > 0) setValidationErrors([]);
+  };
+
   // ── Submit ────────────────────────────────────────────────────────────────
 
+  // Always open the dialog — it lists the errors when there are any (same as the
+  // PO form). Previously it opened only when valid, so a failed check looked like
+  // "Update does nothing".
   const handleSubmitClick = () => {
     const errors = validateForm(form);
     setValidationErrors(errors);
-    if (errors.length === 0) setConfirmOpen(true);
+    setConfirmOpen(true);
   };
 
   const confirmLabel = mode === 'update' ? 'Update' : 'Submit';
@@ -954,7 +984,8 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
                       <Table highlightOnHover withTableBorder withColumnBorders>
                         <Table.Thead>
                           <Table.Tr>
-                            <Table.Th style={{ width: '90%' }}>Packing Material Name</Table.Th>
+                            <Table.Th style={{ width: '62%' }}>Packing Material Name</Table.Th>
+                            <Table.Th style={{ width: '28%' }}>Pack Size</Table.Th>
                             <Table.Th style={{ width: '10%' }}></Table.Th>
                           </Table.Tr>
                         </Table.Thead>
@@ -969,6 +1000,14 @@ const ProductMasterForm: React.FC<ProductMasterFormProps> = ({
                                   data={pmOptions}
                                   placeholder="Select packing material"
                                   searchable
+                                />
+                              </Table.Td>
+                              <Table.Td>
+                                <FormTextInput
+                                  label=""
+                                  value={row.packSize}
+                                  onChange={e => updatePmPackSize(row.rowId, e.target.value)}
+                                  placeholder="e.g. 25"
                                 />
                               </Table.Td>
                               <Table.Td>

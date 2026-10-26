@@ -16,6 +16,7 @@ public class SosPurchaseOrderViewResponse {
     private String poPaymentTerms;
     private String poDeliveryTerms;
     private String poType;
+    
     private String poReference;
     private String poRemarks;
     private BigDecimal poVat;

@@ -94,6 +94,7 @@ public class SosProductMasterServiceImpl implements SosProductMasterService {
         existing.setTestId(entity.getTestId());
         existing.setRate(entity.getRate());
         existing.setBrandName(entity.getBrandName());
+        existing.setFgLotCode(entity.getFgLotCode());
 
         // RM details
         List<SosProdMasterRmDetls> rmDetails =

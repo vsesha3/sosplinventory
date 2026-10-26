@@ -47,7 +47,7 @@ export interface SalesOrderFormProps {
 const WO_COLUMNS: ColumnDef[] = [
   { key: 'woId', label: 'WO Id', width: 80 },
   { key: 'plant', label: 'Plant', width: 110 },
-  { key: 'productCode', label: 'Product Code', width: 120 },
+  { key: 'woCode', label: 'WO Code', width: 180 },
   { key: 'productName', label: 'Product Name', width: 200 },
   { key: 'pmName', label: 'PM', width: 150 },
   { key: 'qty', label: 'Qty', width: 90, align: 'right' },
@@ -273,7 +273,8 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
     if (!form.ordDate) errors.push('Order Date is required');
     if (!form.ordDeliveryDate) errors.push('Delivery Date is required');
     if (!form.partialPoFlag) errors.push('Partial PO is required');
-    if (!form.requestedBy) errors.push('Requested By is required');    return errors;
+    if (!form.requestedBy) errors.push('Requested By is required');
+    if (!form.inwardType) errors.push('Sales Order Type is required');    return errors;
   };
 
   const confirmLabel = mode === 'update' ? 'Update' : 'Save';
@@ -311,7 +312,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
         <Text size="xs">{dsh(item.plant)}</Text>
       </Table.Td>
       <Table.Td>
-        <Text size="xs" fw={500}>{dsh(item.productCode)}</Text>
+        <Text size="xs" fw={500}>{dsh(item.woCode)}</Text>
       </Table.Td>
       <Table.Td>
         <Text size="xs">{dsh(item.productName)}</Text>
@@ -411,6 +412,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
                         setForm(prev => ({ ...prev, inwardType: value as InwardType | null }))}
                       data={INWARD_TYPE_OPTIONS}
                       placeholder="Select"
+                      required
                       clearable
                     />
                   </Grid.Col>

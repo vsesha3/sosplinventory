@@ -82,6 +82,11 @@ const mapApiToForm = (raw: WorkOrderApiData): WorkOrderFormData => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// ── Quick-add Product endpoint ────────────────────────────────────────────────
+// PLACEHOLDER — update to the final endpoint (and payload in handleAddProduct).
+// Expected response: the created product with productId (or id) + productName.
+const PRODUCT_QUICK_ADD_URL = '/api/product';
+
 const safe = (val: string): number => {
   const n = parseFloat(val);
   return isNaN(n) ? 0 : n;
@@ -113,6 +118,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
   const [addPlantOpen, setAddPlantOpen] = useState(false);
   const [newPlantName, setNewPlantName] = useState('');
   const [quickSaving, setQuickSaving]   = useState(false);
+
+  // ── QuickAdd: Product ─────────────────────────────────────────────────────
+  const [addProductOpen, setAddProductOpen] = useState(false);
+  const [newProductName, setNewProductName] = useState('');
 
   // PM list associated with the selected product (null = no product selected)
   const [productPmOptions, setProductPmOptions] = useState<DropDownOption[] | null>(null);
@@ -231,6 +240,47 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
   }, [opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── QuickAdd handlers ─────────────────────────────────────────────────────
+
+  const handleAddProduct = async () => {
+    const name = newProductName.trim();
+    if (!name) return;
+    setQuickSaving(true);
+    try {
+      // TODO: replace PRODUCT_QUICK_ADD_URL / payload with the final quick-add endpoint
+      const res = await api.post(PRODUCT_QUICK_ADD_URL, { productName: name });
+      const created = res.data?.data ?? res.data;
+      const createdId = created?.productId ?? created?.id ?? null;
+
+      // Refresh product dropdown
+      const productRes = await api.get<DropDownApiResponse>('/api/dropdown/product')
+        .catch(() => ({ data: { data: [] as DropDownOption[] } }));
+      let updated: DropDownOption[] = (productRes.data.data ?? [])
+        .map(o => ({ value: String(o.value), label: String(o.label ?? '-') }));
+
+      // Auto-select the new product — by returned id first, then by name
+      let match = (createdId != null ? updated.find(o => o.value === String(createdId)) : undefined)
+        ?? updated.find(o => o.label.trim().toLowerCase() === name.toLowerCase());
+
+      // Not in the refreshed list yet — add it so the Select can show it
+      if (!match && createdId != null) {
+        match = { value: String(createdId), label: created?.productName ?? name };
+        updated = [...updated, match];
+      }
+
+      setProductOptions(updated);
+      // Same path as picking it from the dropdown — loads UOM + PM list
+      if (match) handleProductChange(match.value);
+      setNewProductName('');
+      setAddProductOpen(false);
+    } catch (err: any) {
+      console.error('[handleAddProduct] Failed:', err?.response?.data ?? err);
+      setFetchError(
+        err?.response?.data?.message || 'Failed to add Product. Please try again.'
+      );
+    } finally {
+      setQuickSaving(false);
+    }
+  };
 
   const handleAddPlant = async () => {
     const name = newPlantName.trim();
@@ -384,15 +434,30 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
                     />
                   </Grid.Col>
                   <Grid.Col span={6}>
-                    <FormSelect
-                      label="Product"
-                      value={form.productId}
-                      onChange={handleProductChange}
-                      data={productOptions}
-                      placeholder="--------Select----------"
-                      required
-                      searchable
-                    />
+                    <Group gap="xs" align="flex-end">
+                      <Box style={{ flex: 1 }}>
+                        <FormSelect
+                          label="Product"
+                          value={form.productId}
+                          onChange={handleProductChange}
+                          data={productOptions}
+                          placeholder="--------Select----------"
+                          required
+                          searchable
+                        />
+                      </Box>
+                      <Tooltip label="Add new Product" position="top">
+                        <ActionIcon
+                          variant="light"
+                          color="blue"
+                          size="lg"
+                          mb={1}
+                          onClick={() => { setNewProductName(''); setAddProductOpen(true); }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Grid.Col>
 
                   {/* ── Row 2: Plant | WO Code ── */}
@@ -552,6 +617,18 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
         confirmLabel={confirmLabel}
         errors={validationErrors}
         zIndex={350}
+      />
+
+      {/* ── QuickAdd: Product ── */}
+      <QuickAddModal
+        opened={addProductOpen}
+        onClose={() => setAddProductOpen(false)}
+        title="Add Product"
+        label="Product Name"
+        value={newProductName}
+        onChange={setNewProductName}
+        onSave={handleAddProduct}
+        saving={quickSaving}
       />
 
       {/* ── QuickAdd: Plant ── */}

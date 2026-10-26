@@ -30,6 +30,7 @@ import type {InwardReceiptFormData } from '../raw-material/Rawmaterialinwardrece
 import { saveInwardReceipt } from '../raw-material/saveInwardReceipt';
 import type { SaveStatus } from '../common/Savestatusbanner';
 import SaveStatusBanner from '../common/Savestatusbanner';
+import { PO_TYPE_OPTIONS, poTypeLabel } from '../../constants/poTypes';
 
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
@@ -48,6 +49,7 @@ interface PurchaseOrder {
   addCharges: number | null;
   createdBy: string | null;
   createdAt: string | null;
+  updatedAt?: string | null;
   poLegacyRefNo: string | null;
 }
 
@@ -84,7 +86,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'poDeliveryTerms',    label: 'Delivery Terms',    width: 120 },
   { key: 'poClosedFlag',       label: 'Status',            width: 90  },
  
-  { key: 'createdBy',          label: 'Created By',        width: 110 },
+  { key: 'lastUpdated',        label: 'Last Updated',      width: 150 },
 ];
 
 // ── Child columns (PO line items) ─────────────────────────────────────────────
@@ -119,6 +121,19 @@ const fmtDate = (val: string | null) => {
   } catch { return val; }
 };
 
+// Latest of createdAt / updatedAt, with time — e.g. "26 Oct 2026, 10:42 am"
+const lastUpdated = (createdAt?: string | null, updatedAt?: string | null) => {
+  const times = [createdAt, updatedAt]
+    .filter((v): v is string => !!v)
+    .map(v => new Date(v))
+    .filter(d => !isNaN(d.getTime()));
+  if (times.length === 0) return null;
+  const latest = new Date(Math.max(...times.map(d => d.getTime())));
+  return latest.toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+};
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 const PurchaseOrderPage: React.FC = () => {
@@ -146,6 +161,7 @@ const [inwardPoNo, setInwardPoNo]       = useState<string | null>(null);
 const [inwardPoDate, setInwardPoDate]   = useState<string | null>(null);
 const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
 const [saveMessage, setSaveMessage] = useState<string>('');
+const [savingMessage, setSavingMessage] = useState<string>('Saving, please wait...');
 const [receiptListOpen, setReceiptListOpen] = useState(false);
 
   // ── Fetch parent POs ───────────────────────────────────────────────────────
@@ -224,7 +240,10 @@ const [receiptListOpen, setReceiptListOpen] = useState(false);
     v && v !== '-' ? v : <Text c="dimmed" size="sm">—</Text>;
 
 const handlePoSave = async (data: PurchaseOrderFormData, lineItems: PoLineItem[]) => {
-  console.log('Saving PO', data, lineItems);
+  if (saveStatus === 'saving') return;   // ignore double submit
+  const isUpdate = formMode === 'update';
+  setSavingMessage(isUpdate ? 'Updating Purchase Order, please wait...' : 'Saving Purchase Order, please wait...');
+  setSaveStatus('saving');
   try {
     const payload = {
       ...data,
@@ -249,16 +268,25 @@ const handlePoSave = async (data: PurchaseOrderFormData, lineItems: PoLineItem[]
       })),
     };
 
-    if (formMode === 'update') {
+    if (isUpdate) {
       await api.put(`/api/inventory/purchase-order/${data.poRefNo}`, payload);
     } else {
       await api.post('/api/inventory/purchase-order', payload);
     }
 
+    setSaveStatus('success');
+    setSaveMessage(isUpdate ? 'Purchase Order updated successfully!' : 'Purchase Order created successfully!');
     setPoformOpen(false);
+    setEditPoRefNo(null);
+    setFormMode('create');
     fetchData(page, keyword, fromDate, toDate);
-  } catch (err) {
+  } catch (err: any) {
+    // Form stays open so the user can fix and retry
     console.error('Failed to save PO', err);
+    setSaveStatus('error');
+    setSaveMessage(
+      err?.response?.data?.message || `Failed to ${isUpdate ? 'update' : 'save'} Purchase Order.`
+    );
   }
 };
 
@@ -339,7 +367,11 @@ const getSelectedPoNo = (): string | null => {
             <Table.Td>{fmtDate(item.poDeliverySchedule)}</Table.Td>
             <Table.Td>
               {item.poType
-                ? <Badge variant="light" color="indigo" size="sm">{item.poType}</Badge>
+                // API sends the code (RAW_MATERIAL) — show the proper-case label
+                ? <Badge variant="light" color="indigo" size="sm" tt="none"
+                    styles={{ root: { maxWidth: 'none' }, label: { overflow: 'visible' } }}>
+                    {poTypeLabel(item.poType)}
+                  </Badge>
                 : <Text c="dimmed" size="sm">—</Text>}
             </Table.Td>
             <Table.Td>{val(item.poPaymentTerms)}</Table.Td>
@@ -352,7 +384,7 @@ const getSelectedPoNo = (): string | null => {
                 : <Text c="dimmed" size="sm">—</Text>}
             </Table.Td>
           
-            <Table.Td>{val(item.createdBy)}</Table.Td>
+            <Table.Td>{val(lastUpdated(item.createdAt, item.updatedAt))}</Table.Td>
           </>
         }
       />
@@ -405,6 +437,7 @@ const extraActions = (
 // The PO ref/no are kept — they're cleared when the Inward Receipt dialog closes;
 // clearing them here left the receipt list with no PO to load (new receipt not shown).
 const handleInwardReceiptSave = async (data: InwardReceiptFormData): Promise<boolean> => {
+  setSavingMessage('Saving Inward Receipt, please wait...');
   setSaveStatus('saving');
   try {
     await saveInwardReceipt(data);
@@ -512,13 +545,9 @@ const handleInwardReceiptSave = async (data: InwardReceiptFormData): Promise<boo
     setFormMode('create');     // ← reset mode
   }}
   onSave={handlePoSave}
+  saving={saveStatus === 'saving'}
   onPrint={() => console.log('Print')}
-  poTypeOptions={[
-    { value: 'RAW_MATERIAL',     label: 'Raw Material', prefix: 'RM' },
-    { value: 'PACKING_MATERIAL', label: 'Packing Material', prefix: 'PM' },
-    { value: 'CAPITAL_GOODS',    label: 'Capital Goods', prefix: 'CG' },
-    { value: 'MISCELLANEOUS',    label: 'Miscellaneous', prefix: 'MISC' },
-  ]}
+  poTypeOptions={PO_TYPE_OPTIONS}
   supplierOptions={[]}
   mode={formMode}                // ← pass mode
   poRefNo={editPoRefNo} 
@@ -540,6 +569,7 @@ const handleInwardReceiptSave = async (data: InwardReceiptFormData): Promise<boo
 
 <SaveStatusBanner
   status={saveStatus}
+  savingMessage={savingMessage}
   successMessage={saveMessage || 'Saved!'}
   errorMessage={saveMessage || 'Failed to save.'}
   onDismiss={() => setSaveStatus('idle')}

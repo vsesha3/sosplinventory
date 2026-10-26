@@ -22,8 +22,15 @@ public class SosWorkOrderWithDetailsResponse {
 
     // ── Calculated ────────────────────────────────────────────────────────
     private BigDecimal totalAmount;  // qty * perUnitRate
+    private String woCode;
 
-    // ── Getters ───────────────────────────────────────────────────────────
+    public String getWoCode() {
+		return woCode;
+	}
+	public void setWoCode(String woCode) {
+		this.woCode = woCode;
+	}
+	// ── Getters ───────────────────────────────────────────────────────────
     public Long getWoId() { return woId; }
     public Long getPoId() { return poId; }
     public String getPlant() { return plant; }

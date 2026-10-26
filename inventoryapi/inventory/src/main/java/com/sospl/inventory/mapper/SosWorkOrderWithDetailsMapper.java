@@ -27,6 +27,7 @@ public class SosWorkOrderWithDetailsMapper {
         res.setProductCode(ParseUtil.toString(row[7]));
         res.setProductName(ParseUtil.toString(row[8]));
         res.setPmName(ParseUtil.toString(row[9]));
+        res.setWoCode(ParseUtil.toString(row[10]));
 
         // ── Calculate totalAmount = qty * perUnitRate ─────────────────────
         BigDecimal qty = res.getQty() != null

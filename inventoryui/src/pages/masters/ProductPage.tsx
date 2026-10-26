@@ -170,6 +170,7 @@ const ProductPage: React.FC = () => {
         pmDetails: formData.pmMappings.map(p => ({
           pmPackingDetslId: p.pmPackingDetslId ? Number(p.pmPackingDetslId) : null,
           pmId:             p.pmId             ? Number(p.pmId)             : null,
+          packSize:         p.packSize?.trim() ? Number(p.packSize)         : null,
         })),
       };
 

@@ -1,0 +1,1 @@
+ALTER TABLE sos_prod_master_pm_detls_t ADD COLUMN pack_size BIGINT NULL;

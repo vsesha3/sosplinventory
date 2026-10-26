@@ -9,6 +9,7 @@ import { IconPrinter } from '@tabler/icons-react';
 import { Modal } from '@mantine/core';
 import api from '../../services/api';
 import type { ApiResponse } from '../../types/api.types';
+import { PO_TYPE_OPTIONS } from '../../constants/poTypes';
 
 import { FormDatePicker } from '../../components/common/FormDatePicker';
 import { FormTextInput } from '../../components/common/FormTextInput';
@@ -96,6 +97,7 @@ export interface PurchaseOrderFormProps {
   onClose: () => void;
   mode?: 'create' | 'update';
   poRefNo?: number | null;
+  saving?: boolean;   // true while the parent is saving — shows a loading Save button
 }
 
 // ── Default form values ───────────────────────────────────────────────────────
@@ -141,12 +143,7 @@ const safe = (val: string | null | undefined): number => {
 
 const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   initialData,
-  poTypeOptions = [
-    { value: 'Raw Material',     label: 'Raw Material',     prefix: 'RM'   },
-    { value: 'Packing Material', label: 'Packing Material', prefix: 'PM'   },
-    { value: 'Capital Goods',    label: 'Capital Goods',    prefix: 'CG'   },
-    { value: 'Miscellaneous',    label: 'Miscellaneous',    prefix: 'MISC' },
-  ],
+  poTypeOptions = PO_TYPE_OPTIONS,   // constants/poTypes — value = stored code
   onSave,
   onPrint,
   readOnly = false,
@@ -154,6 +151,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   onClose,
   mode = 'create',
   poRefNo = null,
+  saving = false,
 }) => {
 
   const [form, setForm]           = useState<PurchaseOrderFormData>({ ...defaultForm, ...initialData });
@@ -873,13 +871,13 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
             }}
           >
             <Group justify="flex-end">
-              <Button variant="default" size="sm" onClick={onClose}>Cancel</Button>
-              <Button onClick={() => {
+              <Button variant="default" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+              <Button loading={saving} onClick={() => {
                 const errors = validateForm();
                 setValidationErrors(errors);
                 setConfirmOpen(true);
               }}>
-                Save PO
+                {mode === 'update' ? 'Update PO' : 'Save PO'}
               </Button>
             </Group>
           </Box>
@@ -890,7 +888,10 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       <ConfirmDialog
         opened={confirmOpen}
         onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
-        onConfirm={() => onSave?.(form, lineItems)}
+        onConfirm={() => {
+          setConfirmOpen(false);   // close the dialog; progress shows on the Save button + banner
+          onSave?.(form, lineItems);
+        }}
         message={`Are you sure you want to ${confirmLabel.toLowerCase()} this Purchase Order?`}
         confirmLabel={confirmLabel}
         zIndex={250}

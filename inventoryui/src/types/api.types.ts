@@ -76,16 +76,8 @@ export interface PoLineItem {
 }
 
 
-export const PO_TYPE_OPTIONS = [
-  { value: 'RAW_MATERIAL',     label: 'Raw Material',     prefix: 'RM'   },
-  { value: 'PACKING_MATERIAL', label: 'Packing Material', prefix: 'PM'   },
-  { value: 'CAPITAL_GOODS',    label: 'Capital Goods',    prefix: 'CG'   },
-  { value: 'MISCELLANEOUS',    label: 'Miscellaneous',    prefix: 'MISC' },
-] as const;
-
-export const PO_TYPE_LABELS: Record<string, string> = Object.fromEntries(
-  PO_TYPE_OPTIONS.map(o => [o.value, o.label])
-);
+// PO types now live in constants/poTypes — re-exported here for existing imports
+export { PO_TYPE_OPTIONS, PO_TYPE_LABELS, poTypeLabel } from '../constants/poTypes';
 
 
 // BYPO = inward against a PO (Purchase Orders module)

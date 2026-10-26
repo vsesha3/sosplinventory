@@ -59,7 +59,7 @@ const StockIssuanceEditModal: React.FC<StockIssuanceEditModalProps> = ({
 
         // ── Auto-populate if single lot and requiredQty is known ─────────────
         if (item.lotCount === 1 && item.requiredQty != null) {
-            setEditIssuedQty(item.requiredQty.toFixed(3));
+            setEditIssuedQty(item.requiredQty.toFixed(2));
         } else {
             setEditIssuedQty(item.issuedQty != null ? String(item.issuedQty) : '');
         }
@@ -201,7 +201,7 @@ const StockIssuanceEditModal: React.FC<StockIssuanceEditModalProps> = ({
                                 {item.requiredQty != null && (
                                     <FormTextInput
                                         label="Required Qty"
-                                        value={item.requiredQty.toFixed(3)}
+                                        value={item.requiredQty.toFixed(2)}
                                         onChange={() => { }}
                                         readOnly
                                     />

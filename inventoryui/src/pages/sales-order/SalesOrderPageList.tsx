@@ -49,7 +49,7 @@ const COLUMNS: ColumnDef[] = [
 const CHILD_COLUMNS: ChildColumnDef[] = [
   { key: 'woId',        label: 'WO Id',        width: 80  },
   { key: 'plant',       label: 'Plant',        width: 80 },
-  { key: 'productCode', label: 'Product Code', width: 80 },
+  { key: 'woCode',      label: 'WO Code',      width: 180 },
   { key: 'productName', label: 'Product Name', width: 200 },
   { key: 'pmName',      label: 'Packing Material',           width: 150 },
   { key: 'qty',         label: 'Qty',          width: 100, align: 'right',

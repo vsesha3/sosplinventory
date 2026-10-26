@@ -9,6 +9,7 @@ import { FormTextInput } from '../../components/common/FormTextInput';
 import { FormSelect } from '../../components/common/FormSelect';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import api from '../../services/api';
+import { poTypeLabel } from '../../constants/poTypes';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -86,12 +87,7 @@ const defaultItem: POLineItemData = {
 
 // ── Maps ──────────────────────────────────────────────────────────────────────
 
-const PO_TYPE_LABELS: Record<string, string> = {
-  'RAW_MATERIAL':     'Raw Material',
-  'PACKING_MATERIAL': 'Packing Material',
-  'CAPITAL_GOODS':    'Capital Goods',
-  'MISCELLANEOUS':    'Miscellaneous',
-};
+// PO type labels come from constants/poTypes (poTypeLabel)
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -281,7 +277,7 @@ const handleRmChange = async (value: string | null) => {
   };
 
   const confirmLabel = mode === 'edit' ? 'Update' : 'Save';
-  const typeLabel    = poType ? (PO_TYPE_LABELS[poType] ?? poType) : 'Item / Service';
+  const typeLabel    = poType ? poTypeLabel(poType) : 'Item / Service';
 
   // ── Render ────────────────────────────────────────────────────────────────
 

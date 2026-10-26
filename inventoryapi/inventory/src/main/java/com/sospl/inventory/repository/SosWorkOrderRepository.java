@@ -72,7 +72,8 @@ public interface SosWorkOrderRepository
     	           sspmt.pm_id          AS pmId,
     	           spmt.product_code    AS productCode,
     	           spmt.product_name    AS productName,
-    	           sspmt.pm_name        AS pmName
+    	           sspmt.pm_name        AS pmName,
+    	           swot.wo_code          AS woCode
     	       FROM sos_work_order_t swot
     	       LEFT JOIN sos_product_master_t spmt
     	           ON swot.product_id = spmt.product_id

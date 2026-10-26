@@ -312,5 +312,18 @@ public class SosPurchaseOrderViewServiceImpl
         }
     }
     
+    private String formatPoType(String poType) {
+        if (poType == null || poType.isBlank()) {
+            return poType;
+        }
+
+        return switch (poType.toUpperCase().trim()) {
+            case "RAW_MATERIAL" -> "Raw Material";
+            case "PACKING_MATERIAL" -> "Packing Material";
+            case "MISCULANIOUS", "MISCELLANEOUS" -> "Miscellaneous";
+            default -> poType;
+        };
+    }
+    
    
 }

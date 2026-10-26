@@ -118,7 +118,8 @@ const mapPmDetail = (raw: any): PmPackingDetail => ({
   pmCode: raw.pmCode != null ? String(raw.pmCode)
         : raw.pmId != null ? String(raw.pmId) : null,
   pmName: raw.pmName ?? raw.rmName ?? null,
-  pmSize: raw.pmSize != null ? Number(raw.pmSize) : null,
+  // Pack size from the product's PM mapping (packSize); pmSize kept for older responses
+  pmSize: extractDecimal(raw.packSize ?? raw.pmSize),
   pmQty: extractDecimal(raw.pmQty),
   pmUom: raw.pmUom ?? null,
   description: raw.description ?? null,
@@ -711,7 +712,7 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
         <Table.Td ta="right"><Text size="xs">{fmt(item.mixPercentage, 2)}</Text></Table.Td>
         <Table.Td ta="right"><Text size="xs">{fmt(item.planQty, 2)}</Text></Table.Td>
         <Table.Td ta="right">
-          <Text size="xs" fw={600} c="blue">{fmt(item.requiredQty, 3)}</Text>
+          <Text size="xs" fw={600} c="blue">{fmt(item.requiredQty, 2)}</Text>
         </Table.Td>
       </Table.Tr>
     );
@@ -1120,15 +1121,18 @@ const handleStockEdit = () => {
                     </Stack>
                   </Center>
                 ) : pmLines.length > 0 ? (
+                  // Scrolls when there are several packing items, so the panel stays compact
+                  <Box style={{ maxHeight: 460, overflowY: 'auto' }}>
                   <MasterCardGrid
                     fields={[
                       { key: 'pmName', label: 'PM Name' },
                       { key: 'pmCode', label: 'PM Code' },
                       {
-                        key: 'pmSize', label: 'PM Size',
+                        key: 'pmSize', label: 'Pack Size',
                         render: (v) => v != null ? `${v}` : '—'
                       },
                       {
+                        // Request Quantity ÷ Pack Size, rounded up (a part pack is still a pack)
                         key: 'noOfPacks', label: 'No. of Packs',
                         render: (v) => v != null
                           ? <Text size="sm" fw={700} c="blue">{v}</Text>
@@ -1139,13 +1143,19 @@ const handleStockEdit = () => {
                         render: (v) => v != null ? `₹${Number(v).toFixed(2)}` : '—'
                       },
                     ] as CardFieldDef[]}
-                    items={pmLines.map(pm => ({
-                      ...pm,
-                      noOfPacks: pm.pmSize && pm.pmSize > 0 && form.planToProdQty
-                        ? Math.ceil(Number(form.planToProdQty) / pm.pmSize)
-                        : null,
-                    }))}
-                    idKey="pmId"
+                    // Each packing item gets its own pack count from its own pack size
+                    items={pmLines.map((pm, i) => {
+                      const qty = Number(form.planToProdQty) || 0;
+                      return {
+                        ...pm,
+                        // Unique per row — the same PM can appear with different pack sizes
+                        rowKey: pm.pmPackingDetslId ?? `${pm.pmId ?? 'pm'}-${i}`,
+                        noOfPacks: pm.pmSize && pm.pmSize > 0 && qty > 0
+                          ? Math.ceil(qty / pm.pmSize)
+                          : null,
+                      };
+                    })}
+                    idKey="rowKey"
                     showToolbar={false}
                     totalElements={pmLines.length}
                     loading={pmLoading}
@@ -1165,6 +1175,7 @@ const handleStockEdit = () => {
                       if (form.woId) loadRmMapping(form.woId, form.planToProdQty);
                     }}
                   />
+                  </Box>
                 ) : (
                   <Paper withBorder p="xl" radius="sm"
                     style={{

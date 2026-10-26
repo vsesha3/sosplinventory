@@ -198,7 +198,6 @@ public class SosMaterialReceiptDet extends BaseAuditEntity {
     private String inwardType = "BYPO";
     
     
-
     
    
     // ── Getters ───────────────────────────────────────────────────────────

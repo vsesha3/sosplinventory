@@ -123,6 +123,7 @@ public class SosProdMasterPmDetlsServiceImpl
 
                 existing.setProductId(productId);
                 existing.setPmId(pmDetail.getPmId());
+                existing.setPackSize(pmDetail.getPackSize());
 
                 detlsRepository.save(existing);
 
