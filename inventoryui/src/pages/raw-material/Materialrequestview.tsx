@@ -14,6 +14,7 @@ import type { RmRequestApiData } from '../../types/MaterialRequest.types';
 import { mapRmRequest } from '../../types/MaterialRequest.types';
 import type { SaveStatus } from '../common/Savestatusbanner';
 import SaveStatusBanner from '../common/Savestatusbanner';
+import { fetchReqDetlsIds, postRmIssue } from './rmIssueApi';
 
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -161,6 +162,39 @@ const MaterialRequestView: React.FC = () => {
     setFormOpen(true);
   };
 
+  // ── RM Issue — one per raw material, lines = lot-wise Issue Qty ──────────
+  // Only lots picked before the request existed (new request) are pending here —
+  // on an existing request the stock popup posts its issue straight away.
+  // Needs the saved request line ids (rmReqDetlsId), so runs after the request save.
+  // Returns the RM codes whose issue could not be saved.
+  const saveRmIssues = async (rmReqId: number, formData: MaterialRequestFormData): Promise<string[]> => {
+    const issues = Object.entries(formData.lotIssues ?? {})
+      .filter(([, lots]) => Object.keys(lots).length > 0);
+    if (issues.length === 0 || !rmReqId) return [];
+
+    let detlsIds: Map<number, number>;
+    try {
+      detlsIds = await fetchReqDetlsIds(rmReqId);
+    } catch {
+      return issues.map(([rmCode]) => rmCode);
+    }
+
+    const failed: string[] = [];
+    for (const [rmCode, lots] of issues) {
+      const rmId    = formData.rmLines?.find(l => l.rmCode === rmCode)?.rmId;
+      const detlsId = rmId != null ? detlsIds.get(Number(rmId)) : undefined;
+      if (detlsId == null) { failed.push(rmCode); continue; }
+
+      try {
+        await postRmIssue({ rmReqId, rmReqDetlsId: detlsId, issueBy: formData.requestBy, lots });
+      } catch (err: any) {
+        console.warn(`[saveRmIssues] ${rmCode} failed:`, err?.response?.data ?? err);
+        failed.push(rmCode);
+      }
+    }
+    return failed;
+  };
+
   const handleSave = async (formData: MaterialRequestFormData) => {
     if (saveStatus === 'saving') return;   // ignore double submit
     setSaveStatus('saving');
@@ -188,18 +222,28 @@ const MaterialRequestView: React.FC = () => {
 
       };
 
-      if (formMode === 'update' && formData.rmReqId) {
-        await api.put(`/api/inventory/rm-request/${formData.rmReqId}`, payload);
-      } else {
-        await api.post('/api/inventory/rm-request/save', payload);
-      }
+      const res = formMode === 'update' && formData.rmReqId
+        ? await api.put(`/api/inventory/rm-request/${formData.rmReqId}`, payload)
+        : await api.post('/api/inventory/rm-request/save', payload);
+      const savedReqId = formData.rmReqId ?? Number(res.data?.data);
 
-      setSaveStatus('success');
-      setSaveMessage(
-        formMode === 'update'
-          ? 'Material Request updated successfully!'
-          : 'Material Request created successfully!'
-      );
+      // Request is saved at this point — issue failures are reported, not retried,
+      // so a retry can't post the same issue twice
+      const failedIssues = await saveRmIssues(savedReqId, formData);
+
+      if (failedIssues.length > 0) {
+        setSaveStatus('error');
+        setSaveMessage(
+          `Material Request saved, but RM issue failed for: ${failedIssues.join(', ')}`
+        );
+      } else {
+        setSaveStatus('success');
+        setSaveMessage(
+          formMode === 'update'
+            ? 'Material Request updated successfully!'
+            : 'Material Request created successfully!'
+        );
+      }
       setFormOpen(false);
       setSelected([]);
       await fetchData(page, keyword);

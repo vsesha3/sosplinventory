@@ -16,6 +16,36 @@
 - **UOM** and **PM (Packing Material)** are now filled from the selected product and can't be edited. PM lists every packing material associated with the product. Both stay disabled until a product is chosen.
 - **Per Unit Rate** renamed to **Average Rate** and is no longer mandatory.
 
+### Material Request (new / edit)
+
+**Picking stock lot by lot**
+- Click a raw material in **RM Mapping** and its stock opens in a popup, **RM Stock Lot Wise Selection**. It used to show at the side of the screen.
+- The popup lists every lot of that raw material: Lot No, GRN No, Total Qty, Issued Qty, Remaining Qty, Receipt Date and Invoice No.
+- Type the quantity to give out from each lot in the new **Issue Qty** column, then press **Save**.
+- Below the table you can see the **Required Qty**, the **Total Issue Qty** you have entered, and the **Balance to Issue**.
+- If there is only one lot, Issue Qty is filled in for you.
+- All quantities now show 2 decimal places (for example 25.50) instead of 3.
+
+**Checks when you save**
+- You can't issue more than a lot's **Remaining Qty**. The box turns red if you try.
+- The total you issue can't be more than what is still needed for that raw material.
+- Lots with no stock left can't be selected.
+
+**When the issue is recorded**
+- **New request:** the quantities you enter are recorded when you press **Save Request**.
+- **Editing a saved request:** the issue is recorded as soon as you press **Save** in the popup. A green message confirms it with the issue number.
+- If something goes wrong, you'll see a message saying which raw materials were not issued. The request itself is still saved.
+
+**RM Mapping table**
+- New **Issue Qty** column: how much has been issued for each raw material. It turns green when the full required quantity is issued.
+- New **Balance** column: how much is still left to issue.
+- When you edit a saved request, RM Mapping shows the raw materials saved on that request. The popup also shows how much is **Already Issued**.
+- If you change the **Request Quantity**, the required quantities are worked out again from the product.
+
+### Known limitations
+- **Issue Shift** and **Received By** can't be entered yet.
+- The quantity already issued on a saved request will show once the matching server update is released. Until then, only issues made while the form is open are counted.
+
 ## Version 1.0.0 — 02-10-2026
 
 ### Material Inward — list page

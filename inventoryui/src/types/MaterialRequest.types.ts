@@ -53,6 +53,8 @@ export interface MaterialRequestFormData {
   productionPlanId: number | null;
   isRmIssueCompleted: boolean;
   rmLines?: RmMappingLine[];
+  // Lot-wise Issue Qty from the stock popup: rmCode → receiptId → qty
+  lotIssues?: Record<string, Record<number, string>>;
 }
 
 
@@ -66,6 +68,10 @@ export interface RmMappingLine {
   mixPercentage: number | null;
   planQty:       number | null;
   requiredQty:   number | null;
+  // Saved request only (GET /api/inventory/rm-request/{rmReqId}/lines)
+  rmReqDetlsId?: number | null;
+  issuedQty?:    number | null;   // total already issued against this line
+  balanceQty?:   number | null;   // required − issued, when the API sends it
 }
 
 

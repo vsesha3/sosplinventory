@@ -28,12 +28,12 @@ import type {
 } from '../../types/MaterialRequest.types.ts';
 import type { DropDownOption, DropDownApiResponse } from '../../types/common.types';
 
-// ── RM Mapping types ──────────────────────────────────────────────────────────
+// ── RM Stock lot selection ────────────────────────────────────────────────────
 
-import StockIssuanceEditModal from './StockIssuanceEditModal';
-
-
-import type { StockIssuanceLine } from './StockIssuanceEditModal';
+import RmStockLotModal from './RmStockLotModal';
+import type { RmStockLine, LotIssueMap } from './RmStockLotModal';
+import { fetchReqDetlsIds, postRmIssue } from './rmIssueApi';
+import { notifications } from '@mantine/notifications';
 
 
 const extractDecimal = (v: any): number | null => {
@@ -55,6 +55,31 @@ const mapRmLine = (raw: any): RmMappingLine => ({
   requiredQty: extractDecimal(raw.requiredQty),
 });
 
+// Like extractDecimal, but keeps 0 (an issued / balance qty of 0 is meaningful)
+const toQty = (v: any): number | null => {
+  if (v == null || v === '') return null;
+  const n = typeof v === 'object' ? (v.parsedValue ?? parseFloat(v.source)) : Number(v);
+  return n == null || isNaN(n) ? null : n;
+};
+
+// Saved request line (GET /api/inventory/rm-request/{rmReqId}/lines).
+// The line only stores rmId + qty today, so code / name / mix % / plan qty fall back
+// to the product's RM mapping row with the same rmId.
+const mapRequestLine = (raw: any, recipe?: RmMappingLine): RmMappingLine => ({
+  woId: raw.woId != null ? Number(raw.woId) : recipe?.woId ?? 0,
+  woCode: raw.woCode ?? recipe?.woCode ?? null,
+  productId: raw.productId ?? recipe?.productId ?? null,
+  rmId: Number(raw.rmId ?? recipe?.rmId ?? 0),
+  rmCode: raw.rmCode != null ? String(raw.rmCode) : recipe?.rmCode ?? null,
+  rmName: raw.rmName ?? recipe?.rmName ?? null,
+  mixPercentage: extractDecimal(raw.mixPercentage) ?? recipe?.mixPercentage ?? null,
+  planQty: extractDecimal(raw.planQty) ?? recipe?.planQty ?? null,
+  requiredQty: toQty(raw.requiredQty ?? raw.qty) ?? recipe?.requiredQty ?? null,
+  rmReqDetlsId: raw.rmReqDetlsId != null ? Number(raw.rmReqDetlsId) : null,
+  issuedQty: toQty(raw.issuedQty),
+  balanceQty: toQty(raw.balanceQty ?? raw.remainingQty),
+});
+
 // ── PM Packing Detail type ────────────────────────────────────────────────────
 
 export interface PmPackingDetail {
@@ -69,21 +94,7 @@ export interface PmPackingDetail {
   [key: string]: any;  // allow additional fields from API
 }
 
-// ── RM Stock type ─────────────────────────────────────────────────────────────
-
-interface RmStockLine {
-  receiptId: number;
-  lotNo: string | null;
-  rmCode: string | null;
-  rmName: string | null;
-  totalQty: number | null;
-  perUnitRate: number | null;
-  issuedQty: number | null;
-  remainingQty: number | null;
-  receiptDate: string | null;
-  grnNo: string | null;
-  invoiceNo: string | null;
-}
+// ── RM Stock mapping ──────────────────────────────────────────────────────────
 
 const mapRmStock = (raw: any): RmStockLine => ({
   receiptId: raw.receiptId ?? 0,
@@ -98,16 +109,6 @@ const mapRmStock = (raw: any): RmStockLine => ({
   grnNo: raw.grnNo ?? null,
   invoiceNo: raw.invoiceNo ?? null,
 });
-
-const STOCK_COLUMNS: ColumnDef[] = [
-  { key: 'rmName', label: 'RM Name', width: 200 },
-  { key: 'lotNo', label: 'Lot No', width: 160 },
-  { key: 'totalQty', label: 'Total Qty', width: 110, align: 'right' },
-  { key: 'issuedQty', label: 'Issued Qty', width: 110, align: 'right' },
-  { key: 'remainingQty', label: 'Remaining Qty', width: 120, align: 'right' },
-  { key: 'receiptDate', label: 'Receipt Date', width: 120 },
-  { key: 'invoiceNo', label: 'Invoice No', width: 130 },
-];
 
 // Raw fields first, normalised fields after — so the normalised values win.
 // product-pm-mapping/wo returns the PM name as `rmName` and no pmCode → fall back.
@@ -137,9 +138,11 @@ const RM_COLUMNS: ColumnDef[] = [
   { key: 'mixPercentage', label: 'Mix %', width: 70, align: 'right' },
   { key: 'planQty', label: 'Plan Qty', width: 90, align: 'right' },
   { key: 'requiredQty', label: 'Req Qty', width: 90, align: 'right' },
+  { key: 'issueQty', label: 'Issue Qty', width: 90, align: 'right' },
+  { key: 'balanceQty', label: 'Balance', width: 90, align: 'right' },
 ];
 
-const fmt = (v: number | null, d = 3) =>
+const fmt = (v: number | null, d = 2) =>
   v != null ? v.toFixed(d) : '—';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -265,6 +268,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
     setRmStock([]);
     setSelectedRmId(null);
     setSelectedRmCode(null);
+    setLotIssues({});
     setValidationErrors([]);
 
     loadWoDetails(woId);   // product / product code / vessel — previous workflow
@@ -287,6 +291,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
     setRmStock([]);
     setSelectedRmId(null);
     setSelectedRmCode(null);
+    setLotIssues({});
     loadWoDetails(null);
   };
 
@@ -405,21 +410,95 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
 
   const [selectedRmId, setSelectedRmId] = useState<number | null>(null);
 
+  // Lot-wise Issue Qty per RM (rmCode → receiptId → qty), entered in the stock popup
+  // New request: held here and posted after the request is saved (needs rmReqDetlsId).
+  // Existing request: posted straight from the popup — only the total is kept, in issuedTotals.
+  const [lotIssues, setLotIssues]           = useState<Record<string, LotIssueMap>>({});
+  const [issuedTotals, setIssuedTotals]     = useState<Record<string, number>>({});
+  const [stockModalOpen, setStockModalOpen] = useState(false);
 
-const [selectedStockId, setSelectedStockId]   = useState<number | null>(null);
-const [stockEditOpen, setStockEditOpen]       = useState(false);
-const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | null>(null);
+  const canIssueNow = mode === 'update' && rmReqId != null;
 
+  // Issued in this session (posted, or held for the request save) — on top of line.issuedQty
+  const sessionIssue = (rmCode: string | null): number => {
+    if (!rmCode) return 0;
+    const map     = lotIssues[rmCode];
+    const pending = map ? Object.values(map).reduce((s, v) => s + (parseFloat(v) || 0), 0) : 0;
+    return pending + (issuedTotals[rmCode] ?? 0);
+  };
 
+  // Already issued against the line: from the API (saved request) + this session
+  const alreadyIssued = (line: RmMappingLine): number =>
+    (line.issuedQty ?? 0) + (issuedTotals[line.rmCode ?? ''] ?? 0);
+
+  const issueTotal = (line: RmMappingLine): number | null => {
+    const total = (line.issuedQty ?? 0) + sessionIssue(line.rmCode);
+    return total > 0 || line.issuedQty != null ? total : null;
+  };
+
+  // API balance wins when sent; otherwise required − issued
+  const balanceOf = (line: RmMappingLine): number | null => {
+    const extra = sessionIssue(line.rmCode);
+    if (line.balanceQty != null) return line.balanceQty - extra;
+    if (line.requiredQty == null) return null;
+    return line.requiredQty - ((line.issuedQty ?? 0) + extra);
+  };
+
+  // Selecting a raw material opens its lot-wise stock in a popup
   const handleRmRowSelect = (item: RmMappingLine) => {
-    const newId = selectedRmId === item.rmId ? null : item.rmId;
-    setSelectedRmId(newId);
-    setSelectedRmCode(newId != null ? item.rmCode : null);
-    if (newId != null && item.rmCode) {
+    setSelectedRmId(item.rmId);
+    setSelectedRmCode(item.rmCode);
+    if (item.rmCode) {
       loadRmStock(item.rmCode);
+      setStockModalOpen(true);
     } else {
       setRmStock([]);
     }
+  };
+
+  const closeStockModal = () => {
+    setStockModalOpen(false);
+    setSelectedRmId(null);
+    setSelectedRmCode(null);
+    setRmStock([]);
+  };
+
+  // Stock popup Save. Existing request → POST /api/inventory/rm-issue/save now.
+  // New request → keep for the request save (no rmReqDetlsId yet).
+  // Throws on failure so the popup stays open and shows the error.
+  const handleStockSave = async (issues: LotIssueMap) => {
+    const rmCode = selectedRmCode;
+    if (!rmCode) return;
+
+    if (!canIssueNow) {
+      setLotIssues(prev => ({ ...prev, [rmCode]: issues }));
+      closeStockModal();
+      return;
+    }
+
+    // Line id comes with the saved request lines; look it up only if it's missing
+    const line    = rmLines.find(r => r.rmId === selectedRmId);
+    let detlsId   = line?.rmReqDetlsId ?? undefined;
+    if (detlsId == null && selectedRmId != null)
+      detlsId = (await fetchReqDetlsIds(rmReqId!)).get(Number(selectedRmId));
+    if (detlsId == null)
+      throw new Error('This raw material is not on the saved request yet. Apply Changes first, then issue.');
+
+    const rmIssueId = await postRmIssue({
+      rmReqId: rmReqId!, rmReqDetlsId: detlsId, issueBy: form.requestBy, lots: issues,
+    });
+
+    const total = Object.values(issues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+    setIssuedTotals(prev => ({ ...prev, [rmCode]: (prev[rmCode] ?? 0) + total }));
+    notifications.show({
+      color: 'green',
+      title: 'RM issue saved',
+      message: `${rmCode}: ${total.toFixed(2)} issued${rmIssueId != null ? ` (Issue #${rmIssueId})` : ''}`,
+    });
+    closeStockModal();
+
+    // Reload the saved lines so Issue Qty / Balance come from the API
+    if (form.woId) loadRmMapping(form.woId, form.planToProdQty, true);
   };
 
   // ── Fetch helpers ─────────────────────────────────────────────────────────
@@ -458,24 +537,49 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
 
   // ── Load RM mapping from API ──────────────────────────────────────────────
 
-  const loadRmMapping = async (woId: string, qty: string) => {
+  // fromRequest: edit mode with a saved request → rows come from the request's own lines
+  // (GET /api/inventory/rm-request/{rmReqId}/lines, which carries issued / balance qty).
+  // Otherwise (new request, or the request qty was changed) → the product's RM mapping.
+  const loadRmMapping = async (woId: string, qty: string, fromRequest = false) => {
+    const useRequestLines = fromRequest && mode === 'update' && rmReqId != null;
     setRmLoading(true);
     setPmLoading(true);
     try {
-      // ── Fire all three calls in parallel ────────────────────────────────
+      // ── Fire all calls in parallel ──────────────────────────────────────
       // Lot number: new request → generated; existing request (rmReqId) → its saved lot
       const lotParams = mode === 'update' && rmReqId ? { rmReqId } : undefined;
-      const [rmRes, lotRes, pmRes] = await Promise.allSettled([
+      const [rmRes, lotRes, pmRes, reqLinesRes] = await Promise.allSettled([
         api.get(`/api/inventory/product-rm-mapping/wo/${woId}`, { params: { qty } }),
         api.get(`/api/misc/wo-details/${woId}`, { params: lotParams }),
         api.get(`/api/inventory/product-pm-mapping/wo/${woId}`),
+        useRequestLines
+          ? api.get(`/api/inventory/rm-request/${rmReqId}/lines`)
+          : Promise.reject(new Error('not requested')),
       ]);
 
       // ── RM Mapping ───────────────────────────────────────────────────────
-      if (rmRes.status === 'fulfilled') {
-        const d = rmRes.value.data?.data;
-        const arr = Array.isArray(d) ? d : [];
-        setRmLines(arr.map(mapRmLine));
+      const recipe: RmMappingLine[] = rmRes.status === 'fulfilled'
+        ? (Array.isArray(rmRes.value.data?.data) ? rmRes.value.data.data : []).map(mapRmLine)
+        : [];
+      const reqLines: any[] = reqLinesRes.status === 'fulfilled'
+        ? (Array.isArray(reqLinesRes.value.data?.data) ? reqLinesRes.value.data.data : [])
+        : [];
+
+      if (useRequestLines && reqLines.length > 0) {
+        setRmLines(reqLines.map(raw =>
+          mapRequestLine(raw, recipe.find(r => Number(r.rmId) === Number(raw.rmId)))));
+        // API now reports issued qty → drop the session totals so nothing is counted twice
+        if (reqLines.some(raw => 'issuedQty' in raw)) setIssuedTotals({});
+      } else if (rmRes.status === 'fulfilled') {
+        if (useRequestLines) console.warn('[loadRmMapping] No saved request lines — using RM mapping');
+        // Required qty is recalculated, so the API balance is stale — keep the line id
+        // and issued qty and let the balance be worked out again
+        setRmLines(prev => recipe.map(r => {
+          const old = prev.find(p => p.rmId === r.rmId);
+          return old?.rmReqDetlsId != null
+            ? { ...r, rmReqDetlsId: old.rmReqDetlsId, issuedQty: old.issuedQty ?? null }
+            : r;
+        }));
       } else {
         setValidationErrors([
           rmRes.reason?.response?.data?.message || 'Failed to fetch RM mapping.',
@@ -560,7 +664,7 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
         if (apiData.woId != null) loadWoDetails(String(apiData.woId));
         // Auto-load RM mapping if we have woId and qty
         if (apiData.woId && apiData.planToProdQty) {
-          loadRmMapping(String(apiData.woId), String(apiData.planToProdQty));
+          loadRmMapping(String(apiData.woId), String(apiData.planToProdQty), true);
         }
       } else {
         setForm({ ...defaultForm, ...initialData });
@@ -584,6 +688,9 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
       setRmStock([]);
       setSelectedRmId(null);
       setSelectedRmCode(null);
+      setLotIssues({});
+      setIssuedTotals({});
+      setStockModalOpen(false);
       latestWoRef.current = null;
       setPlanPickerOpen(false);
       setPickedPlanLabel('');
@@ -635,9 +742,10 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
       setRmLines([]);
       setPmLines([]);
       setPmRawResponse(null);
-      setRmStock([]);          // ← add
-      setSelectedRmId(null);     // ← add
-      setSelectedRmCode(null);   // ← add
+      setRmStock([]);
+      setSelectedRmId(null);
+      setSelectedRmCode(null);
+      setLotIssues({});
     }
   };
 
@@ -653,6 +761,7 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
     }
 
     setValidationErrors([]);
+    setLotIssues({});   // required qty changes with the request qty — re-pick lots
     await loadRmMapping(form.woId!, value);
   };
 
@@ -678,10 +787,6 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
   };
 
   const confirmLabel = mode === 'update' ? 'Update' : 'Save';
-
-  const handleStockRowSelect = (item: RmStockLine) => {
-    setSelectedStockId(prev => prev === item.receiptId ? null : item.receiptId);
-  };
 
   // ── RM Mapping rows ───────────────────────────────────────────────────────
 
@@ -714,69 +819,32 @@ const [stockEditItem, setStockEditItem]       = useState<StockIssuanceLine | nul
         <Table.Td ta="right">
           <Text size="xs" fw={600} c="blue">{fmt(item.requiredQty, 2)}</Text>
         </Table.Td>
+        {/* Issued so far (saved request) + Issue Qty entered in the stock popup */}
+        <Table.Td ta="right">
+          {(() => {
+            const issued = issueTotal(item);
+            if (issued == null) return <Text size="xs" c="dimmed">—</Text>;
+            const full = item.requiredQty != null && Math.abs(issued - item.requiredQty) < 0.005;
+            return <Text size="xs" fw={600} c={full ? 'green' : 'orange'}>{fmt(issued, 2)}</Text>;
+          })()}
+        </Table.Td>
+        {/* Balance still to issue */}
+        <Table.Td ta="right">
+          {(() => {
+            const bal = issueTotal(item) != null ? balanceOf(item) : null;
+            if (bal == null) return <Text size="xs" c="dimmed">—</Text>;
+            return (
+              <Text size="xs" fw={600} c={bal < -0.005 ? 'red' : bal <= 0.005 ? 'green' : undefined}>
+                {fmt(bal, 2)}
+              </Text>
+            );
+          })()}
+        </Table.Td>
       </Table.Tr>
     );
   });
 
-
-  const stockRows = rmStock.map(item => {
-    const isSel = selectedStockId === item.receiptId;
-    return (
-      <Table.Tr
-        key={item.receiptId}
-        bg={isSel ? 'var(--mantine-color-blue-0)' : undefined}
-        style={{ cursor: 'pointer' }}
-        onClick={() => handleStockRowSelect(item)}
-      >
-        <Table.Td>
-          <Checkbox
-            size="sm"
-            checked={isSel}
-            onChange={() => handleStockRowSelect(item)}
-            onClick={e => e.stopPropagation()}
-          />
-        </Table.Td>
-        <Table.Td><Text size="xs" fw={500}>{item.rmName ?? '—'}</Text></Table.Td>
-        <Table.Td><Text size="xs">{item.lotNo ?? '—'}</Text></Table.Td>
-        <Table.Td ta="right">
-          <Text size="xs" fw={500}>{item.totalQty != null ? item.totalQty.toFixed(3) : '—'}</Text>
-        </Table.Td>
-        <Table.Td ta="right">
-          <Text size="xs" c="orange">{item.issuedQty != null ? item.issuedQty.toFixed(3) : '—'}</Text>
-        </Table.Td>
-        <Table.Td ta="right">
-          <Text size="xs" fw={600} c={item.remainingQty != null && item.remainingQty > 0 ? 'green' : 'red'}>
-            {item.remainingQty != null ? item.remainingQty.toFixed(3) : '—'}
-          </Text>
-        </Table.Td>
-        <Table.Td><Text size="xs">{item.receiptDate ?? '—'}</Text></Table.Td>
-        <Table.Td><Text size="xs">{item.invoiceNo ?? '—'}</Text></Table.Td>
-      </Table.Tr>
-    );
-  });
-
-const handleStockEdit = () => {
-  if (selectedStockId == null) return;
-  const item = rmStock.find(s => s.receiptId === selectedStockId);
-  if (!item) return;
-
-  // ── Find requiredQty from rmLines for this rmCode ─────────────────────
-  const matchingRmLine = rmLines.find(
-    r => r.rmCode === String(item.rmCode)
-  );
-
-  // ── Count how many lots exist for this rmCode ─────────────────────────
-  const lotCount = rmStock.filter(
-    s => s.rmCode === item.rmCode
-  ).length;
-
-  setStockEditItem({
-    ...item,
-    requiredQty: matchingRmLine?.requiredQty ?? null,
-    lotCount,
-  });
-  setStockEditOpen(true);
-};
+  const selectedRmLine = rmLines.find(r => r.rmId === selectedRmId) ?? null;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -1009,7 +1077,7 @@ const handleStockEdit = () => {
             <Grid columns={12} gutter="md">
 
               {/* ── Left: RM Mapping ── */}
-              <Grid.Col span={selectedRmCode || rmStockLoading ? 4 : 6}>
+              <Grid.Col span={7}>
                 <Group gap="xs" mb="xs">
                   <Text size="sm" fw={600}>RM Mapping</Text>
                   {rmLines.length > 0 && (
@@ -1039,8 +1107,9 @@ const handleStockEdit = () => {
                   onEdit={undefined}
                   onDelete={undefined}
                   onRefresh={() => {
+                    // Edit mode: reload the saved request lines (issued / balance from the API)
                     if (form.woId && form.planToProdQty)
-                      loadRmMapping(form.woId, form.planToProdQty);
+                      loadRmMapping(form.woId, form.planToProdQty, true);
                   }}
                 />
 
@@ -1051,59 +1120,16 @@ const handleStockEdit = () => {
                       : 'Select Work Order and enter Quantity to load RM mapping.'}
                   </Text>
                 )}
+                {rmLines.length > 0 && (
+                  <Text size="xs" c="dimmed" mt={4}>
+                    Select a raw material to pick lot-wise stock and enter the Issue Qty.
+                  </Text>
+                )}
               </Grid.Col>
-              {/* ── Stock table (full width, shown when RM row selected) ── */}
-              {(selectedRmCode || rmStockLoading) && (
-                <Grid.Col span={5}>
-                  <Group gap="xs" mb="xs">
-                    <Text size="sm" fw={600}>
-                      RM Stock Lot Wise Selection — {selectedRmCode}
-                    </Text>
-                    {rmLines.find(r => r.rmCode === selectedRmCode)?.rmName && (
-                      <Text size="sm" c="dimmed">
-                        ({rmLines.find(r => r.rmCode === selectedRmCode)?.rmName})
-                      </Text>
-                    )}
-                    {rmStock.length > 0 && (
-                      <Badge size="xs" variant="light" color="green">
-                        {rmStock.length} lot{rmStock.length !== 1 ? 's' : ''}
-                      </Badge>
-                    )}
-                  </Group>
-
-                  <MasterTable
-                    columns={STOCK_COLUMNS}
-                    rows={stockRows}
-                    colSpan={STOCK_COLUMNS.length + 1}
-                    totalElements={rmStock.length}
-                    loading={rmStockLoading}
-                    page={1}
-                    totalPages={1}
-                    pageSize={rmStock.length || 1}
-                    onPageChange={() => { }}
-                    searchValue=""
-                    onSearchChange={() => { }}
-                    allSelected={false}
-                    someSelected={false}
-                    onToggleSelectAll={() => { }}
-                    selectedCount={selectedStockId != null ? 1 : 0}   // ← update
-                    onAdd={undefined}
-                    onEdit={selectedStockId != null ? handleStockEdit : undefined}
-                    onDelete={undefined}
-                    onRefresh={() => { if (selectedRmCode) loadRmStock(selectedRmCode); }}
-                  />
-
-                  {rmStock.length === 0 && !rmStockLoading && (
-                    <Text size="xs" c="dimmed" ta="center" py="md">
-                      No stock found for RM: {selectedRmCode}
-                    </Text>
-                  )}
-                </Grid.Col>
-              )}
 
               {/* ── Right: PM Packing Details ── */}
 
-              <Grid.Col span={selectedRmCode || rmStockLoading ? 3 : 5}>
+              <Grid.Col span={5}>
                 <Group gap="xs" mb="xs">
                   <Text size="sm" fw={600}>PM Packing Details</Text>
                   {pmLines.length > 0 && (
@@ -1229,7 +1255,7 @@ const handleStockEdit = () => {
         onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
         onConfirm={() => {
           setConfirmOpen(false);   // close the dialog; progress shows on the Save button + banner
-          onSave?.({ ...form, rmLines: rmLines });
+          onSave?.({ ...form, rmLines: rmLines, lotIssues });
         }}
         message={`Are you sure you want to ${confirmLabel.toLowerCase()} this Material Request?`}
         confirmLabel={confirmLabel}
@@ -1245,22 +1271,23 @@ const handleStockEdit = () => {
         selectedPlanId={form.productionPlanId}
       />
 
-       <StockIssuanceEditModal
-        opened={stockEditOpen}
-        onClose={() => {
-          setStockEditOpen(false);
-          setStockEditItem(null);
-          setSelectedStockId(null);
-        }}
-        item={stockEditItem}
-        onSaved={(updatedItem) => {
-          setRmStock(prev => prev.map(s =>
-            s.receiptId === updatedItem.receiptId ? updatedItem : s
-          ));
-          setStockEditOpen(false);
-          setStockEditItem(null);
-          setSelectedStockId(null);
-        }}
+      {/* ── RM Stock Lot Wise Selection — opens on raw material selection ── */}
+      <RmStockLotModal
+        opened={stockModalOpen}
+        onClose={closeStockModal}
+        rmCode={selectedRmCode}
+        rmName={selectedRmLine?.rmName ?? null}
+        requiredQty={selectedRmLine?.requiredQty ?? null}
+        issuedQty={selectedRmLine && canIssueNow ? alreadyIssued(selectedRmLine) : null}
+        lots={rmStock}
+        loading={rmStockLoading}
+        issues={selectedRmCode ? lotIssues[selectedRmCode] : undefined}
+        onRefresh={() => { if (selectedRmCode) loadRmStock(selectedRmCode); }}
+        readOnly={readOnly}
+        onSave={handleStockSave}
+        saveHint={canIssueNow
+          ? null
+          : 'The issue will be recorded when the Material Request is saved.'}
       />
 
     </Modal>
