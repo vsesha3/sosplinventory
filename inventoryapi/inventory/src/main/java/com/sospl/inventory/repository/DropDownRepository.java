@@ -88,13 +88,7 @@ ORDER BY test_id DESC;
     // ── PM Master ─────────────────────────────────────────────────────────
     public List<DropDownResponse> getPmDropdown() {
         return query("""
-                SELECT
-                    pm_id   AS id,
-                    pm_name AS name
-                FROM sos_pm_master_t
-                WHERE is_active = 1
-                AND is_deleted = 0
-                ORDER BY pm_name ASC
+               select rm_id as id,rm_name as name  from sos_rm_master_t where material_type = 'PM';
                 """);
     }
 

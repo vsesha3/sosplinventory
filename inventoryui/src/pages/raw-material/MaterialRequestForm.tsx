@@ -24,7 +24,7 @@ import { createFormSetters } from '../../components/common/formSetters.ts';
 import type {
   MaterialRequestApiData,
   MaterialRequestDetailApiResponse,
-  MaterialRequestFormData, RmMappingLine
+  MaterialRequestFormData, RmMappingLine, PmIssueEntry
 } from '../../types/MaterialRequest.types.ts';
 import type { DropDownOption, DropDownApiResponse } from '../../types/common.types';
 
@@ -268,7 +268,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
     setRmStock([]);
     setSelectedRmId(null);
     setSelectedRmCode(null);
-    setLotIssues({});
+    setLotIssues({}); setPmLotIssues({});
     setValidationErrors([]);
 
     loadWoDetails(woId);   // product / product code / vessel — previous workflow
@@ -291,7 +291,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
     setRmStock([]);
     setSelectedRmId(null);
     setSelectedRmCode(null);
-    setLotIssues({});
+    setLotIssues({}); setPmLotIssues({});
     loadWoDetails(null);
   };
 
@@ -446,6 +446,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
 
   // Selecting a raw material opens its lot-wise stock in a popup
   const handleRmRowSelect = (item: RmMappingLine) => {
+    setSelectedPm(null);
     setSelectedRmId(item.rmId);
     setSelectedRmCode(item.rmCode);
     if (item.rmCode) {
@@ -456,10 +457,78 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
     }
   };
 
+  // ── Packing material → same lot-wise stock popup (same stock endpoint) ────
+  // Same flow as RM: existing request → posted now (postPmIssue); new request → held
+  // in pmLotIssues and posted after the request is saved.
+  const [selectedPm, setSelectedPm] = useState<{
+    rowKey: string | number; code: string; name: string | null; packs: number | null;
+    pmId: number | null; pmPackingDetslId: number | null;
+  } | null>(null);
+  const [pmLotIssues, setPmLotIssues]       = useState<Record<string, PmIssueEntry>>({});
+  const [pmIssuedTotals, setPmIssuedTotals] = useState<Record<string, number>>({});
+
+  // Packs issued for a PM: held for the save + posted this session
+  const pmIssued = (pmCode: string | null): number => {
+    if (!pmCode) return 0;
+    const held = pmLotIssues[pmCode]
+      ? Object.values(pmLotIssues[pmCode].lots).reduce((s, v) => s + (parseFloat(v) || 0), 0)
+      : 0;
+    return held + (pmIssuedTotals[pmCode] ?? 0);
+  };
+
+  const handlePmSelect = (pm: { rowKey: string | number; pmCode: string | null;
+                                pmName: string | null; noOfPacks: number | null;
+                                pmId: number | null; pmPackingDetslId?: number | null }) => {
+    if (!pm.pmCode) return;
+    setSelectedRmId(null);
+    setSelectedRmCode(null);
+    setSelectedPm({
+      rowKey: pm.rowKey, code: pm.pmCode, name: pm.pmName, packs: pm.noOfPacks,
+      pmId: pm.pmId ?? null, pmPackingDetslId: pm.pmPackingDetslId ?? null,
+    });
+    loadRmStock(pm.pmCode);
+    setStockModalOpen(true);
+  };
+
+  // PM popup Save. Throws on failure so the popup stays open and shows the error.
+  const handlePmStockSave = async (issues: LotIssueMap) => {
+    const pm = selectedPm;
+    if (!pm) return;
+
+    if (!canIssueNow) {
+      setPmLotIssues(prev => ({
+        ...prev,
+        [pm.code]: { pmId: pm.pmId, pmPackingDetslId: pm.pmPackingDetslId, lots: issues },
+      }));
+      closeStockModal();
+      return;
+    }
+
+    // PM is an rm_master row → issued on its request line like any RM
+    const detlsId = pm.pmId != null
+      ? (await fetchReqDetlsIds(rmReqId!)).get(Number(pm.pmId))
+      : undefined;
+    if (detlsId == null)
+      throw new Error('This packing material is not on the saved request yet. Apply Changes first, then issue.');
+
+    const pmIssueId = await postRmIssue({
+      rmReqId: rmReqId!, rmReqDetlsId: detlsId, issueBy: form.requestBy, lots: issues,
+    });
+    const total = Object.values(issues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+    setPmIssuedTotals(prev => ({ ...prev, [pm.code]: (prev[pm.code] ?? 0) + total }));
+    notifications.show({
+      color: 'green',
+      title: 'PM issue saved',
+      message: `${pm.name ?? pm.code}: ${total.toFixed(2)} issued${pmIssueId != null ? ` (Issue #${pmIssueId})` : ''}`,
+    });
+    closeStockModal();
+  };
+
   const closeStockModal = () => {
     setStockModalOpen(false);
     setSelectedRmId(null);
     setSelectedRmCode(null);
+    setSelectedPm(null);
     setRmStock([]);
   };
 
@@ -565,8 +634,26 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
         ? (Array.isArray(reqLinesRes.value.data?.data) ? reqLinesRes.value.data.data : [])
         : [];
 
+      // Packing materials are saved as request lines too (same rm_master ids) —
+      // keep them out of the RM table; their issued qty feeds the PM cards instead
+      const pmMapped: PmPackingDetail[] = pmRes.status === 'fulfilled'
+        ? (Array.isArray(pmRes.value.data?.data) ? pmRes.value.data.data
+          : pmRes.value.data?.data ? [pmRes.value.data.data] : []).map(mapPmDetail)
+        : [];
+      const pmIds = new Set(pmMapped.map(p => Number(p.pmId)).filter(n => !isNaN(n)));
+      const isPmLine = (raw: any) =>
+        pmIds.has(Number(raw.rmId)) && !recipe.some(r => Number(r.rmId) === Number(raw.rmId));
+
       if (useRequestLines && reqLines.length > 0) {
-        setRmLines(reqLines.map(raw =>
+        const pmIssued: Record<string, number> = {};
+        reqLines.filter(isPmLine).forEach(raw => {
+          const pm = pmMapped.find(p => Number(p.pmId) === Number(raw.rmId));
+          const issued = extractDecimal(raw.issuedQty);
+          if (pm?.pmCode && issued) pmIssued[pm.pmCode] = issued;
+        });
+        setPmIssuedTotals(pmIssued);
+
+        setRmLines(reqLines.filter(raw => !isPmLine(raw)).map(raw =>
           mapRequestLine(raw, recipe.find(r => Number(r.rmId) === Number(raw.rmId)))));
         // API now reports issued qty → drop the session totals so nothing is counted twice
         if (reqLines.some(raw => 'issuedQty' in raw)) setIssuedTotals({});
@@ -688,8 +775,9 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
       setRmStock([]);
       setSelectedRmId(null);
       setSelectedRmCode(null);
-      setLotIssues({});
+      setLotIssues({}); setPmLotIssues({});
       setIssuedTotals({});
+      setPmIssuedTotals({});
       setStockModalOpen(false);
       latestWoRef.current = null;
       setPlanPickerOpen(false);
@@ -745,7 +833,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
       setRmStock([]);
       setSelectedRmId(null);
       setSelectedRmCode(null);
-      setLotIssues({});
+      setLotIssues({}); setPmLotIssues({});
     }
   };
 
@@ -761,7 +849,7 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
     }
 
     setValidationErrors([]);
-    setLotIssues({});   // required qty changes with the request qty — re-pick lots
+    setLotIssues({}); setPmLotIssues({});   // required qty changes with the request qty — re-pick lots
     await loadRmMapping(form.woId!, value);
   };
 
@@ -797,17 +885,22 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
 
   const rmRows = rmPageLines.map(item => {
     const isSel = selectedRmId === item.rmId;
+    // Fully issued (saved issues only, not unsaved entries) → nothing left to pick
+    const fullyIssued = item.requiredQty != null && item.requiredQty > 0
+      && alreadyIssued(item) >= item.requiredQty - 0.005;
     return (
       <Table.Tr
         key={item.rmId}
         bg={isSel ? 'var(--mantine-color-blue-0)' : undefined}
-        style={{ cursor: 'pointer' }}
-        onClick={() => handleRmRowSelect(item)}
+        style={{ cursor: fullyIssued ? 'not-allowed' : 'pointer', opacity: fullyIssued ? 0.6 : 1 }}
+        title={fullyIssued ? 'Fully issued' : undefined}
+        onClick={() => { if (!fullyIssued) handleRmRowSelect(item); }}
       >
         <Table.Td>
           <Checkbox
             size="sm"
             checked={isSel}
+            disabled={fullyIssued}
             onChange={() => handleRmRowSelect(item)}
             onClick={e => e.stopPropagation()}
           />
@@ -845,6 +938,21 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
   });
 
   const selectedRmLine = rmLines.find(r => r.rmId === selectedRmId) ?? null;
+
+  // PM cards — each packing item gets its own pack count from its own pack size
+  const pmItems = pmLines.map((pm, i) => {
+    const qty = Number(form.planToProdQty) || 0;
+    return {
+      ...pm,
+      // Unique per row — the same PM can appear with different pack sizes
+      rowKey: pm.pmPackingDetslId ?? `${pm.pmId ?? 'pm'}-${i}`,
+      noOfPacks: pm.pmSize && pm.pmSize > 0 && qty > 0
+        ? Math.ceil(qty / pm.pmSize)
+        : null,
+      // Packs issued from the lot popup (held for save, or posted this session)
+      issuedPacks: pm.pmCode && pmIssued(pm.pmCode) > 0 ? pmIssued(pm.pmCode) : null,
+    };
+  });
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -1165,22 +1273,17 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
                           : '—'
                       },
                       {
+                        key: 'issuedPacks', label: 'Issued Packs',
+                        render: (v) => v != null
+                          ? <Text size="sm" fw={700} c="green">{Number(v).toFixed(2)}</Text>
+                          : '—'
+                      },
+                      {
                         key: 'avgRate', label: 'Avg Rate',
                         render: (v) => v != null ? `₹${Number(v).toFixed(2)}` : '—'
                       },
                     ] as CardFieldDef[]}
-                    // Each packing item gets its own pack count from its own pack size
-                    items={pmLines.map((pm, i) => {
-                      const qty = Number(form.planToProdQty) || 0;
-                      return {
-                        ...pm,
-                        // Unique per row — the same PM can appear with different pack sizes
-                        rowKey: pm.pmPackingDetslId ?? `${pm.pmId ?? 'pm'}-${i}`,
-                        noOfPacks: pm.pmSize && pm.pmSize > 0 && qty > 0
-                          ? Math.ceil(qty / pm.pmSize)
-                          : null,
-                      };
-                    })}
+                    items={pmItems}
                     idKey="rowKey"
                     showToolbar={false}
                     totalElements={pmLines.length}
@@ -1192,8 +1295,12 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
                     onPageChange={() => { }}
                     searchValue=""
                     onSearchChange={() => { }}
-                    selected={[]}
-                    onToggleSelect={() => { }}
+                    // Click a card (or its checkbox) → lot-wise stock popup
+                    selected={selectedPm ? [selectedPm.rowKey] : []}
+                    onToggleSelect={(id) => {
+                      const pm = pmItems.find(p => p.rowKey === id);
+                      if (pm) handlePmSelect(pm);
+                    }}
                     onToggleSelectAll={() => { }}
                     allSelected={false}
                     someSelected={false}
@@ -1255,7 +1362,16 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
         onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
         onConfirm={() => {
           setConfirmOpen(false);   // close the dialog; progress shows on the Save button + banner
-          onSave?.({ ...form, rmLines: rmLines, lotIssues });
+          onSave?.({
+            ...form, rmLines: rmLines, lotIssues, pmLotIssues,
+            // Packing materials go on the request as lines too (required = no. of packs)
+            pmLines: pmItems
+              .filter(p => p.pmId != null)
+              .map(p => ({
+                pmId: Number(p.pmId), pmCode: p.pmCode, pmName: p.pmName,
+                requiredQty: p.noOfPacks,
+              })),
+          });
         }}
         message={`Are you sure you want to ${confirmLabel.toLowerCase()} this Material Request?`}
         confirmLabel={confirmLabel}
@@ -1271,24 +1387,46 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
         selectedPlanId={form.productionPlanId}
       />
 
-      {/* ── RM Stock Lot Wise Selection — opens on raw material selection ── */}
-      <RmStockLotModal
-        opened={stockModalOpen}
-        onClose={closeStockModal}
-        rmCode={selectedRmCode}
-        rmName={selectedRmLine?.rmName ?? null}
-        requiredQty={selectedRmLine?.requiredQty ?? null}
-        issuedQty={selectedRmLine && canIssueNow ? alreadyIssued(selectedRmLine) : null}
-        lots={rmStock}
-        loading={rmStockLoading}
-        issues={selectedRmCode ? lotIssues[selectedRmCode] : undefined}
-        onRefresh={() => { if (selectedRmCode) loadRmStock(selectedRmCode); }}
-        readOnly={readOnly}
-        onSave={handleStockSave}
-        saveHint={canIssueNow
-          ? null
-          : 'The issue will be recorded when the Material Request is saved.'}
-      />
+      {/* ── Stock Lot Wise Selection — opens on raw material or packing material selection ── */}
+      {selectedPm ? (
+        // Packing material: lots + available stock; Issue Qty per lot (in packs)
+        <RmStockLotModal
+          opened={stockModalOpen}
+          onClose={closeStockModal}
+          itemType="PM"
+          rmCode={selectedPm.code}
+          rmName={selectedPm.name}
+          requiredQty={selectedPm.packs}
+          issuedQty={canIssueNow ? (pmIssuedTotals[selectedPm.code] ?? 0) : null}
+          lots={rmStock}
+          loading={rmStockLoading}
+          issues={pmLotIssues[selectedPm.code]?.lots}
+          onRefresh={() => loadRmStock(selectedPm.code)}
+          readOnly={readOnly}
+          onSave={handlePmStockSave}
+          saveHint={canIssueNow
+            ? null
+            : 'The issue will be recorded when the Material Request is saved.'}
+        />
+      ) : (
+        <RmStockLotModal
+          opened={stockModalOpen}
+          onClose={closeStockModal}
+          rmCode={selectedRmCode}
+          rmName={selectedRmLine?.rmName ?? null}
+          requiredQty={selectedRmLine?.requiredQty ?? null}
+          issuedQty={selectedRmLine && canIssueNow ? alreadyIssued(selectedRmLine) : null}
+          lots={rmStock}
+          loading={rmStockLoading}
+          issues={selectedRmCode ? lotIssues[selectedRmCode] : undefined}
+          onRefresh={() => { if (selectedRmCode) loadRmStock(selectedRmCode); }}
+          readOnly={readOnly}
+          onSave={handleStockSave}
+          saveHint={canIssueNow
+            ? null
+            : 'The issue will be recorded when the Material Request is saved.'}
+        />
+      )}
 
     </Modal>
   );

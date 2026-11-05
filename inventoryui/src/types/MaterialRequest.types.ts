@@ -1,3 +1,18 @@
+// A packing material's lot-wise issue (receiptId → qty), held until the request is saved
+export interface PmIssueEntry {
+  pmId:             number | null;
+  pmPackingDetslId: number | null;
+  lots:             Record<number, string>;
+}
+
+// A packing material as a request line — requiredQty is the number of packs
+export interface PmRequestLine {
+  pmId:        number;
+  pmCode:      string | null;
+  pmName:      string | null;
+  requiredQty: number | null;
+}
+
 export interface RmRequestApiData {
   rmReqId:              number;
   rmReqDate:            string | null;
@@ -55,6 +70,11 @@ export interface MaterialRequestFormData {
   rmLines?: RmMappingLine[];
   // Lot-wise Issue Qty from the stock popup: rmCode → receiptId → qty
   lotIssues?: Record<string, Record<number, string>>;
+  // Packing material issues held for the request save: pmCode → { pmId, pmPackingDetslId, lots }
+  pmLotIssues?: Record<string, PmIssueEntry>;
+  // Packing materials saved as request lines (rm_master rows, material type PM),
+  // so they get an rmReqDetlsId to issue against
+  pmLines?: PmRequestLine[];
 }
 
 

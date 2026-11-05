@@ -195,6 +195,35 @@ const MaterialRequestView: React.FC = () => {
     return failed;
   };
 
+  // ── PM Issue — held lot-wise packs for a new request, posted after the save ──
+  // PM is an rm_master row saved as a request line → same rm-issue endpoint, by its line id.
+  // Returns the PM codes whose issue could not be saved.
+  const savePmIssues = async (rmReqId: number, formData: MaterialRequestFormData): Promise<string[]> => {
+    const issues = Object.entries(formData.pmLotIssues ?? {})
+      .filter(([, e]) => Object.keys(e.lots).length > 0);
+    if (issues.length === 0 || !rmReqId) return [];
+
+    let detlsIds: Map<number, number>;
+    try {
+      detlsIds = await fetchReqDetlsIds(rmReqId);
+    } catch {
+      return issues.map(([pmCode]) => pmCode);
+    }
+
+    const failed: string[] = [];
+    for (const [pmCode, e] of issues) {
+      const detlsId = e.pmId != null ? detlsIds.get(Number(e.pmId)) : undefined;
+      if (detlsId == null) { failed.push(pmCode); continue; }
+      try {
+        await postRmIssue({ rmReqId, rmReqDetlsId: detlsId, issueBy: formData.requestBy, lots: e.lots });
+      } catch (err: any) {
+        console.warn(`[savePmIssues] ${pmCode} failed:`, err?.response?.data ?? err);
+        failed.push(pmCode);
+      }
+    }
+    return failed;
+  };
+
   const handleSave = async (formData: MaterialRequestFormData) => {
     if (saveStatus === 'saving') return;   // ignore double submit
     setSaveStatus('saving');
@@ -210,15 +239,30 @@ const MaterialRequestView: React.FC = () => {
         requestBy:           formData.requestBy,
         productionPlanId:    formData.productionPlanId,
         isRmIssueCompleted:  formData.isRmIssueCompleted,
-        lines:                formData.rmLines?.map(line => ({
-          woId:          line.woId,
-          rmId:          line.rmId,
-          rmCode:        line.rmCode,
-          rmName:        line.rmName,
-          mixPercentage: line.mixPercentage,
-          planQty:       line.planQty,
-          requiredQty:   line.requiredQty,
-        })),
+        lines: [
+          ...(formData.rmLines ?? []).map(line => ({
+            woId:          line.woId,
+            rmId:          line.rmId,
+            rmCode:        line.rmCode,
+            rmName:        line.rmName,
+            mixPercentage: line.mixPercentage,
+            planQty:       line.planQty,
+            requiredQty:   line.requiredQty,
+          })),
+          // Packing materials (rm_master, material type PM) — required = no. of packs.
+          // Skipped if the same id is already an RM line.
+          ...(formData.pmLines ?? [])
+            .filter(pm => !(formData.rmLines ?? []).some(l => Number(l.rmId) === pm.pmId))
+            .map(pm => ({
+              woId:          formData.woId ? Number(formData.woId) : null,
+              rmId:          pm.pmId,
+              rmCode:        pm.pmCode,
+              rmName:        pm.pmName,
+              mixPercentage: null,
+              planQty:       formData.planToProdQty ? Number(formData.planToProdQty) : null,
+              requiredQty:   pm.requiredQty,
+            })),
+        ],
 
       };
 
@@ -229,13 +273,16 @@ const MaterialRequestView: React.FC = () => {
 
       // Request is saved at this point — issue failures are reported, not retried,
       // so a retry can't post the same issue twice
-      const failedIssues = await saveRmIssues(savedReqId, formData);
+      const failedIssues   = await saveRmIssues(savedReqId, formData);
+      const failedPmIssues = await savePmIssues(savedReqId, formData);
 
-      if (failedIssues.length > 0) {
+      if (failedIssues.length > 0 || failedPmIssues.length > 0) {
         setSaveStatus('error');
-        setSaveMessage(
-          `Material Request saved, but RM issue failed for: ${failedIssues.join(', ')}`
-        );
+        setSaveMessage([
+          'Material Request saved, but',
+          failedIssues.length   > 0 ? `RM issue failed for: ${failedIssues.join(', ')}` : '',
+          failedPmIssues.length > 0 ? `PM issue failed for: ${failedPmIssues.join(', ')}` : '',
+        ].filter(Boolean).join(' '));
       } else {
         setSaveStatus('success');
         setSaveMessage(

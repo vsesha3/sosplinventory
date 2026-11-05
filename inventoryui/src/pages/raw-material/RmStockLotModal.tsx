@@ -40,6 +40,8 @@ export interface RmStockLotModalProps {
   issues?:      LotIssueMap;    // previously saved issue qty for this RM
   onRefresh?:   () => void;
   readOnly?:    boolean;
+  // 'PM' = packing material (same stock endpoint, labels say PM). Default 'RM'.
+  itemType?:    'RM' | 'PM';
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -86,7 +88,9 @@ const RmStockLotModal: React.FC<RmStockLotModalProps> = ({
   onRefresh,
   readOnly = false,
   saveHint,
+  itemType = 'RM',
 }) => {
+  const kind = itemType;   // "RM" / "PM" in labels
   const [issueQty, setIssueQty]                 = useState<LotIssueMap>({});
   const [confirmOpen, setConfirmOpen]           = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -241,7 +245,7 @@ const RmStockLotModal: React.FC<RmStockLotModalProps> = ({
             }}
           >
             <Group gap="sm">
-              <Text fw={700} size="sm" c="white">RM Stock Lot Wise Selection</Text>
+              <Text fw={700} size="sm" c="white">{kind} Stock Lot Wise Selection</Text>
               {rmCode && (
                 <Badge variant="filled" size="sm"
                   style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}>
@@ -266,15 +270,15 @@ const RmStockLotModal: React.FC<RmStockLotModalProps> = ({
               style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
               <Group gap="xl">
                 <Stack gap={2}>
-                  <Text size="xs" c="dimmed">RM Code</Text>
+                  <Text size="xs" c="dimmed">{kind} Code</Text>
                   <Text size="sm" fw={600}>{rmCode || '—'}</Text>
                 </Stack>
                 <Stack gap={2}>
-                  <Text size="xs" c="dimmed">RM Name</Text>
+                  <Text size="xs" c="dimmed">{kind} Name</Text>
                   <Text size="sm" fw={600}>{rmName || '—'}</Text>
                 </Stack>
                 <Stack gap={2}>
-                  <Text size="xs" c="dimmed">Required Qty</Text>
+                  <Text size="xs" c="dimmed">{kind === 'PM' ? 'Required Packs' : 'Required Qty'}</Text>
                   <Text size="sm" fw={600} c="blue">{fmtQty(requiredQty)}</Text>
                 </Stack>
                 {issuedQty != null && (
@@ -304,7 +308,7 @@ const RmStockLotModal: React.FC<RmStockLotModalProps> = ({
               </Center>
             ) : lots.length === 0 ? (
               <Text size="xs" c="dimmed" ta="center" py="md">
-                No stock found for RM: {rmCode}
+                No stock found for {kind}: {rmCode}
               </Text>
             ) : (
               <Table withTableBorder withColumnBorders striped highlightOnHover verticalSpacing={4}>
@@ -397,7 +401,7 @@ const RmStockLotModal: React.FC<RmStockLotModalProps> = ({
         opened={confirmOpen}
         onClose={() => { setConfirmOpen(false); setValidationErrors([]); }}
         onConfirm={handleConfirm}
-        message={`Are you sure you want to issue ${fmtQty(totalIssue)} of ${rmName ?? rmCode ?? 'this RM'}?`}
+        message={`Are you sure you want to issue ${fmtQty(totalIssue)} of ${rmName ?? rmCode ?? `this ${kind}`}?`}
         confirmLabel="Save"
         errors={validationErrors}
         zIndex={350}

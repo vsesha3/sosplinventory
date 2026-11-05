@@ -44,3 +44,6 @@ export const postRmIssue = async (params: {
   const res = await api.post('/api/inventory/rm-issue/save', payload);
   return res.data?.data;   // rmIssueId
 };
+
+// Packing materials live in rm_master too (told apart by material type), so a PM
+// issue uses this same endpoint — saved as a request line, issued via postRmIssue.
