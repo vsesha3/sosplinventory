@@ -7,9 +7,11 @@ import com.sospl.inventory.dto.rmrequest.SosRmRequestLineDto;
 import com.sospl.inventory.dto.rmrequest.SosRmRequestViewResponse;
 import com.sospl.inventory.model.rmrequest.SosRmRequest;
 import com.sospl.inventory.model.rmrequest.SosRmRequestDetls;
+import com.sospl.inventory.model.rmrequest.SosRmRequestView;
 import com.sospl.inventory.repository.DropDownRepository;
 import com.sospl.inventory.repository.rmrequest.SosRmRequestDetlsRepository;
 import com.sospl.inventory.repository.rmrequest.SosRmRequestRepository;
+import com.sospl.inventory.repository.rmrequest.SosRmRequestViewRepository;
 import com.sospl.inventory.service.common.impl.BaseMasterServiceImpl;
 import com.sospl.inventory.service.rmrequest.SosRmRequestService;
 import com.sospl.inventory.util.ParseUtil;
@@ -25,7 +27,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,14 +44,17 @@ public class SosRmRequestServiceImpl
     private final SosRmRequestRepository rmRequestRepository;
     private final SosRmRequestDetlsRepository rmRequestDetlsRepository;
     private final DropDownRepository dropDownRepository;
+    
+    private final SosRmRequestViewRepository sosRmRequestViewRepository;
 
     public SosRmRequestServiceImpl(
             SosRmRequestRepository repository,
-            SosRmRequestDetlsRepository rmRequestDetlsRepository,DropDownRepository dropDownRepositor) {
+            SosRmRequestDetlsRepository rmRequestDetlsRepository,DropDownRepository dropDownRepositor,SosRmRequestViewRepository sosRmRequestViewRepository) {
         super(repository);
         this.rmRequestRepository      = repository;
         this.rmRequestDetlsRepository = rmRequestDetlsRepository;
         this.dropDownRepository = dropDownRepositor;
+        this.sosRmRequestViewRepository = sosRmRequestViewRepository;
     }
 
     // ── Save header + lines ───────────────────────────────────────────────
@@ -238,21 +246,26 @@ public class SosRmRequestServiceImpl
 
     // ── Paginated view ────────────────────────────────────────────────────
 
+    
+
+    // ── Paginated RM Request View ─────────────────────────────────────
+
     @Override
     public PagedResponse<SosRmRequestViewResponse> findAllRmRequestView(
             int page, int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<Object[]> pageData = rmRequestRepository
-                .findAllRmRequestView(pageable);
 
-        List<SosRmRequestViewResponse> content = pageData
-                .getContent()
+        Page<Object[]> pageData =
+                rmRequestRepository.findAllRmRequestView(pageable);
+
+        List<SosRmRequestViewResponse> content = pageData.getContent()
                 .stream()
                 .filter(row -> row != null && row[0] != null)
                 .map(row -> {
                     SosRmRequestViewResponse res =
                             new SosRmRequestViewResponse();
+
                     res.setRmReqId(ParseUtil.toLong(row[0]));
                     res.setRmReqDate(ParseUtil.toLocalDateTime(row[1]));
                     res.setWoId(ParseUtil.toLong(row[2]));
@@ -260,31 +273,70 @@ public class SosRmRequestServiceImpl
                     res.setCreatedBy(ParseUtil.toString(row[4]));
                     res.setCreatedOn(ParseUtil.toLocalDateTime(row[5]));
                     res.setLastUpdatedBy(ParseUtil.toString(row[6]));
-                    res.setLastUpdatedOn(
-                            ParseUtil.toLocalDateTime(row[7]));
+                    res.setLastUpdatedOn(ParseUtil.toLocalDateTime(row[7]));
                     res.setIsActive(ParseUtil.toBoolean(row[8]));
                     res.setRequestBy(ParseUtil.toString(row[9]));
-                    res.setScheduleDate(
-                            ParseUtil.toLocalDateTime(row[10]));
-                    res.setPlanToProdQty(
-                            ParseUtil.toBigDecimal(row[11]));
-                    res.setProductionLotNumber(
-                            ParseUtil.toString(row[12]));
-                    res.setIsRmIssueCompleted(
-                            ParseUtil.toBoolean(row[13]));
+                    res.setScheduleDate(ParseUtil.toLocalDateTime(row[10]));
+                    res.setPlanToProdQty(ParseUtil.toBigDecimal(row[11]));
+                    res.setProductionLotNumber(ParseUtil.toString(row[12]));
+                    res.setIsRmIssueCompleted(ParseUtil.toBoolean(row[13]));
                     res.setCompanyId(ParseUtil.toLong(row[14]));
-                    
                     res.setGinNo(ParseUtil.toLong(row[15]));
-                    res.setProductCode(ParseUtil.toString(row[16]));  // ← new
-                    res.setProductName(ParseUtil.toString(row[17])); 
+                    res.setProductCode(ParseUtil.toString(row[16]));
+                    res.setProductName(ParseUtil.toString(row[17]));
+
                     List<DropDownResponse> users =
                             dropDownRepository.getUserListForDropdown(
-                                    ParseUtil.toString(row[18])
-                            );
+                                    ParseUtil.toString(row[18]));
+
                     res.setRequestBy(
-                            users.isEmpty() ? null : users.get(0).getLabel()
-                    );
+                            users.isEmpty() ? null : users.get(0).getLabel());
                     
+                  
+                    List<Object[]> qtyRows =
+                            rmRequestRepository.findRmIssueQtySummary(
+                                    ParseUtil.toLong(row[0]));
+
+                    Map<String, Map<String, Object>> summaryMap = new LinkedHashMap<>();
+
+                    for (Object[] qtyRow : qtyRows) {
+
+                        String materialType = ParseUtil.toString(qtyRow[0]);
+
+                        BigDecimal requestedQty = ParseUtil.toBigDecimal(qtyRow[1]);
+                        BigDecimal issuedQty = ParseUtil.toBigDecimal(qtyRow[2]);
+
+                        Map<String, Object> summary = summaryMap.computeIfAbsent(
+                                materialType, key -> {
+                                    Map<String, Object> map = new LinkedHashMap<>();
+                                    map.put("materialType", key);
+                                    map.put("requestedQty", BigDecimal.ZERO);
+                                    map.put("issuedQty", BigDecimal.ZERO);
+                                    map.put("pendingQty", BigDecimal.ZERO);
+                                    return map;
+                                });
+
+                        BigDecimal totalRequested =
+                                (BigDecimal) summary.get("requestedQty");
+
+                        BigDecimal totalIssued =
+                                (BigDecimal) summary.get("issuedQty");
+
+                        totalRequested = totalRequested.add(
+                                requestedQty != null ? requestedQty : BigDecimal.ZERO);
+
+                        totalIssued = totalIssued.add(
+                                issuedQty != null ? issuedQty : BigDecimal.ZERO);
+
+                        summary.put("requestedQty", totalRequested);
+                        summary.put("issuedQty", totalIssued);
+                        summary.put("pendingQty", totalRequested.subtract(totalIssued));
+                    }
+
+                    res.setRmIssueQtySummary(new ArrayList<>(summaryMap.values()));
+                    res.setRmIssueQtySummary(
+                            new ArrayList<>(summaryMap.values()));
+
                     return res;
                 })
                 .collect(Collectors.toList());
@@ -296,6 +348,87 @@ public class SosRmRequestServiceImpl
                 pageData.getTotalElements(),
                 pageData.getTotalPages(),
                 pageData.isFirst(),
-                pageData.isLast());
+                pageData.isLast()
+        );
     }
+
+    // ── Paginated RM Issue View ───────────────────────────────────────
+
+    @Override
+    public PagedResponse<SosRmRequestView> findAllRmRequestViewForIssue(
+            int page, int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<SosRmRequestView> pageData =
+                sosRmRequestViewRepository
+                        .findAllByOrderByRmReqIdDesc(pageable);
+
+        List<SosRmRequestView> content = pageData.getContent();
+
+        for (SosRmRequestView res : content) {
+
+            List<Object[]> qtyRows =
+                    rmRequestRepository.findRmIssueQtySummary(
+                            res.getRmReqId());
+
+            BigDecimal rmRequested = BigDecimal.ZERO;
+            BigDecimal rmIssued = BigDecimal.ZERO;
+
+            BigDecimal pmRequested = BigDecimal.ZERO;
+            BigDecimal pmIssued = BigDecimal.ZERO;
+
+            for (Object[] qtyRow : qtyRows) {
+
+                String materialType =
+                        ParseUtil.toString(qtyRow[0]);
+
+                BigDecimal requested =
+                        ParseUtil.toBigDecimal(qtyRow[1]);
+
+                BigDecimal issued =
+                        ParseUtil.toBigDecimal(qtyRow[2]);
+
+                requested = requested != null
+                        ? requested : BigDecimal.ZERO;
+
+                issued = issued != null
+                        ? issued : BigDecimal.ZERO;
+
+                if ("RM".equalsIgnoreCase(materialType)) {
+
+                    rmRequested = rmRequested.add(requested);
+                    rmIssued = rmIssued.add(issued);
+
+                } else if ("PM".equalsIgnoreCase(materialType)) {
+
+                    pmRequested = pmRequested.add(requested);
+                    pmIssued = pmIssued.add(issued);
+                }
+            }
+
+            // Calculate pending RM quantity
+            res.setPendingRM(rmRequested.subtract(rmIssued));
+            res.setTotalRM(rmRequested);
+
+            // Calculate pending PM quantity
+            res.setPendingPM(pmRequested.subtract(pmIssued));
+            res.setTotalPm(pmRequested);
+        }
+
+        return new PagedResponse<>(
+                content,
+                pageData.getNumber(),
+                pageData.getSize(),
+                pageData.getTotalElements(),
+                pageData.getTotalPages(),
+                pageData.isFirst(),
+                pageData.isLast()
+        );
+    }
+
+
+
+
+    
 }

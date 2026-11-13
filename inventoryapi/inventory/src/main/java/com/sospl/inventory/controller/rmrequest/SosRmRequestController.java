@@ -6,6 +6,7 @@ import com.sospl.inventory.dto.rmrequest.SosRmRequestDto;
 import com.sospl.inventory.dto.rmrequest.SosRmRequestViewResponse;
 import com.sospl.inventory.model.rmrequest.SosRmRequest;
 import com.sospl.inventory.model.rmrequest.SosRmRequestDetls;
+import com.sospl.inventory.model.rmrequest.SosRmRequestView;
 import com.sospl.inventory.service.rmrequest.SosRmRequestService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -128,6 +129,20 @@ public class SosRmRequestController {
                 ApiResponse.success(
                         "RM request view fetched successfully",
                         service.findAllRmRequestView(page, size)));
+    }
+    
+ // RM Request View for Issue /api/inventory/rm-request/viewForIssue
+    @GetMapping("/viewForIssue")
+    public ResponseEntity<ApiResponse<PagedResponse<SosRmRequestView>>> getAllViewForIssue(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "RM request view fetched successfully",
+                        service.findAllRmRequestViewForIssue(page, size)
+                )
+        );
     }
 
     // Get by id — ALWAYS LAST

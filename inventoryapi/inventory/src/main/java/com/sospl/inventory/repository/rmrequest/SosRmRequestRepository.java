@@ -109,4 +109,47 @@ public interface SosRmRequestRepository
         	        @Param("woId") Long woId,
         	        @Param("rmReqId") Long rmReqId
         	);
+    	
+    	@Query(value = """
+    		    SELECT
+    		        req.material_type,
+    		        req.total_requested_qty,
+    		        COALESCE(iss.total_issued_qty, 0) AS total_issued_qty,
+    		        (req.total_requested_qty -
+    		         COALESCE(iss.total_issued_qty, 0)) AS pending_qty
+    		    FROM
+    		    (
+    		        SELECT
+    		            srmt.material_type,
+    		            srrdt.rm_id,
+    		            SUM(srrdt.qty) AS total_requested_qty
+    		        FROM sos_rm_request_detls_t srrdt
+    		        JOIN soslive_dev.sos_rm_master_t srmt
+    		            ON srrdt.rm_id = srmt.rm_id
+    		        WHERE srrdt.rm_req_id = :rmReqId
+    		        GROUP BY srmt.material_type, srrdt.rm_id
+    		    ) req
+    		    LEFT JOIN
+    		    (
+    		        SELECT
+    		            srmt.material_type,
+    		            srrdt.rm_id,
+    		            SUM(sridt.issue_qty) AS total_issued_qty
+    		        FROM sos_rm_issue_details_t sridt
+    		        JOIN sos_rm_issue_t srit
+    		            ON sridt.rm_issue_id = srit.rm_issue_id
+    		        JOIN sos_rm_request_detls_t srrdt
+    		            ON sridt.rm_req_detls_id = srrdt.rm_req_detls_id
+    		        JOIN soslive_dev.sos_rm_master_t srmt
+    		            ON srrdt.rm_id = srmt.rm_id
+    		        WHERE srit.rm_req_id = :rmReqId
+    		        GROUP BY srmt.material_type, srrdt.rm_id
+    		    ) iss
+    		        ON req.material_type = iss.material_type
+    		        AND req.rm_id = iss.rm_id
+    		    ORDER BY req.material_type
+    		    """, nativeQuery = true)
+    		List<Object[]> findRmIssueQtySummary(
+    		        @Param("rmReqId") Long rmReqId
+    		);
 }

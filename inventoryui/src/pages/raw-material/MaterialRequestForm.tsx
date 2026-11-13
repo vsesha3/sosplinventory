@@ -444,17 +444,30 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
     return line.requiredQty - ((line.issuedQty ?? 0) + extra);
   };
 
-  // Selecting a raw material opens its lot-wise stock in a popup
-  const handleRmRowSelect = (item: RmMappingLine) => {
+  // ── Info popup (same ConfirmDialog as validation) — no stock / fully issued ──
+  const [infoMessages, setInfoMessages] = useState<string[]>([]);
+  const showInfo = (...messages: string[]) => setInfoMessages(messages);
+
+  // A lot counts only if it still has stock to issue
+  const hasAvailableStock = (lots: RmStockLine[]) =>
+    lots.some(l => (l.remainingQty ?? 0) > 0);
+
+  // Selecting a raw material opens its lot-wise stock in a popup — only when there
+  // is stock to issue; otherwise a message is shown and nothing stays selected
+  const handleRmRowSelect = async (item: RmMappingLine) => {
+    if (!item.rmCode) return;
     setSelectedPm(null);
     setSelectedRmId(item.rmId);
     setSelectedRmCode(item.rmCode);
-    if (item.rmCode) {
-      loadRmStock(item.rmCode);
-      setStockModalOpen(true);
-    } else {
-      setRmStock([]);
+
+    const lots = await loadRmStock(item.rmCode);
+    if (!hasAvailableStock(lots)) {
+      setSelectedRmId(null);
+      setSelectedRmCode(null);
+      showInfo(`No stock available for ${item.rmName ?? 'this raw material'} (RM Code ${item.rmCode}).`);
+      return;
     }
+    setStockModalOpen(true);
   };
 
   // ── Packing material → same lot-wise stock popup (same stock endpoint) ────
@@ -476,17 +489,31 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
     return held + (pmIssuedTotals[pmCode] ?? 0);
   };
 
-  const handlePmSelect = (pm: { rowKey: string | number; pmCode: string | null;
+  const handlePmSelect = async (pm: { rowKey: string | number; pmCode: string | null;
                                 pmName: string | null; noOfPacks: number | null;
                                 pmId: number | null; pmPackingDetslId?: number | null }) => {
     if (!pm.pmCode) return;
+    const name = pm.pmName ?? 'this packing material';
+
+    // Fully issued (issued packs = required packs) → same rule as the RM rows
+    if (pm.noOfPacks != null && pm.noOfPacks > 0 && pmIssued(pm.pmCode) >= pm.noOfPacks - 0.005) {
+      showInfo(`${name} is already fully issued (${pm.noOfPacks} of ${pm.noOfPacks} packs).`);
+      return;
+    }
+
     setSelectedRmId(null);
     setSelectedRmCode(null);
     setSelectedPm({
       rowKey: pm.rowKey, code: pm.pmCode, name: pm.pmName, packs: pm.noOfPacks,
       pmId: pm.pmId ?? null, pmPackingDetslId: pm.pmPackingDetslId ?? null,
     });
-    loadRmStock(pm.pmCode);
+
+    const lots = await loadRmStock(pm.pmCode);
+    if (!hasAvailableStock(lots)) {
+      setSelectedPm(null);
+      showInfo(`No stock available for ${name} (PM Code ${pm.pmCode}).`);
+      return;
+    }
     setStockModalOpen(true);
   };
 
@@ -709,17 +736,21 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
   };
 
 
-  const loadRmStock = async (rmCode: string) => {
+  // Returns the lots loaded ([] on error) so selection can check stock before opening the popup
+  const loadRmStock = async (rmCode: string): Promise<RmStockLine[]> => {
     setRmStockLoading(true);
     setRmStock([]);
     try {
       const res = await api.get(`/api/inventory/rm-stock/code/${rmCode}`);
       const d = res.data?.data ?? res.data;
       const arr = Array.isArray(d) ? d : d ? [d] : [];
-      setRmStock(arr.map(mapRmStock));
+      const lots = arr.map(mapRmStock);
+      setRmStock(lots);
+      return lots;
     } catch (err: any) {
       console.warn('[loadRmStock] Failed:', err?.response?.data ?? err);
       setRmStock([]);
+      return [];
     } finally {
       setRmStockLoading(false);
     }
@@ -1377,6 +1408,18 @@ const MaterialRequestForm: React.FC<MaterialRequestFormProps> = ({
         confirmLabel={confirmLabel}
         zIndex={250}
         errors={validationErrors}
+      />
+
+      {/* ── Info popup — no stock / fully issued (same component as validation) ── */}
+      <ConfirmDialog
+        opened={infoMessages.length > 0}
+        onClose={() => setInfoMessages([])}
+        onConfirm={() => setInfoMessages([])}
+        message=""
+        errors={infoMessages}
+        errorTitle="Cannot open stock selection"
+        errorButtonLabel="Close"
+        zIndex={350}
       />
 
       {/* ── Production Plan picker ── */}

@@ -32,6 +32,7 @@ import MaterialInwardPage    from '../pages/purchase-order/MaterialInwardPage';
 import SalesOrderPage from '../pages/sales-order/SalesOrderPageList';
 import ProductionPlanPage from '../pages/Operations/ProductionPlanPage';
 import MaterialRequestView from '../pages/raw-material/Materialrequestview';
+import MaterialIssueView   from '../pages/raw-material/MaterialIssueView';
 
 const AppRouter: React.FC = () => (
   <BrowserRouter>
@@ -74,6 +75,7 @@ const AppRouter: React.FC = () => (
           <Route path="/masters/miscellaneous"     element={<MiscellaneousPage />} />
           <Route path="/masters/brand"             element={<BrandPage />} />
           <Route path="/procurement/rm-request"     element={<MaterialRequestView />} />
+          <Route path="/procurement/material-issue" element={<MaterialIssueView />} />
 
         </Route>
       </Route>

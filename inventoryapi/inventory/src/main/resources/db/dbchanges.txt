@@ -1,1 +1,17 @@
 ALTER TABLE sos_prod_master_pm_detls_t ADD COLUMN pack_size BIGINT NULL;
+
+CREATE OR REPLACE VIEW sos_rm_request_view AS
+SELECT
+    srrt.production_lot_number AS production_lot_number,
+    srrt.rm_req_date AS rm_req_date,
+    srrt.schedule_date AS schedule_date,
+    swot.product_id AS product_id,
+    spmt.product_name as product_name,
+    swot.wo_code AS wo_code,
+    srrt.plan_to_prod_qty AS plan_to_prod_qty,
+    srrt.request_by AS request_by,
+    srrt.gin_no AS gin_no,
+    srrt.rm_req_id AS rm_req_id
+FROM sos_rm_request_t srrt
+LEFT JOIN sos_work_order_t swot LEFT JOIN sos_product_master_t spmt on swot.product_id = spmt.product_id
+    ON srrt.wo_id = swot.wo_id;

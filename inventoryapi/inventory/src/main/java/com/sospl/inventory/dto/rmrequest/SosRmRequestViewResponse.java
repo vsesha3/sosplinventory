@@ -2,6 +2,8 @@ package com.sospl.inventory.dto.rmrequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 public class SosRmRequestViewResponse {
 
@@ -23,8 +25,16 @@ public class SosRmRequestViewResponse {
     private Long ginNo;
     private String productCode;
     private String productName;
+    
+    private List<Map<String, Object>> rmIssueQtySummary;
 
-    // ── Getters ───────────────────────────────────────────────────────────
+    public List<Map<String, Object>> getRmIssueQtySummary() {
+		return rmIssueQtySummary;
+	}
+	public void setRmIssueQtySummary(List<Map<String, Object>> rmIssueQtySummary) {
+		this.rmIssueQtySummary = rmIssueQtySummary;
+	}
+	// ── Getters ───────────────────────────────────────────────────────────
     public Long getRmReqId() { return rmReqId; }
     public LocalDateTime getRmReqDate() { return rmReqDate; }
     public Long getWoId() { return woId; }
@@ -67,3 +77,5 @@ public class SosRmRequestViewResponse {
     public void setProductCode(String productCode) { this.productCode = productCode; }
     public void setProductName(String productName) { this.productName = productName; }
 }
+
+

@@ -13,6 +13,9 @@ interface ConfirmDialogProps {
   zIndex?: number;
   // Validation errors — if provided, shows error list instead of confirm buttons
   errors?: string[];
+  // Optional wording for the error mode (e.g. an info popup instead of "fix these")
+  errorTitle?: string;
+  errorButtonLabel?: string;
 }
 
 export function ConfirmDialog({
@@ -24,6 +27,8 @@ export function ConfirmDialog({
 
   zIndex = 400,
   errors = [],
+  errorTitle = 'Please fix the following errors:',
+  errorButtonLabel = 'Go Back & Fix',
 }: ConfirmDialogProps) {
 
   const hasErrors = errors.length > 0;
@@ -50,7 +55,7 @@ export function ConfirmDialog({
 
             <Stack gap="xs" w="100%">
               <Text size="sm" fw={600} ta="center" c="red">
-                Please fix the following errors:
+                {errorTitle}
               </Text>
               <Alert color="red" variant="light" p="sm">
                 <List size="sm" spacing={4}>
@@ -69,7 +74,7 @@ export function ConfirmDialog({
               onClick={onClose}
               style={{ minWidth: 120 }}
             >
-              Go Back & Fix
+              {errorButtonLabel}
             </Button>
           </>
         ) : (

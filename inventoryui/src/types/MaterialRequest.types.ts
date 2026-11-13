@@ -1,3 +1,6 @@
+import type { IssueQtySummary } from '../pages/raw-material/IssueQtySummary';
+import { parseIssueQtySummary } from '../pages/raw-material/IssueQtySummary';
+
 // A packing material's lot-wise issue (receiptId → qty), held until the request is saved
 export interface PmIssueEntry {
   pmId:             number | null;
@@ -32,6 +35,7 @@ export interface RmRequestApiData {
   ginNo:                number | null;
   // joined fields if available
   productName?:         string | null;
+  issueSummary:         IssueQtySummary;
 }
 
 export const mapRmRequest = (raw: any): RmRequestApiData => ({
@@ -46,12 +50,17 @@ export const mapRmRequest = (raw: any): RmRequestApiData => ({
   isActive:            raw.isActive            ?? null,
   requestBy:           raw.requestBy           ?? null,
   scheduleDate:        raw.scheduleDate        ?? null,
-  planToProdQty:       raw.planToProdQty       != null ? Number(raw.planToProdQty) : null,
+  planToProdQty:       raw.planToProdQty       != null
+    ? Number(typeof raw.planToProdQty === 'object'
+        ? (raw.planToProdQty.parsedValue ?? raw.planToProdQty.source)
+        : raw.planToProdQty)
+    : null,
   productionLotNumber: raw.productionLotNumber ?? null,
   isRmIssueCompleted:  raw.isRmIssueCompleted  ?? null,
   companyId:           raw.companyId           != null ? Number(raw.companyId) : null,
   ginNo:               raw.ginNo               != null ? Number(raw.ginNo)     : null,
   productName:         raw.productName         ?? null,
+  issueSummary:        parseIssueQtySummary(raw),
 });
 
 
