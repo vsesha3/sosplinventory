@@ -1,9 +1,12 @@
 package com.sospl.inventory.service;
 
+import com.sospl.inventory.dto.SosProductionOutputRequest;
 import com.sospl.inventory.dto.SosProductionPlanResponse;
 import com.sospl.inventory.dto.SosProductionPlanSummaryResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
+import com.sospl.inventory.model.SosProductionOutput;
 import com.sospl.inventory.model.SosProductionPlan;
+import com.sospl.inventory.projection.ProductionPlanCapacityProjection;
 import com.sospl.inventory.service.common.BaseMasterService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,5 +41,17 @@ public interface SosProductionPlanService
     PagedResponse<SosProductionPlanSummaryResponse> findAllProductionPlanSummary(
             int page, int size);
     
+    PagedResponse<SosProductionPlanSummaryResponse> findAllProductionPlanSummaryWithMaterialRequest(
+            int page, int size);
+    
+    ProductionPlanCapacityProjection getProductionCapacityByPlanId(
+            Long productionPlanId);
+    
     SosProductionPlan findByIdWithProductDetails(Long id);
+    
+    SosProductionOutput saveProductionOutput(
+            SosProductionOutputRequest request
+    );
+    
+
 }

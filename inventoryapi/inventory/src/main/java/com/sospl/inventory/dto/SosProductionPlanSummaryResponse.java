@@ -24,8 +24,57 @@ public class SosProductionPlanSummaryResponse {
 
     // ── From sos_product_master_t ─────────────────────────────────────────
     private String productName;
+    private Boolean materialRequested;
+    private BigDecimal totalPlanToProdQty;
+    
+    private BigDecimal totalRequestedQty;
+    private BigDecimal totalIssuedQty;
 
-    // ── Getters ───────────────────────────────────────────────────────────
+    private boolean allMaterialsIssued;
+    private boolean rmAllIssued;
+    private BigDecimal   producedQuantity;
+    
+    public BigDecimal getProducedQuantity() {
+		return producedQuantity;
+	}
+	public void setProducedQuantity(BigDecimal producedQuantity) {
+		this.producedQuantity = producedQuantity;
+	}
+	public BigDecimal getTotalRequestedQty() {
+		return totalRequestedQty;
+	}
+	public void setTotalRequestedQty(BigDecimal totalRequestedQty) {
+		this.totalRequestedQty = totalRequestedQty;
+	}
+	public BigDecimal getTotalIssuedQty() {
+		return totalIssuedQty;
+	}
+	public void setTotalIssuedQty(BigDecimal totalIssuedQty) {
+		this.totalIssuedQty = totalIssuedQty;
+	}
+	public boolean isAllMaterialsIssued() {
+		return allMaterialsIssued;
+	}
+	public void setAllMaterialsIssued(boolean allMaterialsIssued) {
+		this.allMaterialsIssued = allMaterialsIssued;
+	}
+	public boolean isRmAllIssued() {
+		return rmAllIssued;
+	}
+	public void setRmAllIssued(boolean rmAllIssued) {
+		this.rmAllIssued = rmAllIssued;
+	}
+	public boolean isPmAllIssued() {
+		return pmAllIssued;
+	}
+	public void setPmAllIssued(boolean pmAllIssued) {
+		this.pmAllIssued = pmAllIssued;
+	}
+	private boolean pmAllIssued;
+
+    
+	
+	// ── Getters ───────────────────────────────────────────────────────────
     public Long getProductionPlanId() { return productionPlanId; }
     public LocalDateTime getProductionFromDate() { return productionFromDate; }
     public LocalDateTime getProductionToDate() { return productionToDate; }
@@ -52,4 +101,18 @@ public class SosProductionPlanSummaryResponse {
     public void setPerUnitRate(BigDecimal perUnitRate) { this.perUnitRate = perUnitRate; }
     public void setVesselName(String vesselName) { this.vesselName = vesselName; }
     public void setProductName(String productName) { this.productName = productName; }
+    
+    public Boolean getMaterialRequested() {
+		return materialRequested;
+	}
+	public void setMaterialRequested(Boolean materialRequested) {
+		this.materialRequested = materialRequested;
+	}
+	
+	public BigDecimal getTotalPlanToProdQty() {
+		return totalPlanToProdQty;
+	}
+	public void setTotalPlanToProdQty(BigDecimal totalPlanToProdQty) {
+		this.totalPlanToProdQty = totalPlanToProdQty;
+	}
 }

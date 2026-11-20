@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  Title, Text, Box, Alert, Loader, Paper,  Table, Checkbox,
+  Title, Text, Box, Alert, Loader, Paper,  Table, Checkbox, Button, Tooltip,
 } from '@mantine/core';
-import { IconAlertCircle } from '@tabler/icons-react';
+import { IconAlertCircle, IconPackageImport } from '@tabler/icons-react';
+import ProductionEntryForm from './ProductionEntryForm';
+import type { ProductionEntryFormData } from './ProductionEntryForm';
 import api from '../../services/api';
 import MasterTable from '../../components/common/MasterTable';
 import type { ProductionPlanApiData } from '../../types/production.types';
@@ -52,6 +54,7 @@ const ProductionPlanPage: React.FC = () => {
   const [formMode, setFormMode]           = useState<'create' | 'update'>('create');
   const [saveStatus, setSaveStatus]       = useState<SaveStatus>('idle');
   const [saveMessage, setSaveMessage]     = useState('');
+  const [entryOpen, setEntryOpen]         = useState(false);
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
 
@@ -142,6 +145,30 @@ const ProductionPlanPage: React.FC = () => {
     }
   };
 
+  // ── Finished goods entry ──────────────────────────────────────────────────
+
+  const entryPlan = selected.length === 1
+    ? data.find(d => d.productionPlanId === selected[0]) ?? null
+    : null;
+
+  const handleEntrySave = async (entry: ProductionEntryFormData) => {
+    setSaveStatus('saving');
+    try {
+      const res = await api.post('/api/inventory/production-plan/production-output', entry);
+      // Endpoint returns the saved SosProductionOutput directly (no ApiResponse wrapper)
+      const saved = res.data?.data ?? res.data;
+      setEntryOpen(false);
+      setSaveStatus('success');
+      setSaveMessage(saved?.fgLotNo
+        ? `Finished goods saved — FG Lot No: ${saved.fgLotNo}`
+        : 'Finished goods saved.');
+      fetchData(page, keyword);
+    } catch (err: any) {
+      setSaveStatus('error');
+      setSaveMessage(err?.response?.data?.message || 'Failed to save finished goods entry.');
+    }
+  };
+
   // ── Build rows ────────────────────────────────────────────────────────────
 
  const rows = data.map(item => {
@@ -157,10 +184,6 @@ const ProductionPlanPage: React.FC = () => {
 
       <Table.Td>
         <Text size="xs" fw={500} c="blue">{item.productionPlanId}</Text>
-      </Table.Td>
-
-      <Table.Td>
-        <Text size="xs">{dash(item.woId)}</Text>
       </Table.Td>
 
       <Table.Td>
@@ -187,6 +210,14 @@ const ProductionPlanPage: React.FC = () => {
         <Text size="xs" fw={500}>
           {item.qty != null ? Number(item.qty).toFixed(2) : '—'}
         </Text>
+        {/* Produced so far — green once the plan qty is reached */}
+        {item.producedQuantity != null && (
+          <Text size="10px"
+            c={item.producedQuantity <= 0 ? 'dimmed'
+              : item.qty != null && item.producedQuantity >= item.qty ? 'green' : 'orange'}>
+            Produced: {item.producedQuantity.toFixed(2)}
+          </Text>
+        )}
       </Table.Td>
 
       <Table.Td ta="right">
@@ -268,8 +299,26 @@ const ProductionPlanPage: React.FC = () => {
           onDelete={undefined}
           onRefresh={() => fetchData(page, keyword)}
           onExport={() => console.log('Export', selected)}
+          extraActions={
+            <Tooltip label={entryPlan ? 'Enter finished goods produced for this plan' : 'Select one production plan'}>
+              <Button size="xs" variant="light" color="teal"
+                leftSection={<IconPackageImport size={14} />}
+                disabled={!entryPlan}
+                onClick={() => setEntryOpen(true)}>
+                Finished Goods
+              </Button>
+            </Tooltip>
+          }
         />
       )}
+
+      <ProductionEntryForm
+        opened={entryOpen}
+        onClose={() => setEntryOpen(false)}
+        onSave={handleEntrySave}
+        productionPlanId={entryPlan?.productionPlanId ?? null}
+        woCode={entryPlan?.woCode ?? null}
+      />
 
       <ProductionPlanForm
         opened={formOpen}

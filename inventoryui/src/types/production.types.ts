@@ -25,6 +25,11 @@ export interface ProductionPlanApiData {
   // keep these as aliases used by fmtDate in the table
   fromDate:          string | null;
   toDate:            string | null;
+  // summaryWithMaterialRequest only
+  materialRequested?:  boolean;
+  totalPlanToProdQty?: number | null;
+  // /summary — finished goods produced so far against this plan
+  producedQuantity?:   number | null;
 }
 
 // Decimal fields arrive as a number or as { source, parsedValue } — normalise to number
@@ -56,6 +61,9 @@ export const mapProductionPlan = (d: any): ProductionPlanApiData => ({
   toDate:             d.productionToDate   ?? null,
   productionFromDate: d.productionFromDate ?? null,
   productionToDate:   d.productionToDate   ?? null,
+  materialRequested:  d.materialRequested === true,
+  totalPlanToProdQty: toNum(d.totalPlanToProdQty),
+  producedQuantity:   toNum(d.producedQuantity),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -183,7 +191,6 @@ export const getVesselName = (id: number | null | undefined): string => {
 
 export const COLUMNS: ColumnDef[] = [
   { key: 'productionPlanId', label: 'Plan ID',       width: 90  },
-  { key: 'woId',             label: 'WO Id',         width: 80  },
   { key: 'woCode',           label: 'WO Code',       width: 130 },
   { key: 'vesselName',       label: 'Vessel',        width: 150 },
   { key: 'productName',      label: 'Product',       width: 180 },

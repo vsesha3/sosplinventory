@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Modal, Paper, Box, Text, Group, Button, Table, Radio,
+  Modal, Paper, Box, Text, Group, Button, Table, Radio, Badge,
 } from '@mantine/core';
 import { IconCalendarStats } from '@tabler/icons-react';
 import api from '../../services/api';
@@ -11,7 +11,8 @@ import type { ProductionPlanApiData } from '../../types/production.types';
 import { mapProductionPlan } from '../../types/production.types';
 
 // ── Compact picker for production plans ──────────────────────────────────────
-// Same data as the Production Plan page (/production-plan/summary), fewer columns
+// Used by the Material Request form — data from /production-plan/summaryWithMaterialRequest
+// (same row shape as the Production Plan page's /summary), fewer columns
 // (no WO Id, Per Unit Rate, PO Id, Vessel). Click a row to pick it; double-click
 // or "Select" to confirm.
 
@@ -26,6 +27,7 @@ const PICKER_COLUMNS: ColumnDef[] = [
   { key: 'qty',              label: 'Qty',       width: 90, align: 'right' },
   { key: 'woQty',            label: 'WO Qty',    width: 90, align: 'right' },
   { key: 'plant',            label: 'Plant',     width: 100 },
+  { key: 'materialRequested', label: 'Material Request', width: 130 },
 ];
 
 const fmtDate = (val: string | null | undefined): string => {
@@ -75,7 +77,7 @@ const ProductionPlanPickerModal: React.FC<ProductionPlanPickerModalProps> = ({
         size: PAGE_SIZE,
         ...(currentKeyword.trim() ? { keyword: currentKeyword.trim() } : {}),
       };
-      const res = await api.get('/api/inventory/production-plan/summary', { params });
+      const res = await api.get('/api/inventory/production-plan/summaryWithMaterialRequest', { params });
       const d   = res.data.data;
 
       if (Array.isArray(d)) {
@@ -123,8 +125,15 @@ const ProductionPlanPickerModal: React.FC<ProductionPlanPickerModalProps> = ({
 
   const pickedId = picked?.productionPlanId ?? selectedPlanId;
 
+  // A plan that already has a material request can't be picked again
+  // (the request's own plan stays selectable, e.g. when re-opened in edit)
+  const isBlocked = (plan: ProductionPlanApiData) =>
+    plan.materialRequested === true && plan.productionPlanId !== selectedPlanId;
+
+  const pick = (plan: ProductionPlanApiData) => { if (!isBlocked(plan)) setPicked(plan); };
+
   const confirm = (plan: ProductionPlanApiData | null) => {
-    if (!plan) return;
+    if (!plan || isBlocked(plan)) return;
     onSelect(plan);
     onClose();
   };
@@ -132,20 +141,23 @@ const ProductionPlanPickerModal: React.FC<ProductionPlanPickerModalProps> = ({
   // ── Rows ──────────────────────────────────────────────────────────────────
 
   const rows = data.map(item => {
-    const isSel = pickedId === item.productionPlanId;
-    return (
+    const isSel   = pickedId === item.productionPlanId;
+    const blocked = isBlocked(item);
+    const row = (
       <Table.Tr
         key={item.productionPlanId}
-        bg={isSel ? 'var(--mantine-color-blue-0)' : undefined}
-        style={{ cursor: 'pointer' }}
-        onClick={() => setPicked(item)}
+        bg={isSel ? 'var(--mantine-color-blue-0)' : blocked ? 'var(--mantine-color-gray-0)' : undefined}
+        style={{ cursor: blocked ? 'not-allowed' : 'pointer', opacity: blocked ? 0.6 : 1 }}
+        title={blocked ? 'A material request already exists for this production plan' : undefined}
+        onClick={() => pick(item)}
         onDoubleClick={() => confirm(item)}
       >
         <Table.Td>
           <Radio
             size="xs"
             checked={isSel}
-            onChange={() => setPicked(item)}
+            disabled={blocked}
+            onChange={() => pick(item)}
             onClick={e => e.stopPropagation()}
             aria-label={`Select plan ${item.productionPlanId}`}
           />
@@ -162,8 +174,14 @@ const ProductionPlanPickerModal: React.FC<ProductionPlanPickerModalProps> = ({
           <Text size="xs">{item.woQty != null ? Number(item.woQty).toFixed(2) : '—'}</Text>
         </Table.Td>
         <Table.Td><Text size="xs">{dash(item.plant)}</Text></Table.Td>
+        <Table.Td>
+          {item.materialRequested
+            ? <Badge size="sm" variant="light" color="orange" tt="none">Requested</Badge>
+            : <Badge size="sm" variant="light" color="green" tt="none">Open</Badge>}
+        </Table.Td>
       </Table.Tr>
     );
+    return row;
   });
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -234,7 +252,7 @@ const ProductionPlanPickerModal: React.FC<ProductionPlanPickerModalProps> = ({
             <Text size="xs" c="dimmed">
               {picked
                 ? `Selected: Plan #${picked.productionPlanId}${picked.woCode ? ` — ${picked.woCode}` : ''}`
-                : 'Click a row to select (double-click to pick directly)'}
+                : 'Click a row to select (double-click to pick directly). Plans marked Requested already have a material request.'}
             </Text>
             <Group gap="sm">
               <Button variant="default" size="sm" onClick={onClose}>Cancel</Button>

@@ -2,14 +2,18 @@ package com.sospl.inventory.controller;
 
 import com.sospl.inventory.dto.auth.ApiResponse;
 import com.sospl.inventory.dto.common.PagedResponse;
+import com.sospl.inventory.dto.SosProductionOutputRequest;
 import com.sospl.inventory.dto.SosProductionPlanResponse;
 import com.sospl.inventory.dto.SosProductionPlanSummaryResponse;
+import com.sospl.inventory.model.SosProductionOutput;
 import com.sospl.inventory.model.SosProductionPlan;
+import com.sospl.inventory.projection.ProductionPlanCapacityProjection;
 import com.sospl.inventory.service.SosProductionPlanService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,6 +51,16 @@ public class SosProductionPlanController {
                 ApiResponse.success(
                         "Production plans fetched successfully",
                         service.findAllProductionPlanSummary(page, size)));
+    }
+    
+    @GetMapping("/summaryWithMaterialRequest")
+    public ResponseEntity<ApiResponse<PagedResponse<SosProductionPlanSummaryResponse>>> getAllSummaryWithMaterialRequest(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Production plans fetched successfully",
+                        service.findAllProductionPlanSummaryWithMaterialRequest(page, size)));
     }
 
  // Get with details by wo_id — no pagination needed — wo specific
@@ -118,6 +132,27 @@ public class SosProductionPlanController {
                         "Production plans fetched successfully",
                         service.findByVesselId(vesselId)));
     }
+    
+    @GetMapping("/{productionPlanId}/capacity")
+    public ResponseEntity<ProductionPlanCapacityProjection> getProductionCapacity(
+            @PathVariable Long productionPlanId) {
+
+        return ResponseEntity.ok(
+                service.getProductionCapacityByPlanId(
+                        productionPlanId
+                )
+        );
+    }
+    
+    @PostMapping("/production-output")
+    public ResponseEntity<SosProductionOutput> saveProductionOutput(
+            @RequestBody SosProductionOutputRequest request) {
+
+        SosProductionOutput response =
+                service.saveProductionOutput(request);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
     // Create
     @PostMapping
@@ -166,3 +201,4 @@ public class SosProductionPlanController {
                         service.findByIdWithProductDetails(id)));
     }
 }
+

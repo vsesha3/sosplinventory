@@ -11,6 +11,7 @@ import { FormSelect }     from '../../components/common/FormSelect';
 import { FormDatePicker } from '../../components/common/FormDatePicker';
 import { ConfirmDialog }  from '../../components/common/ConfirmDialog';
 import FormHeader         from '../common/Formheader';
+import RmStockAvailability from './RmStockAvailability';
 import api from '../../services/api';
 import type { DateValue } from '@mantine/dates';
 import type { ProductionPlanFormData } from '../../types/production.types';
@@ -286,7 +287,7 @@ useEffect(() => {
         opened={opened}
         onClose={onClose}
         title={null}
-        size="60%"
+        size="75%"
         padding={0}
         radius="md"
         withCloseButton={false}
@@ -460,6 +461,9 @@ useEffect(() => {
 
                 </Grid>
               </Paper>
+
+              {/* ── RM stock for the selected WO's product ── */}
+              <RmStockAvailability woId={form.woId} qty={form.qty} />
 
             </Box>
           )}

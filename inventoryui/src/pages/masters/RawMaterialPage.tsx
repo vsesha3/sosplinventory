@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Title, Text, Box, Alert, Loader, Paper, Badge } from '@mantine/core';
-import { IconAlertCircle } from '@tabler/icons-react';
+import { Title, Text, Box, Alert, Loader, Paper, Badge, Button, Tooltip } from '@mantine/core';
+import { IconAlertCircle, IconBuildingWarehouse } from '@tabler/icons-react';
+import OpeningStockForm from './Forms/OpeningStockForm';
+import type { OpeningStockFormData } from './Forms/OpeningStockForm';
+import { toApiDateTime } from './Forms/OpeningStockForm';
 import { Table, Checkbox } from '@mantine/core';
 import api from '../../services/api';
 import MasterTable  from '../../components/common/MasterTable';
@@ -65,6 +68,9 @@ const RawMaterialPage: React.FC = () => {
   const [formMode, setFormMode]       = useState<'create' | 'update'>('create');
   const [saveStatus, setSaveStatus]   = useState<SaveStatus>('idle');
   const [saveMessage, setSaveMessage] = useState('');
+
+  // ── Opening stock (carried over from legacy) ──────────────────────────────
+  const [openingOpen, setOpeningOpen] = useState(false);
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async (currentPage: number, currentKeyword: string) => {
@@ -161,6 +167,28 @@ const RawMaterialPage: React.FC = () => {
     }
   };
 
+  // ── Opening stock save — API endpoint to be provided ─────────────────────
+  const handleOpeningStockSave = async (form: OpeningStockFormData) => {
+    const payload = {
+      referenceNo: form.referenceNo || null,
+      remarks:     form.remarks || null,
+      lines: form.lines.map(l => ({
+        rmId:           l.rmId,
+        rmCode:         l.rmCode,
+        materialType:   l.materialType,
+        previousLotNo:  l.previousLotNo.trim(),
+        stockEntryDate: toApiDateTime(l.stockEntryDate),
+        qtyCarriedOver: l.qtyCarriedOver === '' ? null : l.qtyCarriedOver,
+        transferRate:   l.transferRate === '' ? null : l.transferRate,
+      })),
+    };
+    // TODO: POST to the opening-stock endpoint once available
+    console.log('[OpeningStock] payload', payload);
+    setOpeningOpen(false);
+    setSaveStatus('success');
+    setSaveMessage('Opening stock captured (preview only — save API not connected yet).');
+  };
+
   // ── Rows ──────────────────────────────────────────────────────────────────
   const rows = data.map((item) => {
   const isSelected = selected.includes(item.rmId);
@@ -241,8 +269,25 @@ const RawMaterialPage: React.FC = () => {
           onDelete={() => console.log('Delete', selected)}
           onRefresh={() => fetchData(page, keyword)}
           onExport={() => console.log('Export')}
+          extraActions={
+            <Tooltip label="Enter stock carried over from the legacy application">
+              <Button size="xs" variant="light" color="teal"
+                leftSection={<IconBuildingWarehouse size={14} />}
+                onClick={() => setOpeningOpen(true)}>
+                Opening Stock
+              </Button>
+            </Tooltip>
+          }
         />
       )}
+
+      {/* Pre-fills the first line when exactly one material is selected */}
+      <OpeningStockForm
+        opened={openingOpen}
+        onClose={() => setOpeningOpen(false)}
+        onSave={handleOpeningStockSave}
+        initialRmId={selected.length === 1 ? selected[0] : null}
+      />
       <RawMaterialForm
         opened={formOpen}
         onClose={() => {
